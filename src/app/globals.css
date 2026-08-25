@@ -43,6 +43,21 @@ body {
   outline-offset: 2px;
 }
 
+@keyframes scan-sweep {
+  0%,
+  10% {
+    transform: translateX(-10%);
+  }
+  90%,
+  100% {
+    transform: translateX(110%);
+  }
+}
+
+.animate-scan-sweep {
+  animation: scan-sweep 7s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

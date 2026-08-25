@@ -125,6 +125,15 @@ export function LoginForm() {
           }}
         />
 
+        <div
+          className="pointer-events-none absolute left-1/2 top-1/2 h-[60%] w-[60%] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-40"
+          style={{
+            background:
+              "radial-gradient(circle, var(--red) 0%, transparent 70%)",
+            filter: "blur(80px)",
+          }}
+        />
+
         <p
           className="pointer-events-none absolute -bottom-[6vw] -right-[4vw] select-none text-[32vw] font-black uppercase leading-none tracking-tighter text-transparent"
           style={{ WebkitTextStroke: "1.5px rgba(253,252,247,0.18)" }}
@@ -143,6 +152,40 @@ export function LoginForm() {
 
         <div className="absolute bottom-10 left-10 h-16 w-px bg-red" />
         <div className="absolute bottom-10 left-10 h-px w-16 bg-red" />
+
+        <div
+          className="pointer-events-none absolute left-[14%] top-[18%] h-24 w-32 -rotate-6 border border-paper/15 bg-paper/[0.03]"
+          style={{ backdropFilter: "blur(2px)" }}
+        >
+          <div className="m-3 h-1.5 w-3/4 bg-paper/15" />
+          <div className="mx-3 mt-2 h-1 w-1/2 bg-paper/10" />
+        </div>
+
+        <div
+          className="pointer-events-none absolute left-[38%] top-[38%] h-28 w-36 rotate-3 border border-paper/15 bg-paper/[0.03]"
+          style={{ backdropFilter: "blur(2px)" }}
+        >
+          <div className="m-3 h-1.5 w-2/3 bg-red/40" />
+          <div className="mx-3 mt-2 h-1 w-1/2 bg-paper/10" />
+          <div className="mx-3 mt-1.5 h-1 w-1/3 bg-paper/10" />
+        </div>
+
+        <div
+          className="pointer-events-none absolute left-[22%] top-[58%] h-20 w-28 rotate-12 border border-paper/15 bg-paper/[0.03]"
+          style={{ backdropFilter: "blur(2px)" }}
+        >
+          <div className="m-3 h-1.5 w-2/3 bg-paper/15" />
+        </div>
+
+        <div className="pointer-events-none absolute inset-y-0 left-0 w-1/3 overflow-hidden">
+          <div
+            className="animate-scan-sweep absolute inset-y-0 w-px"
+            style={{
+              background: "var(--red)",
+              boxShadow: "0 0 16px 2px rgba(214,71,44,0.6)",
+            }}
+          />
+        </div>
       </aside>
     </div>
   );
