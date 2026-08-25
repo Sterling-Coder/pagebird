@@ -8,8 +8,8 @@ export default function Home() {
   return (
     <>
       <Hero />
-      <ProductTeaserGrid />
       <HandoffSection />
+      <ProductTeaserGrid />
       <CTABand />
       <Footer />
     </>
