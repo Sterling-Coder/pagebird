@@ -10,13 +10,13 @@ export function CTABand() {
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
           <a
-            href="#demo"
+            href="/translator#demo"
             className="bg-red px-7 py-3.5 font-mono text-[11px] uppercase tracking-widest text-paper transition-opacity hover:opacity-90"
           >
             Try it free →
           </a>
           <a
-            href="#formats"
+            href="/translator#formats"
             className="border border-ink px-7 py-3.5 font-mono text-[11px] uppercase tracking-widest transition-colors hover:bg-ink hover:text-paper"
           >
             See supported formats
