@@ -34,7 +34,7 @@ export function Header() {
   if (pathname === "/login") return null;
 
   return (
-    <>
+    <div className="sticky top-0 z-30 bg-paper">
       <div className="h-[3px] bg-ink" />
       <header className="relative border-b border-ink">
         <div className="mx-auto grid max-w-6xl grid-cols-3 items-center px-6 py-5 sm:px-8">
@@ -127,6 +127,6 @@ export function Header() {
           </nav>
         ) : null}
       </header>
-    </>
+    </div>
   );
 }
