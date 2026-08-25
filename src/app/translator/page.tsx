@@ -1,4 +1,4 @@
-import { Hero } from "@/components/Hero";
+import { TranslatorHero } from "@/components/TranslatorHero";
 import { DemoSection } from "@/components/DemoSection";
 import { HowItWorks } from "@/components/HowItWorks";
 import { FormatsStrip } from "@/components/FormatsStrip";
@@ -10,7 +10,7 @@ import { Footer } from "@/components/Footer";
 export default function TranslatorPage() {
   return (
     <>
-      <Hero />
+      <TranslatorHero />
       <DemoSection />
       <HowItWorks />
       <FormatsStrip />
