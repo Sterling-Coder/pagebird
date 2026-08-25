@@ -13,7 +13,7 @@ export function LoginForm() {
       <Link
         href="/"
         aria-label="Back to Docly"
-        className="fixed left-6 top-6 z-20 flex h-9 w-9 items-center justify-center border border-ink bg-paper text-ink-soft transition-colors hover:border-ink hover:text-ink sm:left-8 sm:top-8 lg:border-paper/30 lg:bg-transparent lg:text-paper/70 lg:hover:border-paper lg:hover:text-paper"
+        className="fixed right-6 top-6 z-20 flex h-9 w-9 items-center justify-center border border-ink bg-paper text-ink-soft transition-colors hover:border-ink hover:text-ink sm:right-8 sm:top-8 lg:border-paper/30 lg:bg-transparent lg:text-paper/70 lg:hover:border-paper lg:hover:text-paper"
       >
         <svg
           viewBox="0 0 24 24"
@@ -29,42 +29,6 @@ export function LoginForm() {
           <path d="M11 18l-6-6 6-6" />
         </svg>
       </Link>
-
-      <aside className="relative hidden overflow-hidden bg-ink text-paper lg:flex lg:flex-col lg:justify-between lg:p-10">
-        <span className="mt-8 font-mono text-[11px] uppercase tracking-widest text-red">
-          Docly · Translation × Layout × Accuracy
-        </span>
-
-        <div>
-          <p className="max-w-sm text-3xl font-black uppercase leading-[1.05] tracking-tight">
-            One account,
-            <br />
-            every language,
-            <br />
-            <span className="text-red">every pixel.</span>
-          </p>
-          <p className="mt-4 max-w-xs text-sm leading-relaxed text-paper/70">
-            Manage your translations, formats and team from a single place.
-            No separate logins for the extension and the translator.
-          </p>
-        </div>
-
-        <div className="flex items-end justify-between border-t border-paper/20 pt-6 font-mono text-[11px] uppercase tracking-widest text-paper/50">
-          <span>95% accuracy</span>
-          <span>30+ languages</span>
-          <span>4 formats</span>
-        </div>
-
-        <div
-          className="pointer-events-none absolute -right-16 -top-16 h-48 w-48"
-          style={{
-            backgroundImage:
-              "repeating-linear-gradient(45deg, var(--red) 0 14px, transparent 14px 28px)",
-            opacity: 0.5,
-          }}
-          aria-hidden="true"
-        />
-      </aside>
 
       <section className="mx-auto flex w-full max-w-md flex-col items-center justify-center px-6 py-16 text-center sm:px-8">
         <span className="font-mono text-[11px] uppercase tracking-widest text-red">
@@ -147,6 +111,39 @@ export function LoginForm() {
           </button>
         </p>
       </section>
+
+      <aside
+        className="relative hidden overflow-hidden bg-ink lg:block"
+        aria-hidden="true"
+      >
+        <div
+          className="absolute inset-0 opacity-[0.07]"
+          style={{
+            backgroundImage:
+              "linear-gradient(var(--paper) 1px, transparent 1px), linear-gradient(90deg, var(--paper) 1px, transparent 1px)",
+            backgroundSize: "56px 56px",
+          }}
+        />
+
+        <p
+          className="pointer-events-none absolute -bottom-[6vw] -right-[4vw] select-none text-[32vw] font-black uppercase leading-none tracking-tighter text-transparent"
+          style={{ WebkitTextStroke: "1.5px rgba(253,252,247,0.18)" }}
+        >
+          D
+        </p>
+
+        <div
+          className="pointer-events-none absolute -left-16 -top-16 h-56 w-56"
+          style={{
+            backgroundImage:
+              "repeating-linear-gradient(45deg, var(--red) 0 14px, transparent 14px 28px)",
+            opacity: 0.6,
+          }}
+        />
+
+        <div className="absolute bottom-10 left-10 h-16 w-px bg-red" />
+        <div className="absolute bottom-10 left-10 h-px w-16 bg-red" />
+      </aside>
     </div>
   );
 }
