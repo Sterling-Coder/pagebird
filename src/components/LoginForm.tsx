@@ -13,7 +13,7 @@ export function LoginForm() {
       <Link
         href="/"
         aria-label="Back to Docly"
-        className="absolute left-6 top-6 z-20 flex h-9 w-9 items-center justify-center border border-ink text-ink-soft transition-colors hover:border-ink hover:text-ink sm:left-8 sm:top-8 lg:border-paper/30 lg:text-paper/70 lg:hover:border-paper lg:hover:text-paper"
+        className="fixed left-6 top-6 z-20 flex h-9 w-9 items-center justify-center border border-ink bg-paper text-ink-soft transition-colors hover:border-ink hover:text-ink sm:left-8 sm:top-8 lg:border-paper/30 lg:bg-transparent lg:text-paper/70 lg:hover:border-paper lg:hover:text-paper"
       >
         <svg
           viewBox="0 0 24 24"
