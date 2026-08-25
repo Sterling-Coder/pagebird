@@ -34,15 +34,7 @@ export function Header() {
       <div className="h-[3px] bg-ink" />
       <header className="relative border-b border-ink">
         <div className="mx-auto grid max-w-6xl grid-cols-3 items-center px-6 py-5 sm:px-8">
-          <span />
-          <Link
-            href="/"
-            className="justify-self-center text-center text-lg font-black uppercase tracking-tight sm:text-xl"
-          >
-            The Docly Dispatch
-          </Link>
-
-          <nav className="hidden justify-self-end items-center gap-6 font-mono text-[11px] uppercase tracking-widest sm:flex">
+          <nav className="hidden items-center gap-6 font-mono text-[11px] uppercase tracking-widest sm:flex">
             <div ref={productRef} className="relative">
               <button
                 type="button"
@@ -54,7 +46,7 @@ export function Header() {
                 Product ▾
               </button>
               {productOpen ? (
-                <div className="absolute right-0 top-full w-56 border border-ink bg-paper py-2 shadow-[4px_4px_0_rgba(0,0,0,1)]">
+                <div className="absolute left-0 top-full w-56 border border-ink bg-paper py-2 shadow-[4px_4px_0_rgba(0,0,0,1)]">
                   <Link
                     href="/translator"
                     className="block px-4 py-2 text-ink-soft hover:bg-paper-dim hover:text-ink"
@@ -77,6 +69,25 @@ export function Header() {
               About
             </Link>
           </nav>
+
+          <Link
+            href="/"
+            className="justify-self-center text-center text-lg font-black uppercase tracking-tight sm:text-xl"
+          >
+            The Docly Dispatch
+          </Link>
+
+          <div className="hidden items-center justify-self-end gap-4 font-mono text-[11px] uppercase tracking-widest sm:flex">
+            <Link href="/login" className="text-ink-soft transition-colors hover:text-ink">
+              Log in
+            </Link>
+            <Link
+              href="/login"
+              className="border border-ink px-4 py-2 transition-colors hover:bg-ink hover:text-paper"
+            >
+              Sign up
+            </Link>
+          </div>
 
           <button
             type="button"
@@ -102,6 +113,12 @@ export function Header() {
             </Link>
             <Link href="/about" className="py-2 text-ink-soft hover:text-ink">
               About
+            </Link>
+            <Link href="/login" className="py-2 text-ink-soft hover:text-ink">
+              Log in
+            </Link>
+            <Link href="/login" className="py-2 text-ink-soft hover:text-ink">
+              Sign up
             </Link>
           </nav>
         ) : null}
