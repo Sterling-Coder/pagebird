@@ -95,7 +95,11 @@ function PricingCard({ plan }: { plan: Plan }) {
   );
 }
 
-export function PricingSection() {
+type PricingSectionProps = {
+  variant?: "teaser" | "full";
+};
+
+export function PricingSection({ variant = "full" }: PricingSectionProps) {
   return (
     <section id="pricing" className="border-t border-rule bg-paper-dim">
       <div className="mx-auto max-w-6xl px-6 py-20 sm:px-8">
@@ -117,6 +121,17 @@ export function PricingSection() {
             <PricingCard key={plan.name} plan={plan} />
           ))}
         </div>
+
+        {variant === "teaser" ? (
+          <div className="mt-10">
+            <a
+              href="/pricing"
+              className="font-mono text-[11px] uppercase tracking-widest text-ink-soft underline decoration-rule underline-offset-4 transition-colors hover:text-ink hover:decoration-ink"
+            >
+              See full pricing, FAQ and plan comparison →
+            </a>
+          </div>
+        ) : null}
       </div>
     </section>
   );
