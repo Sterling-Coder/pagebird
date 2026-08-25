@@ -2,8 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 export function Header() {
+  const pathname = usePathname();
   const [productOpen, setProductOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const productRef = useRef<HTMLDivElement>(null);
@@ -28,6 +30,8 @@ export function Header() {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [productOpen]);
+
+  if (pathname === "/login") return null;
 
   return (
     <>
