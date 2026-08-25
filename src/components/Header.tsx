@@ -1,11 +1,33 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 
 export function Header() {
   const [productOpen, setProductOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const productRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!productOpen) return;
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setProductOpen(false);
+    }
+
+    function handleClickOutside(event: MouseEvent) {
+      if (!productRef.current?.contains(event.target as Node)) {
+        setProductOpen(false);
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [productOpen]);
 
   return (
     <>
@@ -23,13 +45,12 @@ export function Header() {
           </Link>
 
           <nav className="hidden justify-self-end items-center gap-6 font-mono text-[11px] uppercase tracking-widest sm:flex">
-            <div
-              className="relative"
-              onMouseEnter={() => setProductOpen(true)}
-              onMouseLeave={() => setProductOpen(false)}
-            >
+            <div ref={productRef} className="relative">
               <button
                 type="button"
+                onClick={() => setProductOpen((open) => !open)}
+                aria-haspopup="true"
+                aria-expanded={productOpen}
                 className="text-ink-soft transition-colors hover:text-ink"
               >
                 Product ▾
