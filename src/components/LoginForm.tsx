@@ -8,7 +8,7 @@ export function LoginForm() {
   const [mode, setMode] = useState<Mode>("login");
 
   return (
-    <div className="grid min-h-[calc(100dvh-88px)] w-full lg:grid-cols-2">
+    <div className="grid w-full flex-1 lg:grid-cols-2">
       <aside className="relative hidden overflow-hidden bg-ink text-paper lg:flex lg:flex-col lg:justify-between lg:p-10">
         <span className="font-mono text-[11px] uppercase tracking-widest text-red">
           Docly · Translation × Layout × Accuracy
