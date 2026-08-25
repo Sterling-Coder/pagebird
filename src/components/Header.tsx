@@ -34,9 +34,7 @@ export function Header() {
       <div className="h-[3px] bg-ink" />
       <header className="relative border-b border-ink">
         <div className="mx-auto grid max-w-6xl grid-cols-3 items-center px-6 py-5 sm:px-8">
-          <span className="font-mono text-[11px] uppercase tracking-widest text-ink-soft">
-            Vol. 01 · SaaS
-          </span>
+          <span />
           <Link
             href="/"
             className="justify-self-center text-center text-lg font-black uppercase tracking-tight sm:text-xl"
