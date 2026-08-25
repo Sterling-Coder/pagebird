@@ -5,6 +5,7 @@ import { FormatsStrip } from "@/components/FormatsStrip";
 import { AccuracyBand } from "@/components/AccuracyBand";
 import { LanguageGrid } from "@/components/LanguageGrid";
 import { CTABand } from "@/components/CTABand";
+import { Footer } from "@/components/Footer";
 
 export default function TranslatorPage() {
   return (
@@ -16,6 +17,7 @@ export default function TranslatorPage() {
       <AccuracyBand />
       <LanguageGrid />
       <CTABand />
+      <Footer />
     </>
   );
 }

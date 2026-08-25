@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Inter, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
 
 const inter = Inter({
   variable: "--font-body",
@@ -31,7 +30,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col bg-paper text-ink font-body">
         <Header />
         <main className="flex-1">{children}</main>
-        <Footer />
       </body>
     </html>
   );
