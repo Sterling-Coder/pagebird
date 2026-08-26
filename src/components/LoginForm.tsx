@@ -2,35 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { GridPanel } from "./login-panels/GridPanel";
-import { BlueprintPanel } from "./login-panels/BlueprintPanel";
-import { PrintRegistrationPanel } from "./login-panels/PrintRegistrationPanel";
-import { TerminalPanel } from "./login-panels/TerminalPanel";
-import { CartographicPanel } from "./login-panels/CartographicPanel";
-import { RadarPanel } from "./login-panels/RadarPanel";
 import { PunchCardPanel } from "./login-panels/PunchCardPanel";
 
 type Mode = "login" | "signup";
 
-const PANELS = {
-  grid: GridPanel,
-  blueprint: BlueprintPanel,
-  print: PrintRegistrationPanel,
-  terminal: TerminalPanel,
-  map: CartographicPanel,
-  radar: RadarPanel,
-  punch: PunchCardPanel,
-} as const;
-
 export function LoginForm() {
   const [mode, setMode] = useState<Mode>("login");
-  const searchParams = useSearchParams();
-  const panelParam = searchParams.get("panel");
-  const Panel =
-    panelParam && panelParam in PANELS
-      ? PANELS[panelParam as keyof typeof PANELS]
-      : PANELS.grid;
 
   return (
     <div className="relative grid w-full flex-1 lg:grid-cols-2">
@@ -136,7 +113,7 @@ export function LoginForm() {
         </p>
       </section>
 
-      <Panel />
+      <PunchCardPanel />
     </div>
   );
 }
