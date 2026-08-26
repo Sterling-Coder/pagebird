@@ -1,3 +1,4 @@
+import { AppNavRail } from "@/components/app/AppNavRail";
 import { AppTopBar } from "@/components/app/AppTopBar";
 import { AppSubToolbar } from "@/components/app/AppSubToolbar";
 import { AppThumbnailRail } from "@/components/app/AppThumbnailRail";
@@ -44,16 +45,19 @@ const TRANSLATED = {
 
 export default function AppWorkspacePage() {
   return (
-    <div className="flex h-screen flex-col bg-paper">
-      <AppTopBar />
-      <AppSubToolbar />
-      <div className="flex min-h-0 flex-1">
-        <AppThumbnailRail />
-        <div className="flex min-w-0 flex-1 divide-x divide-rule overflow-auto">
-          <AppDocumentPane content={ORIGINAL} />
-          <AppDocumentPane content={TRANSLATED} />
+    <div className="flex h-screen bg-paper">
+      <AppNavRail />
+      <div className="flex min-w-0 flex-1 flex-col">
+        <AppTopBar />
+        <AppSubToolbar />
+        <div className="flex min-h-0 flex-1">
+          <AppThumbnailRail />
+          <div className="flex min-w-0 flex-1 divide-x divide-rule overflow-auto">
+            <AppDocumentPane content={ORIGINAL} />
+            <AppDocumentPane content={TRANSLATED} />
+          </div>
+          <AppSidebar />
         </div>
-        <AppSidebar />
       </div>
     </div>
   );
