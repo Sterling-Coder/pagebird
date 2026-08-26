@@ -1,13 +1,21 @@
 import Link from "next/link";
 
-export function AppTopBar() {
+export function AppTopBar({
+  navOpen,
+  onToggleNav,
+}: {
+  navOpen: boolean;
+  onToggleNav: () => void;
+}) {
   return (
     <div className="flex h-12 shrink-0 items-center justify-between border-b border-ink bg-paper px-4">
       <div className="flex items-center gap-3">
         <button
           type="button"
-          aria-label="Toggle sidebar"
-          className="text-ink-soft transition-colors hover:text-ink"
+          onClick={onToggleNav}
+          aria-label={navOpen ? "Collapse sidebar" : "Expand sidebar"}
+          aria-pressed={navOpen}
+          className="border border-transparent p-1 text-ink-soft transition-colors hover:border-rule hover:text-ink"
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="h-4 w-4">
             <rect x="3" y="4" width="18" height="16" rx="1" />
