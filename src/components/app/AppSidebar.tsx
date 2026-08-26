@@ -4,12 +4,6 @@ import { useState } from "react";
 
 const TABS = ["Chat", "History"] as const;
 
-const RECENT = [
-  { client: "Ledgerline Group", lang: "French", pages: 24, time: "2 min ago" },
-  { client: "Northstar Health", lang: "German", pages: 8, time: "19 min ago" },
-  { client: "Fielda Ops", lang: "Japanese", pages: 41, time: "1 hr ago" },
-];
-
 export function AppSidebar() {
   const [tab, setTab] = useState<(typeof TABS)[number]>("Chat");
 
@@ -40,25 +34,10 @@ export function AppSidebar() {
             </p>
           </div>
         ) : (
-          <div>
-            <p className="mb-3 font-mono text-[10px] uppercase tracking-widest text-muted">
-              Recent translations
+          <div className="flex h-full items-center justify-center text-center">
+            <p className="font-mono text-[11px] uppercase tracking-widest text-muted">
+              No translations yet
             </p>
-            <div className="divide-y divide-rule border-t border-rule">
-              {RECENT.map((row) => (
-                <div key={row.client} className="flex items-center justify-between py-2.5">
-                  <div>
-                    <p className="text-sm text-ink">{row.client}</p>
-                    <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
-                      {row.lang} · {row.pages} pages
-                    </p>
-                  </div>
-                  <span className="font-mono text-[10px] uppercase tracking-widest text-muted">
-                    {row.time}
-                  </span>
-                </div>
-              ))}
-            </div>
           </div>
         )}
       </div>

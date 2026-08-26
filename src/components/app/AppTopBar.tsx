@@ -14,8 +14,8 @@ export function AppTopBar() {
             <path d="M9 4v16" />
           </svg>
         </button>
-        <span className="font-mono text-[11px] text-ink-soft">
-          field-ops-manual.pdf
+        <span className="font-mono text-[11px] uppercase tracking-widest text-ink-soft">
+          Translate
         </span>
       </div>
 
