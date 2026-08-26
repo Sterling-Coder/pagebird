@@ -16,13 +16,11 @@ export function PunchCardPanel() {
   }
 
   return (
-    <aside
-      className="relative hidden overflow-hidden bg-ink lg:block"
-      aria-hidden="true"
-    >
+    <aside className="relative hidden overflow-hidden bg-ink lg:block">
       <div
         className="absolute inset-6 grid gap-[3px]"
         style={{ gridTemplateColumns: `repeat(${COLS}, 1fr)` }}
+        aria-hidden="true"
       >
         {cells.map(({ x, y, opacity }) => (
           <div
@@ -40,7 +38,26 @@ export function PunchCardPanel() {
             "repeating-linear-gradient(45deg, var(--red) 0 14px, transparent 14px 28px)",
           opacity: 0.6,
         }}
+        aria-hidden="true"
       />
+
+      <div className="absolute left-10 top-32 max-w-sm">
+        <div className="bg-ink/90 p-2">
+          <span className="font-mono text-[11px] uppercase tracking-widest text-red">
+            Docly
+          </span>
+          <p className="mt-3 text-2xl font-black uppercase leading-[1.1] tracking-tight text-paper">
+            Translate the file.
+            <br />
+            Keep the pixel.
+          </p>
+          <ul className="mt-5 space-y-1.5 font-mono text-[11px] uppercase tracking-widest text-paper/60">
+            <li>DOC · PDF · INDD · IDML</li>
+            <li>30+ languages</li>
+            <li>95% accuracy</li>
+          </ul>
+        </div>
+      </div>
 
       <p
         className="pointer-events-none absolute -bottom-[6vw] -right-[4vw] select-none text-[32vw] font-black uppercase leading-none tracking-tighter text-transparent"
