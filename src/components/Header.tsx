@@ -31,7 +31,7 @@ export function Header() {
     };
   }, [productOpen]);
 
-  if (pathname === "/login") return null;
+  if (pathname === "/login" || pathname.startsWith("/app")) return null;
 
   return (
     <div className="sticky top-0 z-30 bg-paper">
