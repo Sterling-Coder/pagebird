@@ -7,6 +7,9 @@ import { GridPanel } from "./login-panels/GridPanel";
 import { BlueprintPanel } from "./login-panels/BlueprintPanel";
 import { PrintRegistrationPanel } from "./login-panels/PrintRegistrationPanel";
 import { TerminalPanel } from "./login-panels/TerminalPanel";
+import { CartographicPanel } from "./login-panels/CartographicPanel";
+import { RadarPanel } from "./login-panels/RadarPanel";
+import { PunchCardPanel } from "./login-panels/PunchCardPanel";
 
 type Mode = "login" | "signup";
 
@@ -15,6 +18,9 @@ const PANELS = {
   blueprint: BlueprintPanel,
   print: PrintRegistrationPanel,
   terminal: TerminalPanel,
+  map: CartographicPanel,
+  radar: RadarPanel,
+  punch: PunchCardPanel,
 } as const;
 
 export function LoginForm() {
