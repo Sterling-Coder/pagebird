@@ -175,9 +175,9 @@ export default function AppWorkspacePage() {
       <CreateJobModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        onCreated={(project) => {
+        onCreated={() => {
           setModalOpen(false);
-          router.push(`/app/jobs/${project.id}/files`);
+          refresh();
         }}
       />
 
