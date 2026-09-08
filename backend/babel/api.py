@@ -81,11 +81,15 @@ _UPLOAD_DIR = os.environ.get("BABEL_UPLOAD_DIR", "uploads")
 _OUT_DIR = os.environ.get("BABEL_OUT_DIR", "out")
 
 app = FastAPI(title="babel review")
+_frontend_origins = [
+    o.strip() for o in os.environ.get("FRONTEND_ORIGIN", "http://localhost:3000").split(",")
+    if o.strip()
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # dev; lock down in production
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=_frontend_origins,
+    allow_methods=["GET", "POST", "PATCH", "DELETE"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 
