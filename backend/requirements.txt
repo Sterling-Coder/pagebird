@@ -5,9 +5,13 @@ python-multipart>=0.0.9  # required by FastAPI for UploadFile/Form (/api/transla
 uvicorn>=0.29
 pydantic>=2.0
 python-dotenv>=1.0
+# schema migrations against Supabase's Postgres (see migrations/) — run
+# `alembic upgrade head` locally or as a one-off Railway deploy step
+alembic>=1.13
+sqlalchemy>=2.0
+psycopg[binary]>=3.1
 # optional translation engines (pipeline degrades gracefully if absent / no API key)
 openai>=1.40
-anthropic>=0.39
 deepl>=1.18
 # optional ingest layers (same contract: absent key -> layer reports and skips)
 google-cloud-documentai>=2.20   # ingest/ocr.py — primary OCR
