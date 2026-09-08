@@ -1,5 +1,5 @@
 {
-  "name": "docly-landing",
+  "name": "pagebird-frontend",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -11,6 +11,7 @@
   "dependencies": {
     "framer-motion": "^13.1.1",
     "next": "16.3.2",
+    "pdfjs-dist": "^6.2.108",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },

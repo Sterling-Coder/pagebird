@@ -43,6 +43,27 @@ body {
   outline-offset: 2px;
 }
 
+@keyframes progress-stripes {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 32px 0;
+  }
+}
+
+.progress-indeterminate {
+  background-image: repeating-linear-gradient(
+    45deg,
+    var(--red) 0,
+    var(--red) 8px,
+    transparent 8px,
+    transparent 16px
+  );
+  background-size: 32px 100%;
+  animation: progress-stripes 0.8s linear infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -51,5 +72,69 @@ body {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* Pagebird marketing site theme — scoped to (marketing) route group via pb- prefix,
+   kept separate from the app's --color-* tokens above so /login and /app are unaffected. */
+@theme inline {
+  --color-pb-paper: #edeadc;
+  --color-pb-ink: #14140f;
+  --color-pb-accent: #e8432c;
+  --color-pb-line: #dddac4;
+  --color-pb-muted: #45443c;
+  --color-pb-faint: #8c8877;
+  --font-pb-display: var(--font-fraunces);
+  --font-pb-mono-brand: var(--font-space-mono);
+  --font-pb-sans: var(--font-inter);
+}
+
+.font-pb-display {
+  font-family: var(--font-pb-display), Georgia, serif;
+  letter-spacing: -0.03em;
+  line-height: 0.95;
+}
+
+.font-pb-mono-brand {
+  font-family: var(--font-pb-mono-brand), monospace;
+}
+
+@keyframes pb-line-grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+.pb-line-grow {
+  transform-origin: left;
+  animation: pb-line-grow 1.1s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pb-line-grow {
+    animation: none;
+  }
+}
+
+@keyframes pb-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.pb-float {
+  animation: pb-float 5.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pb-float {
+    animation: none;
   }
 }

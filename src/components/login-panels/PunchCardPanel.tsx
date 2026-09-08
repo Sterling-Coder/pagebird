@@ -44,7 +44,7 @@ export function PunchCardPanel() {
       <div className="absolute left-10 top-32 max-w-sm">
         <div className="bg-ink/90 p-2">
           <span className="font-mono text-[11px] uppercase tracking-widest text-red">
-            Docly
+            Pagebird
           </span>
           <p className="mt-3 text-2xl font-black uppercase leading-[1.1] tracking-tight text-paper">
             Translate the file.

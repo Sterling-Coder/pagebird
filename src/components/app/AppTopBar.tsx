@@ -1,15 +1,17 @@
-import Link from "next/link";
+import { LogsPanel } from "./LogsPanel";
 
 export function AppTopBar({
   navOpen,
   onToggleNav,
+  breadcrumb,
 }: {
   navOpen: boolean;
   onToggleNav: () => void;
+  breadcrumb?: React.ReactNode;
 }) {
   return (
     <div className="flex h-12 shrink-0 items-center justify-between border-b border-ink bg-paper px-4">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center">
         <button
           type="button"
           onClick={onToggleNav}
@@ -22,25 +24,13 @@ export function AppTopBar({
             <path d="M9 4v16" />
           </svg>
         </button>
-        <span className="font-mono text-[11px] uppercase tracking-widest text-ink-soft">
-          Translate
-        </span>
+        {breadcrumb ? (
+          <div className="ml-3 font-mono text-[11px] uppercase tracking-widest text-ink-soft">
+            {breadcrumb}
+          </div>
+        ) : null}
       </div>
-
-      <div className="flex items-center gap-5 font-mono text-[11px] uppercase tracking-widest text-ink-soft">
-        <Link href="#" className="transition-colors hover:text-ink">
-          Share
-        </Link>
-        <Link href="#" className="transition-colors hover:text-ink">
-          Help
-        </Link>
-        <Link
-          href="/"
-          className="border border-ink px-3 py-1.5 text-ink transition-colors hover:bg-ink hover:text-paper"
-        >
-          Exit
-        </Link>
-      </div>
+      <LogsPanel />
     </div>
   );
 }

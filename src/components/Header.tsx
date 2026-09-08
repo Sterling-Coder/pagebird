@@ -1,132 +1,47 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-export function Header() {
+const NAV = [
+  { href: "/product", label: "Product" },
+  { href: "/integrations", label: "Integrations" },
+  { href: "/#pricing", label: "Pricing" },
+  { href: "/contact", label: "Contact" },
+];
+
+export default function Header() {
   const pathname = usePathname();
-  const [productOpen, setProductOpen] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const productRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!productOpen) return;
-
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") setProductOpen(false);
-    }
-
-    function handleClickOutside(event: MouseEvent) {
-      if (!productRef.current?.contains(event.target as Node)) {
-        setProductOpen(false);
-      }
-    }
-
-    document.addEventListener("keydown", handleKeyDown);
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [productOpen]);
-
-  if (pathname === "/login" || pathname.startsWith("/app")) return null;
 
   return (
-    <div className="sticky top-0 z-30 bg-paper">
-      <div className="h-[3px] bg-ink" />
-      <header className="relative border-b border-ink">
-        <div className="mx-auto grid max-w-6xl grid-cols-3 items-center px-6 py-5 sm:px-8">
-          <nav className="hidden items-center gap-6 font-mono text-[11px] uppercase tracking-widest sm:flex">
-            <div ref={productRef} className="relative">
-              <button
-                type="button"
-                onClick={() => setProductOpen((open) => !open)}
-                aria-haspopup="true"
-                aria-expanded={productOpen}
-                className="text-ink-soft transition-colors hover:text-ink"
-              >
-                Product ▾
-              </button>
-              {productOpen ? (
-                <div className="absolute left-0 top-full w-56 border border-ink bg-paper py-2 shadow-[4px_4px_0_rgba(0,0,0,1)]">
-                  <Link
-                    href="/translator"
-                    className="block px-4 py-2 text-ink-soft hover:bg-paper-dim hover:text-ink"
-                  >
-                    Document Translator
-                  </Link>
-                  <Link
-                    href="/extension"
-                    className="block px-4 py-2 text-ink-soft hover:bg-paper-dim hover:text-ink"
-                  >
-                    Browser Extension
-                  </Link>
-                </div>
-              ) : null}
-            </div>
-            <Link href="/pricing" className="text-ink-soft transition-colors hover:text-ink">
-              Pricing
-            </Link>
-            <Link href="/about" className="text-ink-soft transition-colors hover:text-ink">
-              About
-            </Link>
-          </nav>
-
+    <header className="flex items-center justify-between border-b-[3px] border-pb-ink px-6 py-5 md:px-14">
+      <Link
+        href="/"
+        className="font-pb-display text-[27px] italic tracking-tight lowercase"
+      >
+        page<span className="text-pb-accent">bird</span>
+      </Link>
+      <nav className="hidden items-center gap-9 text-[13.5px] font-semibold tracking-wide uppercase md:flex">
+        {NAV.map((item) => (
           <Link
-            href="/"
-            className="justify-self-center text-center text-lg font-black uppercase tracking-tight sm:text-xl"
+            key={item.href}
+            href={item.href}
+            className={
+              pathname === item.href
+                ? "border-b-[3px] border-pb-accent pb-[3px]"
+                : "hover:text-pb-accent"
+            }
           >
-            The Docly Dispatch
+            {item.label}
           </Link>
-
-          <div className="hidden items-center justify-self-end gap-4 font-mono text-[11px] uppercase tracking-widest sm:flex">
-            <Link href="/login" className="text-ink-soft transition-colors hover:text-ink">
-              Log in
-            </Link>
-            <Link
-              href="/login"
-              className="border border-ink px-4 py-2 transition-colors hover:bg-ink hover:text-paper"
-            >
-              Sign up
-            </Link>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setMobileOpen((open) => !open)}
-            className="justify-self-end font-mono text-[11px] uppercase tracking-widest text-ink-soft sm:hidden"
-            aria-expanded={mobileOpen}
-            aria-label="Toggle menu"
-          >
-            {mobileOpen ? "Close" : "Menu"}
-          </button>
-        </div>
-
-        {mobileOpen ? (
-          <nav className="flex flex-col gap-1 border-t border-rule px-6 py-4 font-mono text-[11px] uppercase tracking-widest sm:hidden">
-            <Link href="/translator" className="py-2 text-ink-soft hover:text-ink">
-              Document Translator
-            </Link>
-            <Link href="/extension" className="py-2 text-ink-soft hover:text-ink">
-              Browser Extension
-            </Link>
-            <Link href="/pricing" className="py-2 text-ink-soft hover:text-ink">
-              Pricing
-            </Link>
-            <Link href="/about" className="py-2 text-ink-soft hover:text-ink">
-              About
-            </Link>
-            <Link href="/login" className="py-2 text-ink-soft hover:text-ink">
-              Log in
-            </Link>
-            <Link href="/login" className="py-2 text-ink-soft hover:text-ink">
-              Sign up
-            </Link>
-          </nav>
-        ) : null}
-      </header>
-    </div>
+        ))}
+      </nav>
+      <Link
+        href="/login"
+        className="flex h-[42px] items-center bg-pb-accent px-5 text-[13.5px] font-bold tracking-wide text-pb-paper uppercase"
+      >
+        Try free
+      </Link>
+    </header>
   );
 }

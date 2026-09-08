@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
-import { Header } from "@/components/Header";
 
 const inter = Inter({
   variable: "--font-body",
@@ -16,9 +15,9 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Docly — Translate any document without breaking the layout",
+  title: "Pagebird — Translate any document without breaking the layout",
   description:
-    "Docly translates DOC, PDF, INDD and IDML files into 30+ languages at 95% accuracy — text, images and layout, all preserved.",
+    "Pagebird translates DOC, PDF, INDD and IDML files into 30+ languages at 95% accuracy — text, images and layout, all preserved.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -28,7 +27,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${inter.variable} ${plexMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-paper text-ink font-body">
-        <Header />
         <main className="flex flex-1 flex-col">{children}</main>
       </body>
     </html>

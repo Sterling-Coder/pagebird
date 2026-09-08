@@ -13,7 +13,7 @@ export function LoginForm() {
     <div className="relative grid w-full flex-1 lg:grid-cols-2">
       <Link
         href="/"
-        aria-label="Back to Docly"
+        aria-label="Back to Pagebird"
         className="fixed right-6 top-6 z-20 flex h-9 w-9 items-center justify-center border border-ink bg-paper text-ink-soft transition-colors hover:border-ink hover:text-ink sm:right-8 sm:top-8 lg:border-paper/30 lg:bg-transparent lg:text-paper/70 lg:hover:border-paper lg:hover:text-paper"
       >
         <svg
@@ -36,7 +36,7 @@ export function LoginForm() {
           {mode === "login" ? "Welcome back" : "Create account"}
         </span>
         <h1 className="mt-3 text-3xl font-black uppercase tracking-tight sm:text-4xl">
-          {mode === "login" ? "Log in to Docly" : "Sign up for Docly"}
+          {mode === "login" ? "Log in to Pagebird" : "Sign up for Pagebird"}
         </h1>
 
         <div className="relative mt-8 w-full">
@@ -102,7 +102,7 @@ export function LoginForm() {
         </div>
 
         <p className="mt-6 text-center text-sm text-ink-soft">
-          {mode === "login" ? "New to Docly?" : "Already have an account?"}{" "}
+          {mode === "login" ? "New to Pagebird?" : "Already have an account?"}{" "}
           <button
             type="button"
             onClick={() => setMode(mode === "login" ? "signup" : "login")}

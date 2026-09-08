@@ -1,7 +1,14 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+
 const NAV_ITEMS = [
   {
-    label: "Documents",
-    active: true,
+    label: "Jobs",
+    href: "/app",
+    enabled: true,
+    isActive: (path: string) => path === "/app" || path.startsWith("/app/jobs"),
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="h-5 w-5">
         <path d="M6 2h9l5 5v15H6z" />
@@ -10,18 +17,10 @@ const NAV_ITEMS = [
     ),
   },
   {
-    label: "History",
-    active: false,
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="h-5 w-5">
-        <circle cx="12" cy="12" r="9" />
-        <path d="M12 7v5l3 3" />
-      </svg>
-    ),
-  },
-  {
     label: "Team",
-    active: false,
+    href: null,
+    enabled: false,
+    isActive: () => false,
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="h-5 w-5">
         <circle cx="9" cy="8" r="3" />
@@ -33,7 +32,9 @@ const NAV_ITEMS = [
   },
   {
     label: "Settings",
-    active: false,
+    href: null,
+    enabled: false,
+    isActive: () => false,
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="h-5 w-5">
         <circle cx="12" cy="12" r="3" />
@@ -44,28 +45,50 @@ const NAV_ITEMS = [
 ];
 
 export function AppNavRail() {
+  const pathname = usePathname();
+
   return (
-    <div className="flex w-14 shrink-0 flex-col items-center border-r border-ink bg-paper-dim py-4">
-      <div className="mb-6 flex h-8 w-8 items-center justify-center bg-ink text-sm font-black uppercase text-paper">
-        D
+    <div className="flex w-56 shrink-0 flex-col border-r border-ink bg-paper-dim py-4">
+      <div className="mb-6 px-4">
+        <span className="font-mono text-sm font-black uppercase tracking-widest text-ink">
+          Pagebird
+        </span>
       </div>
 
-      <nav className="flex flex-1 flex-col items-center gap-1">
-        {NAV_ITEMS.map((item) => (
-          <button
-            key={item.label}
-            type="button"
-            aria-label={item.label}
-            className={`relative flex h-10 w-10 items-center justify-center transition-colors ${
-              item.active ? "text-red" : "text-ink-soft hover:text-ink"
-            }`}
-          >
-            {item.active ? (
-              <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 bg-red" />
-            ) : null}
-            {item.icon}
-          </button>
-        ))}
+      <nav className="flex flex-1 flex-col gap-1 px-2">
+        {NAV_ITEMS.map((item) => {
+          const active = item.enabled && item.isActive(pathname ?? "");
+          const className = `relative flex items-center gap-3 px-3 py-2 text-sm transition-colors ${
+            active
+              ? "bg-red-dim/40 text-red"
+              : item.enabled
+                ? "text-ink-soft hover:bg-paper hover:text-ink"
+                : "text-ink-soft/40"
+          }`;
+          const content = (
+            <>
+              {active ? (
+                <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 bg-red" />
+              ) : null}
+              {item.icon}
+              <span>{item.label}</span>
+            </>
+          );
+
+          if (!item.enabled || !item.href) {
+            return (
+              <span key={item.label} aria-label={item.label} aria-disabled="true" className={className}>
+                {content}
+              </span>
+            );
+          }
+
+          return (
+            <Link key={item.label} href={item.href} aria-label={item.label} className={className}>
+              {content}
+            </Link>
+          );
+        })}
       </nav>
     </div>
   );

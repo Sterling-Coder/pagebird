@@ -1,4 +1,5 @@
-import type { TranslateResult } from "@/lib/translate";
+import type { Segment, TranslateResult } from "@/lib/translate";
+import { SyncedDocumentPair } from "./PdfPreview";
 
 type Status = "idle" | "translating" | "error" | "done";
 
@@ -6,12 +7,14 @@ export function OutputPane({
   status,
   result,
   error,
-  hasFile,
+  file,
+  segments,
 }: {
   status: Status;
   result: TranslateResult | null;
   error: string | null;
-  hasFile: boolean;
+  file: File | null;
+  segments: Segment[];
 }) {
   return (
     <div className="flex min-w-[320px] flex-1 flex-col p-6">
@@ -19,10 +22,16 @@ export function OutputPane({
         Output
       </p>
 
-      <div className="mt-4 flex flex-1 flex-col items-center justify-center border border-rule bg-paper-dim p-8 text-center">
+      <div
+        className={`mt-4 flex min-h-0 flex-1 flex-col border border-rule bg-paper-dim ${
+          status === "done" && result?.previewUrl
+            ? ""
+            : "items-center justify-center p-8 text-center"
+        }`}
+      >
         {status === "idle" ? (
           <p className="font-mono text-[12px] uppercase tracking-widest text-muted">
-            {hasFile
+            {file
               ? "Ready — press translate"
               : "Upload a document to see the translation here"}
           </p>
@@ -37,30 +46,42 @@ export function OutputPane({
         {status === "error" ? (
           <div className="max-w-sm">
             <p className="font-mono text-[11px] uppercase tracking-widest text-red">
-              Backend not connected
+              Translation failed
             </p>
             <p className="mt-2 text-xs leading-relaxed text-ink-soft">
               {error}
-            </p>
-            <p className="mt-4 font-mono text-[10px] uppercase tracking-widest text-muted">
-              Wire translateDocument() in src/lib/translate.ts
             </p>
           </div>
         ) : null}
 
         {status === "done" && result ? (
-          <div>
-            <p className="font-mono text-[12px] text-ink">
-              {result.translatedFileName}
-            </p>
-            <p className="mt-1 text-xs text-muted">{result.pages} pages</p>
-            <a
-              href={result.downloadUrl}
-              className="mt-4 inline-block bg-ink px-6 py-3 font-mono text-[11px] uppercase tracking-widest text-paper transition-opacity hover:opacity-80"
-            >
-              Download →
-            </a>
-          </div>
+          result.previewUrl && file?.type === "application/pdf" ? (
+            <SyncedDocumentPair
+              source={{ kind: "file", file }}
+              target={{ kind: "url", url: result.previewUrl }}
+              segments={segments}
+              downloadUrl={result.downloadUrl}
+              fileName={result.translatedFileName}
+            />
+          ) : (
+            <div>
+              <p className="font-mono text-[12px] text-ink">
+                {result.translatedFileName}
+              </p>
+              {result.pages !== null ? (
+                <p className="mt-1 text-xs text-muted">{result.pages} pages</p>
+              ) : null}
+              <p className="mt-2 max-w-sm text-xs leading-relaxed text-ink-soft">
+                No inline preview for this file type.
+              </p>
+              <a
+                href={result.downloadUrl}
+                className="mt-4 inline-block bg-ink px-6 py-3 font-mono text-[11px] uppercase tracking-widest text-paper transition-opacity hover:opacity-80"
+              >
+                Download →
+              </a>
+            </div>
+          )
         ) : null}
       </div>
     </div>
