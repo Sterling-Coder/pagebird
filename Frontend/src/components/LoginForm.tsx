@@ -24,6 +24,10 @@ export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [awaitingOtp, setAwaitingOtp] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [verifying, setVerifying] = useState(false);
+  const [resending, setResending] = useState(false);
   const router = useRouter();
 
   async function handleSubmit(event: React.FormEvent) {
@@ -46,19 +50,55 @@ export function LoginForm() {
           },
         });
         if (signUpError) throw signUpError;
-      } else {
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-        if (signInError) throw signInError;
+        setAwaitingOtp(true);
+        return;
       }
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (signInError) throw signInError;
       router.push("/app");
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleVerifyOtp(event: React.FormEvent) {
+    event.preventDefault();
+    setError(null);
+    setVerifying(true);
+    const supabase = createClient();
+    try {
+      const { error: otpError } = await supabase.auth.verifyOtp({
+        email,
+        token: otp,
+        type: "signup",
+      });
+      if (otpError) throw otpError;
+      router.push("/app");
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Invalid or expired code");
+    } finally {
+      setVerifying(false);
+    }
+  }
+
+  async function handleResendOtp() {
+    setError(null);
+    setResending(true);
+    const supabase = createClient();
+    try {
+      const { error: resendError } = await supabase.auth.resend({ type: "signup", email });
+      if (resendError) throw resendError;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to resend code");
+    } finally {
+      setResending(false);
     }
   }
 
@@ -119,23 +159,81 @@ export function LoginForm() {
           page<span className="text-[#e08a6f]">bird</span>
         </span>
 
-        <h1
-          className="mt-10 text-5xl font-medium"
-          style={{ fontFamily: "var(--font-login-display), Georgia, serif" }}
-        >
-          {mode === "login" ? (
-            <>
-              Welcome <span className="text-[#e08a6f] italic">back.</span>
-            </>
-          ) : (
-            <>
-              Get <span className="text-[#e08a6f] italic">started.</span>
-            </>
-          )}
-        </h1>
-        <p className="mt-3 text-[15px] text-[#c9c4b0]">
-          {mode === "signup" ? "14-day free trial, no card required." : "Three ways in."}
-        </p>
+        {awaitingOtp ? (
+          <>
+            <h1
+              className="mt-10 text-5xl font-medium"
+              style={{ fontFamily: "var(--font-login-display), Georgia, serif" }}
+            >
+              Check your <span className="text-[#e08a6f] italic">email.</span>
+            </h1>
+            <p className="mt-3 text-[15px] text-[#c9c4b0]">
+              We sent a 6-digit code to <span className="font-semibold text-[#f2ede0]">{email}</span>.
+            </p>
+
+            <form onSubmit={handleVerifyOtp} className="mt-10">
+              <label htmlFor="otp" className="text-[11px] font-semibold tracking-widest uppercase">
+                Verification code
+              </label>
+              <input
+                id="otp"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                required
+                maxLength={6}
+                placeholder="000000"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                className="mt-2 w-full rounded-lg border border-[#3d5847] bg-[#1e4536] px-4 py-3 text-center text-lg tracking-[0.5em] text-[#f2ede0] placeholder-[#8fa090] outline-none focus-visible:border-[#e08a6f]"
+              />
+
+              {error ? (
+                <p className="mt-3 text-xs text-[#e08a6f]" role="alert">
+                  {error}
+                </p>
+              ) : null}
+
+              <button
+                type="submit"
+                disabled={verifying || otp.length !== 6}
+                className="mt-4 w-full rounded-full bg-[#e08a6f] px-6 py-3.5 text-sm font-bold text-[#153a2e] transition-opacity hover:opacity-90 disabled:opacity-50"
+              >
+                {verifying ? "Verifying…" : "Verify email"}
+              </button>
+
+              <p className="mt-4 text-center text-xs text-[#c9c4b0]">
+                Didn&rsquo;t get it?{" "}
+                <button
+                  type="button"
+                  onClick={handleResendOtp}
+                  disabled={resending}
+                  className="font-semibold text-[#f2ede0] underline decoration-[#3d5847] underline-offset-4 hover:decoration-[#f2ede0] disabled:opacity-50"
+                >
+                  {resending ? "Sending…" : "Resend code"}
+                </button>
+              </p>
+            </form>
+          </>
+        ) : (
+          <>
+            <h1
+              className="mt-10 text-5xl font-medium"
+              style={{ fontFamily: "var(--font-login-display), Georgia, serif" }}
+            >
+              {mode === "login" ? (
+                <>
+                  Welcome <span className="text-[#e08a6f] italic">back.</span>
+                </>
+              ) : (
+                <>
+                  Get <span className="text-[#e08a6f] italic">started.</span>
+                </>
+              )}
+            </h1>
+            <p className="mt-3 text-[15px] text-[#c9c4b0]">
+              {mode === "signup" ? "14-day free trial, no card required." : "Three ways in."}
+            </p>
 
         <form onSubmit={handleSubmit} className="mt-10">
           {mode === "signup" ? (
@@ -296,6 +394,8 @@ export function LoginForm() {
             </button>
           </div>
         </form>
+          </>
+        )}
       </section>
     </div>
   );

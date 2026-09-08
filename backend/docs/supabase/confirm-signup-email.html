@@ -1,0 +1,43 @@
+<!--
+  Paste into: Supabase Dashboard -> Authentication -> Email Templates -> "Confirm signup"
+  Uses {{ .Token }} (the 6-digit OTP), not {{ .ConfirmationURL }} — the
+  frontend calls supabase.auth.verifyOtp({ email, token, type: "signup" })
+  instead of following a link.
+-->
+<div style="background:#153a2e;padding:40px 20px;font-family:Georgia,serif;">
+  <table role="presentation" width="100%" style="max-width:420px;margin:0 auto;">
+    <tr>
+      <td style="padding-bottom:32px;">
+        <span style="font-style:italic;font-size:28px;color:#f2ede0;">page<span style="color:#e08a6f;">bird</span></span>
+      </td>
+    </tr>
+    <tr>
+      <td style="background:#1e4536;border:1px solid #3d5847;border-radius:12px;padding:36px 32px;">
+        <p style="margin:0 0 8px;font-family:Arial,sans-serif;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#8fa090;">
+          Verify your email
+        </p>
+        <h1 style="margin:0 0 16px;font-family:Georgia,serif;font-weight:500;font-size:28px;color:#f2ede0;">
+          Confirm your <span style="font-style:italic;color:#e08a6f;">account.</span>
+        </h1>
+        <p style="margin:0 0 28px;font-family:Arial,sans-serif;font-size:14px;line-height:1.6;color:#c9c4b0;">
+          Enter this code in Pagebird to finish creating your account. It expires in 1 hour.
+        </p>
+        <div style="background:#153a2e;border:1px solid #3d5847;border-radius:8px;padding:20px;text-align:center;">
+          <span style="font-family:'Courier New',monospace;font-size:32px;font-weight:700;letter-spacing:.4em;color:#f2ede0;">
+            {{ .Token }}
+          </span>
+        </div>
+        <p style="margin:24px 0 0;font-family:Arial,sans-serif;font-size:12px;line-height:1.6;color:#8fa090;">
+          Didn&rsquo;t sign up for Pagebird? You can safely ignore this email.
+        </p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding-top:24px;text-align:center;">
+        <span style="font-family:Arial,sans-serif;font-size:11px;letter-spacing:.05em;color:#5a6f63;">
+          © Pagebird
+        </span>
+      </td>
+    </tr>
+  </table>
+</div>
