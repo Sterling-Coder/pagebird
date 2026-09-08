@@ -117,7 +117,7 @@ def get_or_create_profile(user: dict) -> dict:
 
     resp = requests.get(
         f"{_SUPABASE_URL}/rest/v1/profiles",
-        params={"id": f"eq.{user['id']}", "select": "email,created_at,trial_ends_at"},
+        params={"id": f"eq.{user['id']}", "select": "email,created_at,trial_ends_at,first_name,last_name,full_name"},
         headers=_service_headers(),
         timeout=10,
     )

@@ -11,6 +11,7 @@ type Profile = {
   email: string | null;
   createdAt: string | null;
   trialEndsAt: string | null;
+  fullName: string | null;
 };
 
 export default function AccountSettingsPage() {
@@ -26,9 +27,10 @@ export default function AccountSettingsPage() {
           email: me.email,
           createdAt: me.created_at,
           trialEndsAt: me.trial_ends_at,
+          fullName: me.full_name,
         })
       )
-      .catch(() => setProfile({ email: null, createdAt: null, trialEndsAt: null }));
+      .catch(() => setProfile({ email: null, createdAt: null, trialEndsAt: null, fullName: null }));
   }, []);
 
   async function handleSignOut() {
@@ -56,10 +58,15 @@ export default function AccountSettingsPage() {
               <div className="flex flex-col gap-6">
                 <div className="flex items-center gap-4 border border-rule bg-paper-dim p-5">
                   <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-red font-mono text-lg font-bold text-paper">
-                    {profile.email?.[0]?.toUpperCase() ?? "?"}
+                    {(profile.fullName || profile.email)?.[0]?.toUpperCase() ?? "?"}
                   </div>
                   <div>
-                    <p className="text-sm font-semibold text-ink">{profile.email}</p>
+                    <p className="text-sm font-semibold text-ink">
+                      {profile.fullName || profile.email}
+                    </p>
+                    {profile.fullName ? (
+                      <p className="text-xs text-muted">{profile.email}</p>
+                    ) : null}
                     {profile.createdAt ? (
                       <p className="mt-0.5 text-xs text-muted">
                         Member since {new Date(profile.createdAt).toLocaleDateString()}

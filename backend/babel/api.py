@@ -762,6 +762,9 @@ def get_me(user: dict = Depends(require_user)) -> dict:
         "email": profile.get("email") or user.get("email"),
         "created_at": profile.get("created_at"),
         "trial_ends_at": profile.get("trial_ends_at"),
+        "first_name": profile.get("first_name"),
+        "last_name": profile.get("last_name"),
+        "full_name": profile.get("full_name"),
     }
 
 

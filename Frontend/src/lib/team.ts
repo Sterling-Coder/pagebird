@@ -6,6 +6,9 @@ export type Me = {
   email: string | null;
   created_at: string | null;
   trial_ends_at: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  full_name: string | null;
 };
 
 export type TeamMember = {

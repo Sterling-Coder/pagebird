@@ -17,6 +17,8 @@ type Mode = "login" | "signup";
 
 export function LoginForm() {
   const [mode, setMode] = useState<Mode>("login");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -32,7 +34,17 @@ export function LoginForm() {
 
     try {
       if (mode === "signup") {
-        const { error: signUpError } = await supabase.auth.signUp({ email, password });
+        const { error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              first_name: firstName,
+              last_name: lastName,
+              full_name: `${firstName} ${lastName}`.trim(),
+            },
+          },
+        });
         if (signUpError) throw signUpError;
       } else {
         const { error: signInError } = await supabase.auth.signInWithPassword({
@@ -126,6 +138,41 @@ export function LoginForm() {
         </p>
 
         <form onSubmit={handleSubmit} className="mt-10">
+          {mode === "signup" ? (
+            <div className="mb-5 grid grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="firstName" className="text-[11px] font-semibold tracking-widest uppercase">
+                  First name
+                </label>
+                <input
+                  id="firstName"
+                  type="text"
+                  autoComplete="given-name"
+                  required
+                  placeholder="Jane"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  className="mt-2 w-full rounded-lg border border-[#3d5847] bg-[#1e4536] px-4 py-3 text-sm text-[#f2ede0] placeholder-[#8fa090] outline-none focus-visible:border-[#e08a6f]"
+                />
+              </div>
+              <div>
+                <label htmlFor="lastName" className="text-[11px] font-semibold tracking-widest uppercase">
+                  Last name
+                </label>
+                <input
+                  id="lastName"
+                  type="text"
+                  autoComplete="family-name"
+                  required
+                  placeholder="Doe"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  className="mt-2 w-full rounded-lg border border-[#3d5847] bg-[#1e4536] px-4 py-3 text-sm text-[#f2ede0] placeholder-[#8fa090] outline-none focus-visible:border-[#e08a6f]"
+                />
+              </div>
+            </div>
+          ) : null}
+
           <label htmlFor="email" className="text-[11px] font-semibold tracking-widest uppercase">
             Email
           </label>
