@@ -765,41 +765,54 @@ def get_me(user: dict = Depends(require_user)) -> dict:
     }
 
 
+
+class TeamAccept(BaseModel):
+    owner_id: str
+
+
+def _team_headers() -> dict:
+    service_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+    return {"apikey": service_key, "Authorization": f"Bearer {service_key}"}
+
+
 @app.get("/api/team")
 def list_team(user: dict = Depends(require_user)) -> dict:
-    """Everyone in the caller's workspace: people they've invited (as
-    owner), and — if they were invited by someone else — that owner."""
-    headers = {
-        "apikey": os.environ.get("SUPABASE_SERVICE_ROLE_KEY", ""),
-        "Authorization": f"Bearer {os.environ.get('SUPABASE_SERVICE_ROLE_KEY', '')}",
-    }
+    """The caller's workspace: people they've invited (any status — pending
+    shows as "invited, not yet accepted"), the pending invites addressed to
+    them, and the accepted owner(s) whose workspace they're actually in."""
     base = os.environ.get("SUPABASE_URL", "").rstrip("/")
+    headers = _team_headers()
 
     invited = requests.get(
         f"{base}/rest/v1/team_members",
-        params={"owner_id": f"eq.{user['id']}", "select": "member_id,email,created_at"},
+        params={"owner_id": f"eq.{user['id']}", "select": "member_id,email,status,created_at"},
         headers=headers, timeout=10,
     )
     invited.raise_for_status()
 
-    invited_by = requests.get(
+    involving_me = requests.get(
         f"{base}/rest/v1/team_members",
-        params={"member_id": f"eq.{user['id']}", "select": "owner_id,email,created_at"},
+        params={"member_id": f"eq.{user['id']}", "select": "owner_id,email,status,created_at"},
         headers=headers, timeout=10,
     )
-    invited_by.raise_for_status()
+    involving_me.raise_for_status()
+    involving_me_rows = involving_me.json()
 
     return {
         "members": invited.json(),
-        "owner": (invited_by.json() or [None])[0],
+        "pending_invitations": [r for r in involving_me_rows if r["status"] == "pending"],
+        "workspaces": [r for r in involving_me_rows if r["status"] == "accepted"],
     }
 
 
 @app.post("/api/team/invite")
 def invite_team_member(body: TeamInvite, user: dict = Depends(require_user)) -> dict:
+    """Creates a *pending* invite — grants no access until the invitee
+    explicitly accepts it via POST /api/team/accept. Anyone could otherwise
+    add an arbitrary email and (previously) get standing access to that
+    person's data without their consent."""
     base = os.environ.get("SUPABASE_URL", "").rstrip("/")
-    service_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
-    headers = {"apikey": service_key, "Authorization": f"Bearer {service_key}"}
+    headers = _team_headers()
     frontend_origin = _frontend_origins[0] if _frontend_origins else None
 
     resp = requests.post(
@@ -814,7 +827,7 @@ def invite_team_member(body: TeamInvite, user: dict = Depends(require_user)) -> 
         member_id = resp.json()["id"]
     else:
         # Already-registered users can't be re-invited by email — look them
-        # up and add directly instead of erroring.
+        # up so we can still record the (still-pending) invite.
         lookup = requests.get(
             f"{base}/auth/v1/admin/users", params={"email": body.email},
             headers=headers, timeout=10,
@@ -828,7 +841,10 @@ def invite_team_member(body: TeamInvite, user: dict = Depends(require_user)) -> 
     upsert = requests.post(
         f"{base}/rest/v1/team_members",
         params={"on_conflict": "owner_id,member_id"},
-        json={"owner_id": user["id"], "member_id": member_id, "email": body.email},
+        json={
+            "owner_id": user["id"], "member_id": member_id, "email": body.email,
+            "status": "pending",
+        },
         headers={**headers, "Prefer": "resolution=merge-duplicates"},
         timeout=10,
     )
@@ -836,15 +852,48 @@ def invite_team_member(body: TeamInvite, user: dict = Depends(require_user)) -> 
     return {"ok": True}
 
 
-@app.delete("/api/team/{member_id}")
-def remove_team_member(member_id: str, user: dict = Depends(require_user)) -> dict:
+@app.post("/api/team/accept")
+def accept_team_invite(body: TeamAccept, user: dict = Depends(require_user)) -> dict:
+    """The invitee accepts — only now does the owner's workspace become
+    visible to them. Scoped to member_id = the caller, so you can only
+    accept invites actually addressed to you."""
     base = os.environ.get("SUPABASE_URL", "").rstrip("/")
-    service_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+    resp = requests.patch(
+        f"{base}/rest/v1/team_members",
+        params={"owner_id": f"eq.{body.owner_id}", "member_id": f"eq.{user['id']}"},
+        json={"status": "accepted"},
+        headers=_team_headers(), timeout=10,
+    )
+    resp.raise_for_status()
+    return {"ok": True}
+
+
+@app.post("/api/team/decline")
+def decline_team_invite(body: TeamAccept, user: dict = Depends(require_user)) -> dict:
+    base = os.environ.get("SUPABASE_URL", "").rstrip("/")
     resp = requests.delete(
         f"{base}/rest/v1/team_members",
-        params={"owner_id": f"eq.{user['id']}", "member_id": f"eq.{member_id}"},
-        headers={"apikey": service_key, "Authorization": f"Bearer {service_key}"},
-        timeout=10,
+        params={"owner_id": f"eq.{body.owner_id}", "member_id": f"eq.{user['id']}"},
+        headers=_team_headers(), timeout=10,
+    )
+    resp.raise_for_status()
+    return {"ok": True}
+
+
+@app.delete("/api/team/{other_user_id}")
+def remove_team_member(other_user_id: str, user: dict = Depends(require_user)) -> dict:
+    """Removes the relationship in either direction: an owner removing a
+    member, or a member leaving a workspace they'd joined."""
+    base = os.environ.get("SUPABASE_URL", "").rstrip("/")
+    resp = requests.delete(
+        f"{base}/rest/v1/team_members",
+        params={
+            "or": (
+                f"(and(owner_id.eq.{user['id']},member_id.eq.{other_user_id}),"
+                f"and(owner_id.eq.{other_user_id},member_id.eq.{user['id']}))"
+            ),
+        },
+        headers=_team_headers(), timeout=10,
     )
     resp.raise_for_status()
     return {"ok": True}

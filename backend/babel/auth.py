@@ -147,27 +147,21 @@ def require_trial_active(user: dict) -> None:
 
 def effective_owner_ids(user_id: str) -> list[str]:
     """The set of user ids whose projects `user_id` may access: themselves,
-    whoever invited them onto a team, and whoever they've invited onto
-    theirs — invites are full-access and bidirectional within a team."""
+    plus anyone who invited them and whose invite they've accepted.
+
+    One-directional and consent-gated: accepting an invite lets you see the
+    *owner's* projects — it does not give the owner access to yours. A
+    pending (not yet accepted) invite grants nothing."""
     if not _SUPABASE_URL or not _SUPABASE_SERVICE_ROLE_KEY:
         raise HTTPException(status_code=500, detail="Supabase is not configured on the server")
 
-    as_member = requests.get(
+    resp = requests.get(
         f"{_SUPABASE_URL}/rest/v1/team_members",
-        params={"member_id": f"eq.{user_id}", "select": "owner_id"},
+        params={"member_id": f"eq.{user_id}", "status": "eq.accepted", "select": "owner_id"},
         headers=_service_headers(),
         timeout=10,
     )
-    as_member.raise_for_status()
-    as_owner = requests.get(
-        f"{_SUPABASE_URL}/rest/v1/team_members",
-        params={"owner_id": f"eq.{user_id}", "select": "member_id"},
-        headers=_service_headers(),
-        timeout=10,
-    )
-    as_owner.raise_for_status()
-
-    ids = {row["owner_id"] for row in as_member.json()}
-    ids |= {row["member_id"] for row in as_owner.json()}
+    resp.raise_for_status()
+    ids = {row["owner_id"] for row in resp.json()}
     ids.add(user_id)
     return list(ids)
