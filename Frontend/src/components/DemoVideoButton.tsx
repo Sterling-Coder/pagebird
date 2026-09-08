@@ -35,7 +35,7 @@ export function DemoVideoButton() {
           onClick={() => setOpen(false)}
         >
           <div
-            className="relative w-full max-w-3xl border-[3px] border-pb-ink bg-black shadow-[10px_10px_0_var(--color-pb-accent)]"
+            className="relative max-h-[85vh] max-w-3xl border-[3px] border-pb-ink bg-black shadow-[10px_10px_0_var(--color-pb-accent)]"
             onClick={(e) => e.stopPropagation()}
           >
             <button
@@ -47,7 +47,7 @@ export function DemoVideoButton() {
               ✕
             </button>
             <video
-              className="aspect-video w-full"
+              className="block max-h-[85vh] max-w-full"
               src="/how-it-works.mp4"
               controls
               autoPlay
