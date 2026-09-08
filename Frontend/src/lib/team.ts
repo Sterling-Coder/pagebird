@@ -11,13 +11,41 @@ export type Me = {
 export type TeamMember = {
   member_id: string;
   email: string;
+  status: "pending" | "accepted";
+  created_at: number;
+};
+
+export type PendingInvitation = {
+  owner_id: string;
+  email: string;
+  status: "pending";
+  created_at: number;
+};
+
+export type Workspace = {
+  owner_id: string;
+  email: string;
+  status: "accepted";
   created_at: number;
 };
 
 export type TeamInfo = {
   members: TeamMember[];
-  owner: { owner_id: string; email: string; created_at: number } | null;
+  pending_invitations: PendingInvitation[];
+  workspaces: Workspace[];
 };
+
+async function post(path: string, body: unknown) {
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...(await authHeaders()) },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const errBody = await res.json().catch(() => null);
+    throw new Error(errBody?.detail ?? `Request failed (${res.status})`);
+  }
+}
 
 export async function getMe(): Promise<Me> {
   const res = await fetch(`${API_BASE_URL}/api/me`, { headers: await authHeaders() });
@@ -32,21 +60,21 @@ export async function getTeam(): Promise<TeamInfo> {
 }
 
 export async function inviteTeamMember(email: string): Promise<void> {
-  const res = await fetch(`${API_BASE_URL}/api/team/invite`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...(await authHeaders()) },
-    body: JSON.stringify({ email }),
-  });
-  if (!res.ok) {
-    const body = await res.json().catch(() => null);
-    throw new Error(body?.detail ?? `Invite failed (${res.status})`);
-  }
+  await post("/api/team/invite", { email });
 }
 
-export async function removeTeamMember(memberId: string): Promise<void> {
-  const res = await fetch(`${API_BASE_URL}/api/team/${memberId}`, {
+export async function acceptTeamInvite(ownerId: string): Promise<void> {
+  await post("/api/team/accept", { owner_id: ownerId });
+}
+
+export async function declineTeamInvite(ownerId: string): Promise<void> {
+  await post("/api/team/decline", { owner_id: ownerId });
+}
+
+export async function removeTeamMember(otherUserId: string): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/api/team/${otherUserId}`, {
     method: "DELETE",
     headers: await authHeaders(),
   });
-  if (!res.ok) throw new Error(`Failed to remove member (${res.status})`);
+  if (!res.ok) throw new Error(`Failed to remove (${res.status})`);
 }

@@ -19,6 +19,7 @@ export function LoginForm() {
   const [mode, setMode] = useState<Mode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -142,17 +143,37 @@ export function LoginForm() {
           <label htmlFor="password" className="mt-5 block text-[11px] font-semibold tracking-widest uppercase">
             Password
           </label>
-          <input
-            id="password"
-            type="password"
-            autoComplete={mode === "login" ? "current-password" : "new-password"}
-            required
-            minLength={6}
-            placeholder="••••••••"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="mt-2 w-full rounded-lg border border-[#3d5847] bg-[#1e4536] px-4 py-3 text-sm text-[#f2ede0] placeholder-[#8fa090] outline-none focus-visible:border-[#e08a6f]"
-          />
+          <div className="relative mt-2">
+            <input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              autoComplete={mode === "login" ? "current-password" : "new-password"}
+              required
+              minLength={6}
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full rounded-lg border border-[#3d5847] bg-[#1e4536] px-4 py-3 pr-11 text-sm text-[#f2ede0] placeholder-[#8fa090] outline-none focus-visible:border-[#e08a6f]"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-[#8fa090] hover:text-[#f2ede0]"
+            >
+              {showPassword ? (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="h-4 w-4">
+                  <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+                  <path d="M9.5 4.5 3 21M14.5 3 8 19.5" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="h-4 w-4">
+                  <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              )}
+            </button>
+          </div>
 
           {error ? (
             <p className="mt-3 text-xs text-[#e08a6f]" role="alert">

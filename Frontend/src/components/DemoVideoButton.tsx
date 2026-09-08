@@ -42,7 +42,7 @@ export function DemoVideoButton() {
               type="button"
               onClick={() => setOpen(false)}
               aria-label="Close video"
-              className="font-pb-mono-brand absolute -top-11 right-0 flex h-8 w-8 items-center justify-center border-2 border-pb-paper text-pb-paper hover:bg-pb-paper hover:text-pb-ink"
+              className="font-pb-mono-brand absolute -top-11 right-0 flex h-8 w-8 items-center justify-center border-2 border-[#f2ede0] text-[#f2ede0] hover:bg-[#f2ede0] hover:text-[#153a2e]"
             >
               ✕
             </button>

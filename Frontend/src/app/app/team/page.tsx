@@ -3,7 +3,14 @@
 import { useEffect, useState } from "react";
 import { AppNavRail } from "@/components/app/AppNavRail";
 import { AppTopBar } from "@/components/app/AppTopBar";
-import { getTeam, inviteTeamMember, removeTeamMember, type TeamInfo } from "@/lib/team";
+import {
+  acceptTeamInvite,
+  declineTeamInvite,
+  getTeam,
+  inviteTeamMember,
+  removeTeamMember,
+  type TeamInfo,
+} from "@/lib/team";
 
 export default function TeamPage() {
   const [navOpen, setNavOpen] = useState(true);
@@ -11,12 +18,12 @@ export default function TeamPage() {
   const [email, setEmail] = useState("");
   const [inviting, setInviting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [removingId, setRemovingId] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   function refresh() {
     return getTeam()
       .then(setTeam)
-      .catch(() => setTeam({ members: [], owner: null }));
+      .catch(() => setTeam({ members: [], pending_invitations: [], workspaces: [] }));
   }
 
   useEffect(() => {
@@ -38,13 +45,33 @@ export default function TeamPage() {
     }
   }
 
-  async function handleRemove(memberId: string) {
-    setRemovingId(memberId);
+  async function handleAccept(ownerId: string) {
+    setBusyId(ownerId);
     try {
-      await removeTeamMember(memberId);
+      await acceptTeamInvite(ownerId);
       await refresh();
     } finally {
-      setRemovingId(null);
+      setBusyId(null);
+    }
+  }
+
+  async function handleDecline(ownerId: string) {
+    setBusyId(ownerId);
+    try {
+      await declineTeamInvite(ownerId);
+      await refresh();
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function handleRemove(otherUserId: string) {
+    setBusyId(otherUserId);
+    try {
+      await removeTeamMember(otherUserId);
+      await refresh();
+    } finally {
+      setBusyId(null);
     }
   }
 
@@ -57,14 +84,65 @@ export default function TeamPage() {
           <div className="w-full max-w-xl">
             <h1 className="mb-1 text-lg font-bold text-ink">Team</h1>
             <p className="mb-6 text-sm text-muted">
-              Invite people to work in your workspace — they&rsquo;ll see and translate the
-              same projects you do.
+              Invite people to work in your workspace — once they accept, they&rsquo;ll see
+              and translate the same projects you do.
             </p>
 
-            {team?.owner ? (
-              <div className="mb-6 border border-rule bg-paper-dim px-4 py-3 text-sm text-ink-soft">
-                You&rsquo;re a member of <span className="font-semibold text-ink">{team.owner.email}</span>&rsquo;s
-                workspace.
+            {team && team.pending_invitations.length > 0 ? (
+              <div className="mb-6 flex flex-col gap-2">
+                {team.pending_invitations.map((inv) => (
+                  <div
+                    key={inv.owner_id}
+                    className="flex items-center justify-between border border-red bg-red-dim/40 px-4 py-3 text-sm"
+                  >
+                    <span className="text-ink">
+                      <span className="font-semibold">{inv.email}</span> invited you to their
+                      workspace.
+                    </span>
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => handleAccept(inv.owner_id)}
+                        disabled={busyId === inv.owner_id}
+                        className="bg-red px-3 py-1.5 font-mono text-[11px] uppercase tracking-widest text-paper hover:opacity-90 disabled:opacity-40"
+                      >
+                        Accept
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDecline(inv.owner_id)}
+                        disabled={busyId === inv.owner_id}
+                        className="font-mono text-[11px] uppercase tracking-widest text-ink-soft underline decoration-rule underline-offset-4 hover:decoration-ink disabled:opacity-40"
+                      >
+                        Decline
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            {team && team.workspaces.length > 0 ? (
+              <div className="mb-6 flex flex-col gap-2">
+                {team.workspaces.map((w) => (
+                  <div
+                    key={w.owner_id}
+                    className="flex items-center justify-between border border-rule bg-paper-dim px-4 py-3 text-sm"
+                  >
+                    <span className="text-ink-soft">
+                      You&rsquo;re a member of <span className="font-semibold text-ink">{w.email}</span>&rsquo;s
+                      workspace.
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemove(w.owner_id)}
+                      disabled={busyId === w.owner_id}
+                      className="font-mono text-[11px] uppercase tracking-widest text-ink-soft underline decoration-rule underline-offset-4 hover:decoration-ink disabled:opacity-40"
+                    >
+                      {busyId === w.owner_id ? "Leaving…" : "Leave"}
+                    </button>
+                  </div>
+                ))}
               </div>
             ) : null}
 
@@ -100,7 +178,7 @@ export default function TeamPage() {
 
             <div className="border border-rule">
               <div className="border-b border-rule px-4 py-2.5 font-mono text-[11px] font-bold uppercase tracking-widest text-muted">
-                Members
+                People you&rsquo;ve invited
               </div>
               {!team || team.members.length === 0 ? (
                 <p className="px-4 py-6 text-center text-sm text-muted">
@@ -112,14 +190,21 @@ export default function TeamPage() {
                     key={m.member_id}
                     className="flex items-center justify-between border-b border-rule px-4 py-3 text-sm last:border-b-0"
                   >
-                    <span className="text-ink">{m.email}</span>
+                    <span className="text-ink">
+                      {m.email}{" "}
+                      {m.status === "pending" ? (
+                        <span className="ml-1 font-mono text-[10px] uppercase tracking-widest text-muted">
+                          pending
+                        </span>
+                      ) : null}
+                    </span>
                     <button
                       type="button"
                       onClick={() => handleRemove(m.member_id)}
-                      disabled={removingId === m.member_id}
+                      disabled={busyId === m.member_id}
                       className="font-mono text-[11px] uppercase tracking-widest text-ink-soft underline decoration-rule underline-offset-4 hover:decoration-ink disabled:opacity-40"
                     >
-                      {removingId === m.member_id ? "Removing…" : "Remove"}
+                      {busyId === m.member_id ? "Removing…" : "Remove"}
                     </button>
                   </div>
                 ))
