@@ -47,32 +47,35 @@ export default function ProductPage() {
       {/* WORKSPACE SCREENSHOT — mirrors the real /app workspace layout */}
       <section className="border-b-[3px] border-pb-ink px-6 py-14 md:px-14">
         <div className="border-[3px] border-pb-ink shadow-[14px_14px_0_var(--color-pb-accent)]">
-          <div className="flex items-center gap-2.5 border-b-[3px] border-pb-ink bg-white px-5 py-3.5">
-            <span className="font-pb-mono-brand text-[11.5px] text-pb-faint">
+          <div className="flex items-center gap-2.5 border-b-[3px] border-pb-card-ink bg-white px-5 py-3.5">
+            <span className="font-pb-mono-brand text-[11.5px] text-pb-card-faint">
               app.pagebird.com/jobs/q3-investor-deck
             </span>
           </div>
           <div className="flex h-auto flex-col bg-white md:h-[460px] md:flex-row">
             {/* nav rail */}
-            <div className="hidden w-44 shrink-0 flex-col gap-1 border-r-[3px] border-pb-ink bg-[#f6f4ea] p-4 md:flex">
-              <span className="font-pb-display px-1 pb-4 text-lg italic">
+            <div className="hidden w-44 shrink-0 flex-col gap-1 border-r-[3px] border-pb-card-ink bg-[#f6f4ea] p-4 md:flex">
+              <span
+                className="text-pb-card-ink px-1 pb-4 text-lg italic"
+                style={{ fontFamily: "var(--font-fraunces), Georgia, serif" }}
+              >
                 page<span className="text-pb-accent">bird</span>
               </span>
-              <span className="flex items-center gap-2.5 border-l-[3px] border-pb-accent bg-white px-2.5 py-2 text-[13px] font-semibold">
+              <span className="text-pb-card-ink flex items-center gap-2.5 border-l-[3px] border-pb-accent bg-white px-2.5 py-2 text-[13px] font-semibold">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="h-4 w-4">
                   <path d="M6 2h9l5 5v15H6z" />
                   <path d="M15 2v5h5" />
                 </svg>
                 Jobs
               </span>
-              <span className="flex items-center gap-2.5 px-2.5 py-2 text-[13px] text-pb-faint">
+              <span className="text-pb-card-faint flex items-center gap-2.5 px-2.5 py-2 text-[13px]">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="h-4 w-4">
                   <circle cx="9" cy="8" r="3" />
                   <path d="M2 21c0-3.9 3.1-7 7-7s7 3.1 7 7" />
                 </svg>
                 Team
               </span>
-              <span className="flex items-center gap-2.5 px-2.5 py-2 text-[13px] text-pb-faint">
+              <span className="text-pb-card-faint flex items-center gap-2.5 px-2.5 py-2 text-[13px]">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="h-4 w-4">
                   <circle cx="12" cy="12" r="3" />
                   <path d="M19.4 15a1.7 1.7 0 0 0 1.9 2l.1.1a2 2 0 1 1-2.8 2.8" />
@@ -83,8 +86,8 @@ export default function ProductPage() {
 
             <div className="flex flex-1 flex-col">
               {/* top bar */}
-              <div className="flex items-center justify-between border-b-[3px] border-pb-ink px-5 py-3">
-                <span className="font-pb-mono-brand text-[11px] tracking-widest text-pb-faint uppercase">
+              <div className="flex items-center justify-between border-b-[3px] border-pb-card-ink px-5 py-3">
+                <span className="font-pb-mono-brand text-pb-card-faint text-[11px] tracking-widest uppercase">
                   Q3 Investor Deck · 日本語
                 </span>
                 <span className="font-pb-mono-brand rounded-none bg-pb-accent px-2 py-1 text-[10px] font-bold tracking-widest text-white uppercase">
@@ -94,11 +97,11 @@ export default function ProductPage() {
 
               <div className="flex flex-1 flex-col md:flex-row">
                 {/* source pane */}
-                <div className="flex flex-1 flex-col gap-3 border-b-[3px] border-pb-ink p-6 md:border-r-[3px] md:border-b-0">
-                  <span className="font-pb-mono-brand text-[11px] font-bold text-pb-faint uppercase">
+                <div className="flex flex-1 flex-col gap-3 border-b-[3px] border-pb-card-ink p-6 md:border-r-[3px] md:border-b-0">
+                  <span className="font-pb-mono-brand text-pb-card-faint text-[11px] font-bold uppercase">
                     Source document
                   </span>
-                  <div className="flex flex-1 flex-col gap-3 overflow-hidden border-2 border-pb-line p-4.5 text-[11.5px] leading-relaxed text-pb-ink">
+                  <div className="text-pb-card-ink flex flex-1 flex-col gap-3 overflow-hidden border-2 border-pb-card-ink/25 p-4.5 text-[11.5px] leading-relaxed">
                     <p className="font-bold">Q3 Investor Update</p>
                     <p>
                       Revenue grew 34% quarter over quarter, driven by expansion in the
@@ -108,7 +111,7 @@ export default function ProductPage() {
                       Northwind Logistics renewed its enterprise agreement for three
                       years, anchoring roughly 18% of Q3 recurring revenue.
                     </p>
-                    <p className="text-pb-faint">
+                    <p className="text-pb-card-faint">
                       Headcount grew from 142 to 168, with new hires concentrated in
                       engineering and customer success.
                     </p>
@@ -120,7 +123,7 @@ export default function ProductPage() {
                   <span className="font-pb-mono-brand text-[11px] font-bold text-pb-accent uppercase">
                     Output — 日本語
                   </span>
-                  <div className="flex flex-1 flex-col gap-3 overflow-hidden border-2 border-pb-accent p-4.5 text-[11.5px] leading-relaxed text-pb-ink">
+                  <div className="text-pb-card-ink flex flex-1 flex-col gap-3 overflow-hidden border-2 border-pb-accent p-4.5 text-[11.5px] leading-relaxed">
                     <p className="font-bold">第3四半期 投資家アップデート</p>
                     <p>
                       収益は前四半期比34%増加し、EMEA地域の拡大と大企業契約の更新が牽引しました。
@@ -129,12 +132,12 @@ export default function ProductPage() {
                       Northwindロジスティクスは3年間のエンタープライズ契約を更新し、
                       第3四半期の経常収益の約18%を占めています。
                     </p>
-                    <p className="animate-pulse bg-[#f3c4b8]/50 text-pb-muted">
+                    <p className="text-pb-card-muted animate-pulse bg-[#f3c4b8]/50">
                       従業員数は142名から168名に増加し、新規採用はエンジニアリングと
                       カスタマーサクセスに集中しました。
                     </p>
                   </div>
-                  <div className="flex items-start gap-2 border-2 border-pb-ink bg-[#fff3e0] px-3.5 py-3">
+                  <div className="text-pb-card-ink flex items-start gap-2 border-2 border-pb-card-ink bg-[#fff3e0] px-3.5 py-3">
                     <span className="font-pb-mono-brand text-[11.5px] leading-relaxed">
                       ⚠ &ldquo;Northwind&rdquo; matched glossary — left untranslated
                     </span>
@@ -147,16 +150,16 @@ export default function ProductPage() {
       </section>
 
       {/* DEEP DIVES */}
-      <section className="border-b-[3px] border-pb-ink">
+      <section className="border-b-[3px] border-pb-ink bg-pb-ink text-pb-paper">
         <div className="grid grid-cols-1 md:grid-cols-3">
           {DEEP_DIVES.map((d, i) => (
             <div
               key={d.n}
-              className={`flex flex-col gap-3.5 p-11 ${i < 2 ? "border-b-[3px] border-pb-ink md:border-r-[3px] md:border-b-0" : ""}`}
+              className={`flex flex-col gap-3.5 p-11 ${i < 2 ? "border-b-[3px] border-pb-card-ink/15 md:border-r-[3px] md:border-b-0" : ""}`}
             >
               <span className="font-pb-display text-4xl text-pb-accent">{d.n}</span>
               <h3 className="text-[19px] font-bold">{d.title}</h3>
-              <p className="text-sm leading-relaxed text-pb-muted">{d.body}</p>
+              <p className="text-pb-card-muted text-sm leading-relaxed">{d.body}</p>
             </div>
           ))}
         </div>

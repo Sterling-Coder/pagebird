@@ -17,7 +17,8 @@ export default function Header() {
     <header className="flex items-center justify-between border-b-[3px] border-pb-ink px-6 py-5 md:px-14">
       <Link
         href="/"
-        className="font-pb-display text-[27px] italic tracking-tight lowercase"
+        className="text-[27px] italic"
+        style={{ fontFamily: "var(--font-fraunces), Georgia, serif" }}
       >
         page<span className="text-pb-accent">bird</span>
       </Link>

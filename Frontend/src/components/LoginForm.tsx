@@ -87,12 +87,12 @@ export function LoginForm() {
         ← Back
       </Link>
 
-      <section className="relative z-10 mx-auto flex w-full max-w-md flex-col px-6 pt-16 pb-24 sm:ml-10 sm:px-0">
+      <section className="relative z-10 mx-auto flex min-h-[calc(100vh-88px)] w-full max-w-md flex-col justify-center px-6 pb-16 sm:px-0">
         <span
           className="text-3xl italic"
           style={{ fontFamily: "var(--font-login-display), Georgia, serif" }}
         >
-          pagebird
+          page<span className="text-[#e08a6f]">bird</span>
         </span>
 
         <h1

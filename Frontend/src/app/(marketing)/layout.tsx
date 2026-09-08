@@ -3,6 +3,7 @@ import { Fraunces, Space_Mono, Inter } from "next/font/google";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { DemoVideoButton } from "@/components/DemoVideoButton";
+import { ParallaxCurves } from "@/components/ParallaxCurves";
 
 export const metadata: Metadata = {
   title: "Pagebird — Document translation that keeps the document",
@@ -13,7 +14,7 @@ export const metadata: Metadata = {
 const fraunces = Fraunces({
   variable: "--font-fraunces",
   subsets: ["latin"],
-  weight: ["600"],
+  weight: ["500", "600"],
   style: ["normal", "italic"],
 });
 
@@ -32,8 +33,10 @@ const inter = Inter({
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
   return (
     <div
-      className={`${fraunces.variable} ${spaceMono.variable} ${inter.variable} flex min-h-full flex-1 flex-col bg-pb-paper text-pb-ink antialiased`}
+      className={`${fraunces.variable} ${spaceMono.variable} ${inter.variable} relative flex min-h-full flex-1 flex-col bg-pb-paper text-pb-ink antialiased`}
     >
+      <ParallaxCurves />
+
       <Header />
       <main className="flex-1">{children}</main>
       <Footer />

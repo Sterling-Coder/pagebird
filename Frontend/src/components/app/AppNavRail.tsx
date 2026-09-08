@@ -2,6 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Fraunces } from "next/font/google";
+
+const fraunces = Fraunces({
+  variable: "--font-navrail-display",
+  subsets: ["latin"],
+  weight: ["600"],
+  style: ["italic"],
+});
 
 const NAV_ITEMS = [
   {
@@ -48,10 +56,13 @@ export function AppNavRail() {
   const pathname = usePathname();
 
   return (
-    <div className="flex w-56 shrink-0 flex-col border-r border-ink bg-paper-dim py-4">
+    <div className="flex w-56 shrink-0 flex-col border-r-[3px] border-[#0f2a20] bg-[#153a2e] py-4">
       <div className="mb-6 px-4">
-        <span className="font-mono text-sm font-black uppercase tracking-widest text-ink">
-          Pagebird
+        <span
+          className={`${fraunces.variable} text-lg italic text-[#f2ede0]`}
+          style={{ fontFamily: "var(--font-navrail-display), Georgia, serif" }}
+        >
+          page<span className="text-[#e08a6f]">bird</span>
         </span>
       </div>
 
@@ -60,15 +71,15 @@ export function AppNavRail() {
           const active = item.enabled && item.isActive(pathname ?? "");
           const className = `relative flex items-center gap-3 px-3 py-2 text-sm transition-colors ${
             active
-              ? "bg-red-dim/40 text-red"
+              ? "bg-[#e08a6f]/15 text-[#e08a6f]"
               : item.enabled
-                ? "text-ink-soft hover:bg-paper hover:text-ink"
-                : "text-ink-soft/40"
+                ? "text-[#c9c4b0] hover:bg-[#1e4536] hover:text-[#f2ede0]"
+                : "text-[#c9c4b0]/40"
           }`;
           const content = (
             <>
               {active ? (
-                <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 bg-red" />
+                <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 bg-[#e08a6f]" />
               ) : null}
               {item.icon}
               <span>{item.label}</span>

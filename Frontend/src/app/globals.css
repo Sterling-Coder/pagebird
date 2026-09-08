@@ -7,7 +7,8 @@
   --ink-soft: #4a463d;
   --muted: #6e6a61;
   --rule: #dad4c7;
-  --red: #d6472c;
+  /* brand accent unified with landing/login's coral */
+  --red: #e08a6f;
   --red-dim: #f2e2dc;
 }
 
@@ -78,12 +79,19 @@ body {
 /* Pagebird marketing site theme — scoped to (marketing) route group via pb- prefix,
    kept separate from the app's --color-* tokens above so /login and /app are unaffected. */
 @theme inline {
-  --color-pb-paper: #edeadc;
-  --color-pb-ink: #14140f;
-  --color-pb-accent: #e8432c;
-  --color-pb-line: #dddac4;
-  --color-pb-muted: #45443c;
-  --color-pb-faint: #8c8877;
+  --color-pb-paper: #153a2e;
+  --color-pb-ink: #f2ede0;
+  --color-pb-accent: #e08a6f;
+  --color-pb-line: #3d5847;
+  --color-pb-muted: #c9c4b0;
+  --color-pb-faint: #8fa090;
+  /* Fixed — always dark, independent of the page theme above. Use these for
+     text sitting on a literal white/cream card (DocMock, step cards, the
+     light pricing tier), never the page-theme pb-ink/muted/faint, which
+     flip with the theme and go invisible on a surface that doesn't. */
+  --color-pb-card-ink: #14140f;
+  --color-pb-card-muted: #45443c;
+  --color-pb-card-faint: #8c8877;
   --font-pb-display: var(--font-fraunces);
   --font-pb-mono-brand: var(--font-space-mono);
   --font-pb-sans: var(--font-inter);

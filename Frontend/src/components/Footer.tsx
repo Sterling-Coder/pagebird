@@ -21,7 +21,10 @@ export default function Footer() {
   return (
     <footer className="px-6 pt-14 pb-8 md:px-14">
       <div className="flex flex-col justify-between gap-10 border-b-[3px] border-pb-ink pb-10 md:flex-row">
-        <span className="font-pb-display text-6xl italic tracking-tight lowercase md:text-8xl">
+        <span
+          className="text-6xl italic md:text-8xl"
+          style={{ fontFamily: "var(--font-fraunces), Georgia, serif" }}
+        >
           page<span className="text-pb-accent">bird</span>
         </span>
         <div className="grid grid-cols-2 gap-10 pt-3 md:grid-cols-4 md:gap-12">

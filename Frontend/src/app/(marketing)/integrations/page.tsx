@@ -94,11 +94,11 @@ export default function IntegrationsPage() {
         </p>
       </section>
 
-      <section className="grid grid-cols-1 border-b-[3px] border-pb-ink sm:grid-cols-2 md:grid-cols-4">
+      <section className="grid grid-cols-1 border-b-[3px] border-pb-ink bg-pb-ink text-pb-paper sm:grid-cols-2 md:grid-cols-4">
         {INTEGRATIONS.map((item, i) => (
           <div
             key={item.title}
-            className={`flex flex-col gap-3 border-pb-ink p-8 ${
+            className={`flex flex-col gap-3 border-pb-card-ink/15 p-8 ${
               i % 4 !== 3 ? "sm:border-r-[3px]" : ""
             } ${i < INTEGRATIONS.length - (INTEGRATIONS.length % 4 || 4) ? "border-b-[3px]" : "border-b-[3px] md:border-b-0"}`}
           >
@@ -115,7 +115,7 @@ export default function IntegrationsPage() {
               {item.icon}
             </svg>
             <h3 className="text-base font-bold">{item.title}</h3>
-            <p className="text-[13px] leading-relaxed text-pb-muted">{item.body}</p>
+            <p className="text-pb-card-muted text-[13px] leading-relaxed">{item.body}</p>
           </div>
         ))}
       </section>

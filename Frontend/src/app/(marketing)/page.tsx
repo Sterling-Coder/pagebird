@@ -147,18 +147,18 @@ function DocMock({
 }) {
   return (
     <div
-      className={`${rotate} ${shadow ? "shadow-[14px_14px_0_var(--color-pb-accent)]" : ""} relative flex h-[420px] w-[320px] flex-col gap-2.5 border-[3px] border-pb-ink bg-white p-6`}
+      className={`${rotate} ${shadow ? "shadow-[14px_14px_0_var(--color-pb-accent)]" : ""} relative flex h-[420px] w-[320px] flex-col gap-2.5 border-[3px] border-pb-card-ink bg-white p-6`}
     >
-      <div className="flex items-center justify-between border-b-[3px] border-pb-ink pb-2.5">
-        <span className="font-pb-display text-sm">{heading}</span>
-        <span className="font-pb-mono-brand text-[8px] text-pb-faint">{meta}</span>
+      <div className="flex items-center justify-between border-b-[3px] border-pb-card-ink/20 pb-2.5">
+        <span className="font-pb-display text-pb-card-ink text-sm">{heading}</span>
+        <span className="font-pb-mono-brand text-pb-card-faint text-[8px]">{meta}</span>
       </div>
-      <span className="h-1 w-[88%] bg-pb-line" />
-      <span className="h-1 w-[96%] bg-pb-line" />
-      <span className="h-1 w-[70%] bg-pb-line" />
+      <span className="h-1 w-[88%] bg-pb-card-ink/15" />
+      <span className="h-1 w-[96%] bg-pb-card-ink/15" />
+      <span className="h-1 w-[70%] bg-pb-card-ink/15" />
       <span className="mt-1.5 h-[60px] bg-[#f3efe5]" />
-      <span className="mt-1.5 h-1 w-[92%] bg-pb-line" />
-      <span className="h-1 w-[64%] bg-pb-line" />
+      <span className="mt-1.5 h-1 w-[92%] bg-pb-card-ink/15" />
+      <span className="h-1 w-[64%] bg-pb-card-ink/15" />
     </div>
   );
 }
@@ -167,7 +167,20 @@ export default function Home() {
   return (
     <>
       {/* HERO */}
-      <section className="border-b-[3px] border-pb-ink px-6 md:px-14">
+      <section className="relative overflow-hidden border-b-[3px] border-pb-ink px-6 md:px-14">
+        <svg
+          className="pointer-events-none absolute inset-0 h-full w-full opacity-40"
+          viewBox="0 0 1600 800"
+          preserveAspectRatio="xMidYMid slice"
+          fill="none"
+          aria-hidden="true"
+        >
+          <path
+            d="M1080 -60 C 1450 120, 1180 380, 1500 650 C 1680 800, 1900 720, 2000 560"
+            stroke="#8a9a5b"
+            strokeWidth="2.5"
+          />
+        </svg>
         <div className="grid grid-cols-1 border-b-[3px] border-pb-ink md:grid-cols-[1.15fr_0.85fr]">
           <div className="flex flex-col justify-center gap-7 border-pb-ink py-14 md:border-r-[3px] md:py-24 md:pr-14">
             <span className="font-pb-mono-brand text-[12.5px] font-bold tracking-widest text-pb-accent uppercase">
@@ -246,8 +259,8 @@ export default function Home() {
       </section>
 
       {/* PROBLEM */}
-      <section className="border-b-[3px] border-pb-ink">
-        <div className="border-b-[3px] border-pb-ink px-6 py-14 md:px-14 md:py-16">
+      <section className="border-b-[3px] border-pb-ink bg-pb-ink text-pb-paper">
+        <div className="border-b-[3px] border-pb-card-ink/15 px-6 py-14 md:px-14 md:py-16">
           <h2 className="font-pb-display max-w-3xl text-4xl md:text-5xl">
             Translating the text is easy. Keeping the document is the hard part.
           </h2>
@@ -256,11 +269,11 @@ export default function Home() {
           {PROBLEMS.map((p, i) => (
             <div
               key={p.n}
-              className={`flex flex-col gap-3.5 p-10 ${i < 2 ? "border-b-[3px] border-pb-ink md:border-r-[3px] md:border-b-0" : ""}`}
+              className={`flex flex-col gap-3.5 p-10 ${i < 2 ? "border-b-[3px] border-pb-card-ink/15 md:border-r-[3px] md:border-b-0" : ""}`}
             >
               <span className="font-pb-display text-5xl text-pb-accent">{p.n}</span>
               <h3 className="text-lg font-bold">{p.title}</h3>
-              <p className="text-sm leading-relaxed text-pb-muted">{p.body}</p>
+              <p className="text-pb-card-muted text-sm leading-relaxed">{p.body}</p>
             </div>
           ))}
         </div>
@@ -284,10 +297,10 @@ export default function Home() {
                 {s.n}
               </span>
               <div
-                className={`flex flex-col gap-2.5 border-[3px] border-pb-ink bg-white p-6 transition-all duration-300 ease-out group-hover:-translate-y-1.5 ${s.accent ? "shadow-[8px_8px_0_var(--color-pb-accent)] group-hover:shadow-[12px_12px_0_var(--color-pb-accent)]" : "group-hover:shadow-[8px_8px_0_var(--color-pb-accent)]"}`}
+                className={`flex flex-col gap-2.5 border-[3px] border-pb-card-ink bg-white p-6 transition-all duration-300 ease-out group-hover:-translate-y-1.5 ${s.accent ? "shadow-[8px_8px_0_var(--color-pb-accent)] group-hover:shadow-[12px_12px_0_var(--color-pb-accent)]" : "group-hover:shadow-[8px_8px_0_var(--color-pb-accent)]"}`}
               >
-                <h3 className="text-[17px] font-bold">{s.title}</h3>
-                <p className="text-[13.5px] leading-relaxed text-pb-muted">{s.body}</p>
+                <h3 className="text-pb-card-ink text-[17px] font-bold">{s.title}</h3>
+                <p className="text-pb-card-muted text-[13.5px] leading-relaxed">{s.body}</p>
               </div>
             </div>
           ))}
@@ -346,15 +359,15 @@ export default function Home() {
           {PLANS.map((plan) => (
             <div
               key={plan.name}
-              className={`flex w-full max-w-75 flex-col gap-4.5 border-[3px] border-pb-ink p-8 ${plan.rotate} ${
+              className={`flex w-full max-w-75 flex-col gap-4.5 border-[3px] p-8 ${plan.rotate} ${
                 plan.variant === "dark"
-                  ? "z-10 bg-pb-ink text-pb-paper shadow-[12px_12px_0_var(--color-pb-accent)]"
-                  : "bg-white"
+                  ? "z-10 border-pb-ink bg-pb-ink text-pb-paper shadow-[12px_12px_0_var(--color-pb-accent)]"
+                  : "border-pb-card-ink bg-white text-pb-card-ink"
               }`}
             >
               <span
                 className={`font-pb-mono-brand text-[11px] font-bold tracking-wide ${
-                  plan.variant === "dark" ? "text-pb-accent" : ""
+                  plan.variant === "dark" ? "text-pb-accent" : "text-pb-card-ink"
                 }`}
               >
                 {plan.name}
@@ -365,13 +378,13 @@ export default function Home() {
                   <span className="font-sans text-sm font-medium">/mo</span>
                 )}
               </span>
-              <p className={`text-[13px] leading-relaxed ${plan.variant === "dark" ? "text-[#a29e8e]" : "text-pb-muted"}`}>
+              <p className={`text-[13px] leading-relaxed ${plan.variant === "dark" ? "text-[#a29e8e]" : "text-pb-card-muted"}`}>
                 {plan.tagline}
               </p>
-              <div className={`h-0.5 ${plan.variant === "dark" ? "bg-[#38372c]" : "bg-pb-ink"}`} />
+              <div className={`h-0.5 ${plan.variant === "dark" ? "bg-[#38372c]" : "bg-pb-card-ink/20"}`} />
               <div
                 className={`flex flex-col gap-2.25 text-[13px] ${
-                  plan.variant === "dark" ? "text-[#c4c0b0]" : "text-pb-muted"
+                  plan.variant === "dark" ? "text-[#c4c0b0]" : "text-pb-card-muted"
                 }`}
               >
                 {plan.features.map((f) => (
@@ -383,7 +396,7 @@ export default function Home() {
                 className={`mt-2 flex h-11.5 items-center justify-center text-[13.5px] font-bold ${
                   plan.variant === "dark"
                     ? "bg-pb-accent text-pb-paper"
-                    : "border-[3px] border-pb-ink"
+                    : "border-[3px] border-pb-card-ink text-pb-card-ink"
                 }`}
               >
                 {plan.cta}
@@ -394,7 +407,7 @@ export default function Home() {
       </section>
 
       {/* TESTIMONIAL */}
-      <section className="border-b-[3px] border-pb-ink px-6 py-18 md:px-14">
+      <section className="border-b-[3px] border-pb-ink bg-pb-ink px-6 py-18 text-pb-paper md:px-14">
         <ScrollReveal className="flex items-start gap-10">
           <span className="font-pb-display text-[80px] leading-[0.7] text-pb-accent md:text-[120px]">
             &ldquo;
