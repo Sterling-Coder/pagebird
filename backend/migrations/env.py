@@ -24,6 +24,10 @@ config = context.config
 # pooler" or "Session pooler" both work; use the pooler one for serverless).
 db_url = os.environ.get("SUPABASE_DB_URL")
 if db_url:
+    # We installed psycopg (v3), but SQLAlchemy's default dialect for a
+    # bare "postgresql://" scheme is psycopg2 — force the v3 driver.
+    if db_url.startswith("postgresql://"):
+        db_url = db_url.replace("postgresql://", "postgresql+psycopg://", 1)
     config.set_main_option("sqlalchemy.url", db_url)
 
 # Interpret the config file for Python logging.
