@@ -33,7 +33,7 @@ from fastapi import Depends, FastAPI, Form, HTTPException, UploadFile, File
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response
-from pydantic import BaseModel
+from pydantic import BaseModel, UUID4
 
 from babel import languages
 from babel.auth import effective_owner_ids, get_or_create_profile, require_trial_active, require_user
@@ -767,7 +767,7 @@ def get_me(user: dict = Depends(require_user)) -> dict:
 
 
 class TeamAccept(BaseModel):
-    owner_id: str
+    owner_id: UUID4
 
 
 def _team_headers() -> dict:
@@ -881,19 +881,25 @@ def decline_team_invite(body: TeamAccept, user: dict = Depends(require_user)) ->
 
 
 @app.delete("/api/team/{other_user_id}")
-def remove_team_member(other_user_id: str, user: dict = Depends(require_user)) -> dict:
+def remove_team_member(other_user_id: UUID4, user: dict = Depends(require_user)) -> dict:
     """Removes the relationship in either direction: an owner removing a
-    member, or a member leaving a workspace they'd joined."""
+    member, or a member leaving a workspace they'd joined.
+
+    Two plain eq. filters rather than one or=(and(...),and(...)) filter —
+    FastAPI's UUID4 path type already rejects anything that isn't a
+    well-formed UUID, but avoiding hand-built PostgREST filter syntax
+    entirely means there's no filter-injection surface to reason about."""
     base = os.environ.get("SUPABASE_URL", "").rstrip("/")
+    headers = _team_headers()
+    requests.delete(
+        f"{base}/rest/v1/team_members",
+        params={"owner_id": f"eq.{user['id']}", "member_id": f"eq.{other_user_id}"},
+        headers=headers, timeout=10,
+    ).raise_for_status()
     resp = requests.delete(
         f"{base}/rest/v1/team_members",
-        params={
-            "or": (
-                f"(and(owner_id.eq.{user['id']},member_id.eq.{other_user_id}),"
-                f"and(owner_id.eq.{other_user_id},member_id.eq.{user['id']}))"
-            ),
-        },
-        headers=_team_headers(), timeout=10,
+        params={"owner_id": f"eq.{other_user_id}", "member_id": f"eq.{user['id']}"},
+        headers=headers, timeout=10,
     )
     resp.raise_for_status()
     return {"ok": True}
