@@ -37,12 +37,20 @@ export default function Header() {
           </Link>
         ))}
       </nav>
-      <Link
-        href="/login"
-        className="flex h-[42px] items-center bg-pb-accent px-5 text-[13.5px] font-bold tracking-wide text-pb-paper uppercase"
-      >
-        Try free
-      </Link>
+      <div className="flex items-center gap-6">
+        <Link
+          href="/login"
+          className="hidden text-[13.5px] font-semibold tracking-wide uppercase hover:text-pb-accent sm:inline"
+        >
+          Log in
+        </Link>
+        <Link
+          href="/login"
+          className="flex h-[42px] items-center bg-pb-accent px-5 text-[13.5px] font-bold tracking-wide text-pb-paper uppercase"
+        >
+          Try free
+        </Link>
+      </div>
     </header>
   );
 }
