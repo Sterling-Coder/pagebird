@@ -26,9 +26,9 @@ const NAV_ITEMS = [
   },
   {
     label: "Team",
-    href: null,
-    enabled: false,
-    isActive: () => false,
+    href: "/app/team",
+    enabled: true,
+    isActive: (path: string) => path === "/app/team",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="h-5 w-5">
         <circle cx="9" cy="8" r="3" />

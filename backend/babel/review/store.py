@@ -174,13 +174,17 @@ class ReviewStore:
 
     # ---- read ----------------------------------------------------------------
 
-    def list_jobs(self, created_by: str | None = None) -> list[dict]:
+    def list_jobs(self, created_by: str | list[str] | None = None) -> list[dict]:
+        if isinstance(created_by, str):
+            created_by = [created_by]
         if created_by is not None:
+            placeholders = ",".join("?" for _ in created_by)
             rows = self.conn.execute(
                 "SELECT id, source, output, created_at, meta_json, original_filename, "
                 "file_hash, file_size, duration_sec, status, error, project_id, job_type, "
-                "folder_id, created_by FROM jobs WHERE created_by = ? ORDER BY created_at DESC",
-                (created_by,),
+                f"folder_id, created_by FROM jobs WHERE created_by IN ({placeholders}) "
+                "ORDER BY created_at DESC",
+                tuple(created_by),
             ).fetchall()
         else:
             rows = self.conn.execute(
@@ -307,11 +311,15 @@ class ReviewStore:
             return None
         return self._project_row_to_dict(row)
 
-    def list_projects(self, created_by: str | None = None) -> list[dict]:
+    def list_projects(self, created_by: str | list[str] | None = None) -> list[dict]:
+        if isinstance(created_by, str):
+            created_by = [created_by]
         if created_by is not None:
+            placeholders = ",".join("?" for _ in created_by)
             rows = self.conn.execute(
-                "SELECT * FROM projects WHERE created_by = ? ORDER BY created_at DESC",
-                (created_by,),
+                f"SELECT * FROM projects WHERE created_by IN ({placeholders}) "
+                "ORDER BY created_at DESC",
+                tuple(created_by),
             ).fetchall()
         else:
             rows = self.conn.execute(

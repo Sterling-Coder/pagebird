@@ -28,6 +28,7 @@ from babel.config import load_env
 
 load_env()
 
+import requests
 from fastapi import Depends, FastAPI, Form, HTTPException, UploadFile, File
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
@@ -35,7 +36,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from pydantic import BaseModel
 
 from babel import languages
-from babel.auth import require_trial_active, require_user
+from babel.auth import effective_owner_ids, get_or_create_profile, require_trial_active, require_user
 from babel.pipeline import rebuild_from_edits, regenerate_idml_from_review, translate_idml, translate_pdf
 from babel.review.store import ReviewStore
 
@@ -117,12 +118,13 @@ def _find_job(job_id: str) -> dict | None:
 
 
 def _assert_owns_project(store: ReviewStore, project_id: str, user: dict) -> dict:
-    """404 if the project doesn't exist, 403 if it belongs to someone else
-    (or predates auth and has no owner — same effect, treated as orphaned)."""
+    """404 if the project doesn't exist, 403 if it belongs to someone outside
+    the caller's team (or predates auth and has no owner — same effect,
+    treated as orphaned)."""
     project = store.get_project(project_id)
     if project is None:
         raise HTTPException(status_code=404, detail="project not found")
-    if project.get("created_by") != user["id"]:
+    if project.get("created_by") not in effective_owner_ids(user["id"]):
         raise HTTPException(status_code=403, detail="not your project")
     return project
 
@@ -137,7 +139,7 @@ def _assert_owns_folder(store: ReviewStore, folder_id: str, user: dict) -> dict:
 
 def _find_owned_job(job_id: str, user: dict) -> dict:
     job = _find_job(job_id)
-    if job is None or job.get("created_by") != user["id"]:
+    if job is None or job.get("created_by") not in effective_owner_ids(user["id"]):
         raise HTTPException(status_code=404, detail="job not found")
     return job
 
@@ -206,7 +208,7 @@ def create_project(body: ProjectCreate, user: dict = Depends(require_user)) -> d
 def list_projects(user: dict = Depends(require_user)) -> list[dict]:
     s = _store()
     try:
-        return s.list_projects(created_by=user["id"])
+        return s.list_projects(created_by=effective_owner_ids(user["id"]))
     finally:
         s.close()
 
@@ -281,7 +283,7 @@ def list_project_files(project_id: str, folder_id: str | None = None,
     s = _store()
     try:
         _assert_owns_project(s, project_id, user)
-        jobs = s.list_jobs(created_by=user["id"])
+        jobs = s.list_jobs(created_by=effective_owner_ids(user["id"]))
     finally:
         s.close()
     if all:
@@ -322,7 +324,7 @@ def get_job_history(job_id: str, user: dict = Depends(require_user)) -> list[dic
 def list_jobs(user: dict = Depends(require_user)) -> list[dict]:
     s = _store()
     try:
-        return s.list_jobs(created_by=user["id"])
+        return s.list_jobs(created_by=effective_owner_ids(user["id"]))
     finally:
         s.close()
 
@@ -743,3 +745,106 @@ def download_output(job_id: str, format: str | None = None, type: str | None = N
     return FileResponse(job["output"], media_type="application/octet-stream",
                         filename=os.path.basename(job["output"]))
 
+
+
+class TeamInvite(BaseModel):
+    email: str
+
+
+@app.get("/api/me")
+def get_me(user: dict = Depends(require_user)) -> dict:
+    """Signed-in user's profile — email, member-since, trial status.
+    Self-heals a missing profile row (accounts created before the trial
+    trigger existed)."""
+    profile = get_or_create_profile(user)
+    return {
+        "id": user["id"],
+        "email": profile.get("email") or user.get("email"),
+        "created_at": profile.get("created_at"),
+        "trial_ends_at": profile.get("trial_ends_at"),
+    }
+
+
+@app.get("/api/team")
+def list_team(user: dict = Depends(require_user)) -> dict:
+    """Everyone in the caller's workspace: people they've invited (as
+    owner), and — if they were invited by someone else — that owner."""
+    headers = {
+        "apikey": os.environ.get("SUPABASE_SERVICE_ROLE_KEY", ""),
+        "Authorization": f"Bearer {os.environ.get('SUPABASE_SERVICE_ROLE_KEY', '')}",
+    }
+    base = os.environ.get("SUPABASE_URL", "").rstrip("/")
+
+    invited = requests.get(
+        f"{base}/rest/v1/team_members",
+        params={"owner_id": f"eq.{user['id']}", "select": "member_id,email,created_at"},
+        headers=headers, timeout=10,
+    )
+    invited.raise_for_status()
+
+    invited_by = requests.get(
+        f"{base}/rest/v1/team_members",
+        params={"member_id": f"eq.{user['id']}", "select": "owner_id,email,created_at"},
+        headers=headers, timeout=10,
+    )
+    invited_by.raise_for_status()
+
+    return {
+        "members": invited.json(),
+        "owner": (invited_by.json() or [None])[0],
+    }
+
+
+@app.post("/api/team/invite")
+def invite_team_member(body: TeamInvite, user: dict = Depends(require_user)) -> dict:
+    base = os.environ.get("SUPABASE_URL", "").rstrip("/")
+    service_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+    headers = {"apikey": service_key, "Authorization": f"Bearer {service_key}"}
+    frontend_origin = _frontend_origins[0] if _frontend_origins else None
+
+    resp = requests.post(
+        f"{base}/auth/v1/invite",
+        json={"email": body.email, "data": {}, **(
+            {"redirect_to": f"{frontend_origin}/auth/callback"} if frontend_origin else {}
+        )},
+        headers=headers, timeout=10,
+    )
+
+    if resp.status_code in (200, 201):
+        member_id = resp.json()["id"]
+    else:
+        # Already-registered users can't be re-invited by email — look them
+        # up and add directly instead of erroring.
+        lookup = requests.get(
+            f"{base}/auth/v1/admin/users", params={"email": body.email},
+            headers=headers, timeout=10,
+        )
+        lookup.raise_for_status()
+        users = lookup.json().get("users", [])
+        if not users:
+            raise HTTPException(status_code=400, detail=resp.json().get("msg", "Invite failed"))
+        member_id = users[0]["id"]
+
+    upsert = requests.post(
+        f"{base}/rest/v1/team_members",
+        params={"on_conflict": "owner_id,member_id"},
+        json={"owner_id": user["id"], "member_id": member_id, "email": body.email},
+        headers={**headers, "Prefer": "resolution=merge-duplicates"},
+        timeout=10,
+    )
+    upsert.raise_for_status()
+    return {"ok": True}
+
+
+@app.delete("/api/team/{member_id}")
+def remove_team_member(member_id: str, user: dict = Depends(require_user)) -> dict:
+    base = os.environ.get("SUPABASE_URL", "").rstrip("/")
+    service_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+    resp = requests.delete(
+        f"{base}/rest/v1/team_members",
+        params={"owner_id": f"eq.{user['id']}", "member_id": f"eq.{member_id}"},
+        headers={"apikey": service_key, "Authorization": f"Bearer {service_key}"},
+        timeout=10,
+    )
+    resp.raise_for_status()
+    return {"ok": True}

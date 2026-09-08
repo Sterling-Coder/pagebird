@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { AppNavRail } from "@/components/app/AppNavRail";
 import { AppTopBar } from "@/components/app/AppTopBar";
 import { createClient } from "@/lib/supabase/client";
+import { getMe } from "@/lib/team";
 
 type Profile = {
   email: string | null;
@@ -19,22 +20,15 @@ export default function AccountSettingsPage() {
   const router = useRouter();
 
   useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => {
-      const user = data.user;
-      if (!user) return;
-      supabase
-        .from("profiles")
-        .select("trial_ends_at")
-        .single()
-        .then(({ data: row }) => {
-          setProfile({
-            email: user.email ?? null,
-            createdAt: user.created_at ?? null,
-            trialEndsAt: row?.trial_ends_at ?? null,
-          });
-        });
-    });
+    getMe()
+      .then((me) =>
+        setProfile({
+          email: me.email,
+          createdAt: me.created_at,
+          trialEndsAt: me.trial_ends_at,
+        })
+      )
+      .catch(() => setProfile({ email: null, createdAt: null, trialEndsAt: null }));
   }, []);
 
   async function handleSignOut() {
