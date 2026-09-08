@@ -13,5 +13,7 @@ out/
 out6/
 *.db
 *.db.bak
+*.db-shm
+*.db-wal
 
 .DS_Store
