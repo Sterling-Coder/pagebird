@@ -25,6 +25,8 @@ export default function AppWorkspacePage() {
 
   useEffect(() => {
     refresh();
+    const pollInterval = setInterval(refresh, 5000);
+    return () => clearInterval(pollInterval);
   }, []);
 
   function toggleSelected(id: string) {

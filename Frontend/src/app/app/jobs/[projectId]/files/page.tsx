@@ -75,16 +75,20 @@ export default function ProjectFilesPage() {
     };
   }, [folderId]);
 
+  // Always poll while this page is open — not just while this tab kicked off
+  // an upload. A reload, a return visit, or an upload started elsewhere all
+  // used to mean the list froze until a manual refresh.
+  useEffect(() => {
+    const pollInterval = setInterval(refresh, 5000);
+    return () => clearInterval(pollInterval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.projectId, folderId]);
+
   useEffect(() => {
     if (inFlight.length === 0) return;
-    const pollInterval = setInterval(refresh, 3000);
     const tickInterval = setInterval(() => setTick((t) => t + 1), 1000);
-    return () => {
-      clearInterval(pollInterval);
-      clearInterval(tickInterval);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inFlight.length, params.projectId, folderId]);
+    return () => clearInterval(tickInterval);
+  }, [inFlight.length]);
 
   useEffect(() => {
     listLanguages()
