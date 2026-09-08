@@ -76,7 +76,7 @@ export default function TeamPage() {
   }
 
   return (
-    <div className="flex min-h-screen w-full bg-paper">
+    <div className="flex h-full w-full bg-paper">
       {navOpen ? <AppNavRail /> : null}
       <div className="flex min-w-0 flex-1 flex-col">
         <AppTopBar navOpen={navOpen} onToggleNav={() => setNavOpen((v) => !v)} breadcrumb="Team" />

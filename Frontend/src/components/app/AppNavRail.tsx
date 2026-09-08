@@ -56,7 +56,7 @@ export function AppNavRail() {
   const pathname = usePathname();
 
   return (
-    <div className="sticky top-0 flex h-screen w-56 shrink-0 flex-col border-r-[3px] border-[#0f2a20] bg-[#153a2e] py-4">
+    <div className="flex h-full w-56 shrink-0 flex-col border-r-[3px] border-[#0f2a20] bg-[#153a2e] py-4">
       <div className="mb-6 px-4">
         <span
           className={`${fraunces.variable} text-lg italic text-[#f2ede0]`}
