@@ -103,11 +103,13 @@ def _script_with_bold(regular: list[str], bold: list[str]) -> dict[str, list[str
 # Real bold faces per script (rather than reusing the regular weight for both):
 # a heading set in Korean or Hebrew comes out visibly bold instead of flat.
 _CJK_SC = _script_with_bold(
-    ["C:/Windows/Fonts/msyh.ttc", "C:/Windows/Fonts/simsun.ttc",
+    ["NotoSansSC-Regular.ttf",
+     "C:/Windows/Fonts/msyh.ttc", "C:/Windows/Fonts/simsun.ttc",
      "/System/Library/Fonts/PingFang.ttc",
      "/System/Library/Fonts/STHeiti Medium.ttc",
      "/System/Library/Fonts/Hiragino Sans GB.ttc"],
-    ["C:/Windows/Fonts/msyhbd.ttc", "C:/Windows/Fonts/simsun.ttc",
+    ["NotoSansSC-Bold.ttf",
+     "C:/Windows/Fonts/msyhbd.ttc", "C:/Windows/Fonts/simsun.ttc",
      "/System/Library/Fonts/PingFang.ttc"],
 )
 _CJK_JP = _script_with_bold(
@@ -120,11 +122,12 @@ _CJK_KR = _script_with_bold(
     ["C:/Windows/Fonts/malgun.ttf", "/System/Library/Fonts/AppleSDGothicNeo.ttc"],
     ["C:/Windows/Fonts/malgunbd.ttf", "/System/Library/Fonts/AppleSDGothicNeo.ttc"],
 )
-# Devanagari and the RTL scripts below lead with a vendored face (see
-# babel/fonts/README.md) so output does not depend on what the host OS happens
-# to have installed. System paths stay as a last resort; `fonts.resolve`
-# always prefers the bundled entry. (CJK/Hangul above still lean on system
-# fonts only — no vendored face for those yet.)
+# Simplified Chinese, Devanagari, and the RTL scripts below lead with a
+# vendored face (see babel/fonts/README.md) so output does not depend on
+# what the host OS happens to have installed. System paths stay as a last
+# resort; `fonts.resolve` always prefers the bundled entry. (Japanese/Korean
+# above still lean on system fonts only — no vendored face for those yet,
+# so they'll hit the same "no installed font" error on a bare Linux host.)
 _DEVANAGARI = _script_with_bold(
     ["NotoSansDevanagari-Regular.ttf", "C:/Windows/Fonts/Nirmala.ttf",
      "/System/Library/Fonts/Supplemental/Devanagari Sangam MN.ttc",
