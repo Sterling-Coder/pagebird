@@ -35,7 +35,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response
 from pydantic import BaseModel, UUID4
 
-from babel import languages
+from babel import languages, storage
 from babel.auth import effective_owner_ids, get_or_create_profile, require_trial_active, require_user
 from babel.pipeline import rebuild_from_edits, regenerate_idml_from_review, translate_idml, translate_pdf
 from babel.review.store import ReviewStore
@@ -144,6 +144,27 @@ def _find_owned_job(job_id: str, user: dict) -> dict:
     return job
 
 
+def _materialize_job_files(job: dict) -> tuple[str, str]:
+    """Downloads a job's current source/output from Storage into a fresh
+    local temp dir. Pipeline functions (rebuild_from_edits,
+    regenerate_idml_from_review) predate Storage and want real files on
+    disk; this lets them run unmodified via their source_path/output_path
+    overrides. Returns (local_source, local_output) — local_output may not
+    exist yet (it's a write target, not necessarily downloaded)."""
+    import tempfile
+
+    tmp_dir = tempfile.mkdtemp(prefix=f"job-{job['id']}-")
+    source_key = str(job.get("source") or "")
+    output_key = str(job.get("output") or "")
+    local_source = os.path.join(tmp_dir, "source" + (os.path.splitext(source_key)[1] or ""))
+    local_output = os.path.join(tmp_dir, "output" + (os.path.splitext(output_key)[1] or ""))
+    if source_key:
+        storage.download_to(source_key, local_source)
+    if output_key:
+        storage.download_to(output_key, local_output)
+    return local_source, local_output
+
+
 def _output_pdf_path(output: str) -> str:
     """The browser-renderable PDF for a job output.
 
@@ -227,9 +248,12 @@ def delete_project(project_id: str, user: dict = Depends(require_user)) -> dict:
     s = _store()
     try:
         _assert_owns_project(s, project_id, user)
+        job_ids = [j["id"] for j in s.list_jobs() if j.get("project_id") == project_id]
         s.delete_project(project_id)
     finally:
         s.close()
+    for jid in job_ids:
+        storage.delete_prefix(f"jobs/{jid}/")
     return {"ok": True}
 
 
@@ -307,6 +331,7 @@ def delete_job(job_id: str, user: dict = Depends(require_user)) -> dict:
         s.delete_job(job_id)
     finally:
         s.close()
+    storage.delete_prefix(f"jobs/{job_id}/")
     return {"ok": True}
 
 
@@ -373,11 +398,20 @@ async def rebuild_job(job_id: str, user: dict = Depends(require_user)) -> dict:
     require_trial_active(user)
 
     is_idml = str(job.get("output", "")).lower().endswith(".idml")
+    output_key = str(job["output"])
 
     def _run() -> str:
+        local_source, local_output = _materialize_job_files(job)
         if is_idml:
-            return regenerate_idml_from_review(job, review_db=_REVIEW_DB)
-        return rebuild_from_edits(job_id, out_dir=_out_dir(), review_db=_REVIEW_DB)
+            regenerate_idml_from_review(
+                job, review_db=_REVIEW_DB, source_path=local_source, output_path=local_output
+            )
+        else:
+            rebuild_from_edits(
+                job_id, review_db=_REVIEW_DB, source_path=local_source, output_path=local_output
+            )
+        storage.upload_file(local_output, output_key)
+        return output_key
 
     try:
         output = await run_in_threadpool(_run)
@@ -658,6 +692,31 @@ async def translate_upload(
             store.close()
         raise HTTPException(status_code=500, detail=f"translation failed: {e}")
 
+    # The pipeline wrote source/output to local scratch space (Railway's disk
+    # resets on every redeploy) and pointed the job row at those local paths.
+    # Upload both to durable Storage, then repoint the row at the storage
+    # keys — same repoint mechanism already used above for the INDD export
+    # swap, applied uniformly to every format now.
+    job_id = report.get("job_id")
+    if job_id and report.get("source") and report.get("output"):
+        stem = os.path.splitext(os.path.basename(name))[0]
+        source_ext = os.path.splitext(report["source"])[1] or ext
+        output_ext = os.path.splitext(report["output"])[1] or ext
+        source_key = f"jobs/{job_id}/{stem}{source_ext}"
+        output_key = f"jobs/{job_id}/{stem}.{lang.code}{output_ext}"
+        try:
+            await run_in_threadpool(storage.upload_file, report["source"], source_key)
+            await run_in_threadpool(storage.upload_file, report["output"], output_key)
+            store = _store()
+            try:
+                store.update_job_paths(job_id, source=source_key, output=output_key)
+            finally:
+                store.close()
+            report["source"] = source_key
+            report["output"] = output_key
+        except Exception:
+            logger.exception("upload: failed to persist job %s to storage", job_id)
+
     if project_id:
         store = _store()
         try:
@@ -669,25 +728,30 @@ async def translate_upload(
 
 
 @app.get("/api/jobs/{job_id}/source")
-def get_source(job_id: str, user: dict = Depends(require_user)) -> FileResponse:
+def get_source(job_id: str, user: dict = Depends(require_user)) -> Response:
     job = _find_owned_job(job_id, user)
-    if not str(job["source"]).lower().endswith(".pdf") or not os.path.exists(job["source"]):
+    key = str(job["source"])
+    if not key.lower().endswith(".pdf"):
         raise HTTPException(status_code=404, detail="no renderable source")
-    return FileResponse(job["source"], media_type="application/pdf")
+    data = storage.read_bytes(key)
+    if data is None:
+        raise HTTPException(status_code=404, detail="no renderable source")
+    return Response(content=data, media_type="application/pdf")
 
 
 @app.get("/api/jobs/{job_id}/output")
-def get_output(job_id: str, user: dict = Depends(require_user)) -> FileResponse:
+def get_output(job_id: str, user: dict = Depends(require_user)) -> Response:
     job = _find_owned_job(job_id, user)
-    pdf = _output_pdf_path(job["output"])
-    if not os.path.exists(pdf):
+    key = _output_pdf_path(str(job["output"]))
+    data = storage.read_bytes(key)
+    if data is None:
         raise HTTPException(status_code=404, detail="no renderable output pdf")
-    return FileResponse(pdf, media_type="application/pdf")
+    return Response(content=data, media_type="application/pdf")
 
 
 @app.get("/api/jobs/{job_id}/download")
 def download_output(job_id: str, format: str | None = None, type: str | None = None,
-                     user: dict = Depends(require_user)) -> FileResponse:
+                     user: dict = Depends(require_user)) -> Response:
     job = _find_owned_job(job_id, user)
 
     out = str(job["output"])
@@ -695,55 +759,68 @@ def download_output(job_id: str, format: str | None = None, type: str | None = N
     target_type = (type or "").lower().strip()
     source = str(job.get("source", ""))
 
+    def _serve(key: str, media: str) -> Response:
+        data = storage.read_bytes(key)
+        if data is None:
+            raise HTTPException(status_code=404, detail="file not found")
+        return Response(
+            content=data, media_type=media,
+            headers={"Content-Disposition": f'attachment; filename="{os.path.basename(key)}"'},
+        )
+
     # If source file requested
     if target_type == "source" or fmt == "source":
         if fmt == "idml":
-            if source.lower().endswith(".idml") and os.path.exists(source):
-                return FileResponse(source, media_type="application/octet-stream", filename=os.path.basename(source))
+            if source.lower().endswith(".idml"):
+                return _serve(source, "application/octet-stream")
             src_idml = os.path.splitext(source)[0] + ".idml"
-            if os.path.exists(src_idml):
-                return FileResponse(src_idml, media_type="application/octet-stream", filename=os.path.basename(src_idml))
-        if os.path.exists(source):
-            filename = os.path.basename(source)
-            media = "application/pdf" if filename.lower().endswith(".pdf") else "application/octet-stream"
-            return FileResponse(source, media_type=media, filename=filename)
+            if storage.read_bytes(src_idml) is not None:
+                return _serve(src_idml, "application/octet-stream")
+        if source:
+            media = "application/pdf" if source.lower().endswith(".pdf") else "application/octet-stream"
+            data = storage.read_bytes(source)
+            if data is not None:
+                return _serve(source, media)
         raise HTTPException(status_code=404, detail="Source file not found")
 
     if fmt == "pdf":
-        pdf_path = _output_pdf_path(out)
-        if os.path.exists(pdf_path):
-            filename = os.path.basename(pdf_path)
-            return FileResponse(pdf_path, media_type="application/pdf", filename=filename)
-        if source.lower().endswith(".pdf") and os.path.exists(source):
-            return FileResponse(source, media_type="application/pdf", filename=os.path.basename(source))
+        pdf_key = _output_pdf_path(out)
+        if storage.read_bytes(pdf_key) is not None:
+            return _serve(pdf_key, "application/pdf")
+        if source.lower().endswith(".pdf"):
+            data = storage.read_bytes(source)
+            if data is not None:
+                return _serve(source, "application/pdf")
         raise HTTPException(status_code=404, detail="PDF format not found for this job")
 
     if fmt == "idml":
         meta = job.get("meta") or {}
-        if meta.get("format") == "idml" and source.lower().endswith(".idml") \
-                and os.path.exists(source):
+        if meta.get("format") == "idml" and source.lower().endswith(".idml"):
             # Review-store approvals/edits made after the initial MT export
             # never get written back to the saved .idml on their own — bring
             # the file up to date before serving it (see
             # pipeline.regenerate_idml_from_review).
-            from babel.pipeline import regenerate_idml_from_review
             try:
-                regenerate_idml_from_review(job, review_db=_REVIEW_DB)
+                local_source, local_output = _materialize_job_files(job)
+                regenerate_idml_from_review(
+                    job, review_db=_REVIEW_DB, source_path=local_source, output_path=local_output
+                )
+                storage.upload_file(local_output, out)
             except Exception:
                 logger.exception("download: failed to regenerate idml for job %s", job_id)
-        if out.lower().endswith(".idml") and os.path.exists(out):
-            return FileResponse(out, media_type="application/octet-stream", filename=os.path.basename(out))
-        idml_path = os.path.splitext(out)[0] + ".idml"
-        if os.path.exists(idml_path):
-            return FileResponse(idml_path, media_type="application/octet-stream", filename=os.path.basename(idml_path))
-        if source.lower().endswith(".idml") and os.path.exists(source):
-            return FileResponse(source, media_type="application/octet-stream", filename=os.path.basename(source))
+        if out.lower().endswith(".idml") and storage.read_bytes(out) is not None:
+            return _serve(out, "application/octet-stream")
+        idml_key = os.path.splitext(out)[0] + ".idml"
+        if storage.read_bytes(idml_key) is not None:
+            return _serve(idml_key, "application/octet-stream")
+        if source.lower().endswith(".idml") and storage.read_bytes(source) is not None:
+            return _serve(source, "application/octet-stream")
         raise HTTPException(status_code=404, detail="IDML format not available for this job")
 
-    if not os.path.exists(out):
+    data = storage.read_bytes(out)
+    if data is None:
         raise HTTPException(status_code=404, detail="output not found")
-    return FileResponse(job["output"], media_type="application/octet-stream",
-                        filename=os.path.basename(job["output"]))
+    return _serve(out, "application/octet-stream")
 
 
 

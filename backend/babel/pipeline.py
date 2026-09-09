@@ -422,7 +422,8 @@ def translate_idml(
     return report
 
 
-def regenerate_idml_from_review(job: dict, review_db: str = "babel_review.db") -> str:
+def regenerate_idml_from_review(job: dict, review_db: str = "babel_review.db",
+                                 source_path: str | None = None, output_path: str | None = None) -> str:
     """Re-apply a job's current review-store state (including post-export human
     approvals/edits) onto a fresh copy of the original .idml and overwrite the
     saved output.
@@ -438,8 +439,8 @@ def regenerate_idml_from_review(job: dict, review_db: str = "babel_review.db") -
     from babel.idml.package import IdmlPackage
     from babel.review.store import ReviewStore
 
-    src_idml = str(job["source"])
-    out_idml = str(job["output"])
+    src_idml = source_path or str(job["source"])
+    out_idml = output_path or str(job["output"])
     meta = job.get("meta") or {}
     lang = languages.get(meta.get("target_lang"))
 
@@ -467,7 +468,8 @@ def regenerate_idml_from_review(job: dict, review_db: str = "babel_review.db") -
 
 
 def rebuild_from_edits(job_id: str, out_dir: str = "out",
-                        review_db: str = "babel_review.db") -> str:
+                        review_db: str = "babel_review.db",
+                        source_path: str | None = None, output_path: str | None = None) -> str:
     """Redraw a PDF job's output from the review store's current target/status
     per segment — call after a human edits or approves a segment, since
     `ReviewStore.update_segment` only updates its own row; nothing re-draws
@@ -491,8 +493,8 @@ def rebuild_from_edits(job_id: str, out_dir: str = "out",
     finally:
         store.close()
 
-    src_pdf = str(job["source"])
-    out_pdf = str(job["output"])
+    src_pdf = source_path or str(job["source"])
+    out_pdf = output_path or str(job["output"])
     meta = job.get("meta") or {}
     lang = languages.get(meta.get("target_lang"))
 

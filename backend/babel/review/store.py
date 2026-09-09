@@ -6,113 +6,53 @@ was unsure about (needs_human, disagreement, glossary miss) surfaces here for a
 person to fix, and every approval writes back to the shared translation memory
 so the correction is reused everywhere.
 
-Schema (SQLite):
-  jobs(id, source, output, created_at, meta_json)
-  segments(job_id, seg_id, page, source, target, status, disagreement,
-           has_math_font, placeholders_json, bbox_json, notes_json, approved)
+Backed by Supabase Postgres (via SUPABASE_DB_URL) — not local SQLite. A local
+SQLite file lived on Railway's container disk, which resets to empty on every
+redeploy; every project/job was silently wiped each deploy. Table names are
+prefixed review_ (review_projects, review_jobs, ...) to stay out of the way of
+Supabase's own auth/profiles/team_members tables in the same database.
+
+Schema: see migrations/versions/*_review_store_tables_*.py.
 """
 
 from __future__ import annotations
 
 import json
+import os
 import time
 import uuid
-from dataclasses import asdict
-from pathlib import Path
 
+import psycopg
+from psycopg.rows import dict_row
+
+from babel.config import load_env
 from babel.models import Segment
 from babel.tm.store import TranslationMemory
 from babel.translate import integrity
 
-_SCHEMA = """
-CREATE TABLE IF NOT EXISTS projects (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    job_type TEXT NOT NULL DEFAULT 'document',
-    source_lang TEXT,
-    target_lang TEXT,
-    client TEXT,
-    vendor TEXT,
-    deadline REAL,
-    status TEXT NOT NULL DEFAULT 'created',
-    created_at REAL NOT NULL,
-    created_by TEXT
-);
-CREATE TABLE IF NOT EXISTS folders (
-    id TEXT PRIMARY KEY,
-    project_id TEXT NOT NULL,
-    name TEXT NOT NULL,
-    parent_folder_id TEXT,
-    created_at REAL NOT NULL,
-    FOREIGN KEY (project_id) REFERENCES projects(id)
-);
-CREATE TABLE IF NOT EXISTS jobs (
-    id TEXT PRIMARY KEY, source TEXT, output TEXT,
-    created_at REAL, meta_json TEXT
-);
-CREATE TABLE IF NOT EXISTS segments (
-    job_id TEXT, seg_id TEXT, page INTEGER, source TEXT, target TEXT,
-    status TEXT, disagreement INTEGER, has_math_font INTEGER,
-    placeholders_json TEXT, bbox_json TEXT, notes_json TEXT, approved INTEGER,
-    PRIMARY KEY (job_id, seg_id)
-);
-CREATE TABLE IF NOT EXISTS segment_events (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    job_id TEXT NOT NULL,
-    seg_id TEXT NOT NULL,
-    action TEXT NOT NULL,
-    reviewer TEXT NOT NULL DEFAULT 'unknown',
-    old_target TEXT,
-    new_target TEXT,
-    created_at REAL NOT NULL,
-    FOREIGN KEY (job_id) REFERENCES jobs(id)
-);
-CREATE INDEX IF NOT EXISTS idx_segment_events_job_seg ON segment_events(job_id, seg_id);
-CREATE INDEX IF NOT EXISTS idx_segments_job_status ON segments(job_id, status);
-"""
+load_env()
 
-_JOB_COLUMNS = [
-    ("original_filename", "TEXT"),
-    ("file_hash", "TEXT"),
-    ("file_size", "INTEGER"),
-    ("duration_sec", "REAL"),
-    ("status", "TEXT DEFAULT 'complete'"),
-    ("error", "TEXT"),
-    ("project_id", "TEXT"),
-    ("job_type", "TEXT DEFAULT 'document'"),
-    ("folder_id", "TEXT"),
-    ("created_by", "TEXT"),
-]
+
+def _db_url() -> str:
+    url = os.environ.get("SUPABASE_DB_URL", "")
+    if not url:
+        raise RuntimeError("SUPABASE_DB_URL is not set — required to reach the review store")
+    # Alembic and psycopg2-style tooling use a bare postgresql:// scheme;
+    # psycopg (v3) needs it spelled out to pick the right driver.
+    if url.startswith("postgresql://"):
+        url = url.replace("postgresql://", "postgresql+psycopg://", 1)
+    # psycopg.connect() doesn't understand the SQLAlchemy-style "+psycopg"
+    # scheme — strip it back off for the raw driver, keep it only when
+    # something else (SQLAlchemy) reads this via a different path.
+    return url.replace("postgresql+psycopg://", "postgresql://", 1)
 
 
 class ReviewStore:
-    """Review store: persists a translation job's segments so the human-review
-    UI has something to load, edit, and approve.
-
-    `segments.job_id` is a logical (unenforced) reference to `jobs.id` — SQLite
-    can't add a FK constraint to an already-populated table without a rebuild,
-    which is out of scope here. `segment_events.job_id` is a new table and does
-    enforce the FK.
-    """
-
-    def __init__(self, path: str = "babel_review.db", tm_path: str = "babel_tm.db"):
-        Path(path).parent.mkdir(parents=True, exist_ok=True)
-        self.conn = __import__("sqlite3").connect(path)
-        self.conn.row_factory = __import__("sqlite3").Row
-        self.conn.execute("PRAGMA journal_mode=WAL")
-        self.conn.execute("PRAGMA synchronous=NORMAL")
-        self.conn.execute("PRAGMA foreign_keys=ON")
-        self.conn.executescript(_SCHEMA)
-        for name, coltype in _JOB_COLUMNS:
-            self._ensure_column("jobs", name, coltype)
-        self._ensure_column("folders", "parent_folder_id", "TEXT")
-        self.conn.commit()
+    def __init__(self, path: str = "", tm_path: str = "babel_tm.db"):
+        # `path` (an old SQLite filename) is accepted for call-site
+        # compatibility but unused now — everything reads from SUPABASE_DB_URL.
+        self.conn = psycopg.connect(_db_url(), row_factory=dict_row, autocommit=False)
         self.tm_path = tm_path
-
-    def _ensure_column(self, table: str, name: str, coltype: str) -> None:
-        cols = {r[1] for r in self.conn.execute(f"PRAGMA table_info({table})")}
-        if name not in cols:
-            self.conn.execute(f"ALTER TABLE {table} ADD COLUMN {name} {coltype}")
 
     # ---- write ---------------------------------------------------------------
 
@@ -130,46 +70,51 @@ class ReviewStore:
         created_by: str | None = None,
     ) -> str:
         job_id = uuid.uuid4().hex[:12]
-        self.conn.execute(
-            "INSERT INTO jobs (id, source, output, created_at, meta_json, "
-            "original_filename, file_hash, file_size, duration_sec, status, error, "
-            "project_id, job_type, folder_id, created_by) "
-            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-            (job_id, source, output, time.time(), json.dumps(meta, ensure_ascii=False),
-             original_filename, file_hash, file_size, duration_sec, status, error,
-             project_id, job_type, folder_id, created_by),
-        )
-        for s in segments:
-            if not s.is_translatable:
-                continue  # empty/whitespace-only segments aren't reviewable
-            self.conn.execute(
-                """INSERT INTO segments VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
-                (
-                    job_id, s.id, s.page, s.source, s.target, s.status,
-                    int(s.disagreement), int(s.has_math_font),
-                    json.dumps(s.placeholders, ensure_ascii=False),
-                    json.dumps(s.bbox), json.dumps(s.notes, ensure_ascii=False), 0,
-                ),
+        with self.conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO review_jobs (id, source, output, created_at, meta_json, "
+                "original_filename, file_hash, file_size, duration_sec, status, error, "
+                "project_id, job_type, folder_id, created_by) "
+                "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                (job_id, source, output, time.time(), json.dumps(meta, ensure_ascii=False),
+                 original_filename, file_hash, file_size, duration_sec, status, error,
+                 project_id, job_type, folder_id, created_by),
             )
+            for s in segments:
+                if not s.is_translatable:
+                    continue  # empty/whitespace-only segments aren't reviewable
+                cur.execute(
+                    "INSERT INTO review_segments (job_id, seg_id, page, source, target, "
+                    "status, disagreement, has_math_font, placeholders_json, bbox_json, "
+                    "notes_json, approved) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                    (
+                        job_id, s.id, s.page, s.source, s.target, s.status,
+                        int(s.disagreement), int(s.has_math_font),
+                        json.dumps(s.placeholders, ensure_ascii=False),
+                        json.dumps(s.bbox), json.dumps(s.notes, ensure_ascii=False), 0,
+                    ),
+                )
         self.conn.commit()
         return job_id
 
     def update_job_paths(self, job_id: str, source: str | None = None,
                           output: str | None = None) -> None:
-        """Repoint a job's stored source/output paths (e.g. after INDD conversion
-        or export swaps the intermediate .idml for the final .indd)."""
-        if source is not None:
-            self.conn.execute("UPDATE jobs SET source = ? WHERE id = ?", (source, job_id))
-        if output is not None:
-            self.conn.execute("UPDATE jobs SET output = ? WHERE id = ?", (output, job_id))
+        """Repoint a job's stored source/output — a storage key, not a local
+        path, once the pipeline's local scratch copy has been uploaded."""
+        with self.conn.cursor() as cur:
+            if source is not None:
+                cur.execute("UPDATE review_jobs SET source = %s WHERE id = %s", (source, job_id))
+            if output is not None:
+                cur.execute("UPDATE review_jobs SET output = %s WHERE id = %s", (output, job_id))
         self.conn.commit()
 
     def delete_job(self, job_id: str) -> None:
         """Remove a job and its segments (e.g. a translate succeeded but a later
         export step failed, leaving a job row that shouldn't be browsable/downloadable)."""
-        self.conn.execute("DELETE FROM segment_events WHERE job_id = ?", (job_id,))
-        self.conn.execute("DELETE FROM segments WHERE job_id = ?", (job_id,))
-        self.conn.execute("DELETE FROM jobs WHERE id = ?", (job_id,))
+        with self.conn.cursor() as cur:
+            cur.execute("DELETE FROM review_segment_events WHERE job_id = %s", (job_id,))
+            cur.execute("DELETE FROM review_segments WHERE job_id = %s", (job_id,))
+            cur.execute("DELETE FROM review_jobs WHERE id = %s", (job_id,))
         self.conn.commit()
 
     # ---- read ----------------------------------------------------------------
@@ -177,21 +122,22 @@ class ReviewStore:
     def list_jobs(self, created_by: str | list[str] | None = None) -> list[dict]:
         if isinstance(created_by, str):
             created_by = [created_by]
-        if created_by is not None:
-            placeholders = ",".join("?" for _ in created_by)
-            rows = self.conn.execute(
-                "SELECT id, source, output, created_at, meta_json, original_filename, "
-                "file_hash, file_size, duration_sec, status, error, project_id, job_type, "
-                f"folder_id, created_by FROM jobs WHERE created_by IN ({placeholders}) "
-                "ORDER BY created_at DESC",
-                tuple(created_by),
-            ).fetchall()
-        else:
-            rows = self.conn.execute(
-                "SELECT id, source, output, created_at, meta_json, original_filename, "
-                "file_hash, file_size, duration_sec, status, error, project_id, job_type, "
-                "folder_id, created_by FROM jobs ORDER BY created_at DESC"
-            ).fetchall()
+        with self.conn.cursor() as cur:
+            if created_by is not None:
+                cur.execute(
+                    "SELECT id, source, output, created_at, meta_json, original_filename, "
+                    "file_hash, file_size, duration_sec, status, error, project_id, job_type, "
+                    "folder_id, created_by FROM review_jobs WHERE created_by = ANY(%s) "
+                    "ORDER BY created_at DESC",
+                    (list(created_by),),
+                )
+            else:
+                cur.execute(
+                    "SELECT id, source, output, created_at, meta_json, original_filename, "
+                    "file_hash, file_size, duration_sec, status, error, project_id, job_type, "
+                    "folder_id, created_by FROM review_jobs ORDER BY created_at DESC"
+                )
+            rows = cur.fetchall()
         out = []
         for r in rows:
             counts = self._status_counts(r["id"])
@@ -212,53 +158,59 @@ class ReviewStore:
     def create_folder(self, project_id: str, name: str,
                        parent_folder_id: str | None = None) -> str:
         folder_id = uuid.uuid4().hex[:12]
-        self.conn.execute(
-            "INSERT INTO folders (id, project_id, name, parent_folder_id, created_at) "
-            "VALUES (?,?,?,?,?)",
-            (folder_id, project_id, name, parent_folder_id, time.time()),
-        )
+        with self.conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO review_folders (id, project_id, name, parent_folder_id, created_at) "
+                "VALUES (%s,%s,%s,%s,%s)",
+                (folder_id, project_id, name, parent_folder_id, time.time()),
+            )
         self.conn.commit()
         return folder_id
 
     def list_folders(self, project_id: str,
                       parent_folder_id: str | None = None) -> list[dict]:
-        rows = self.conn.execute(
-            "SELECT id, project_id, name, parent_folder_id, created_at FROM folders "
-            "WHERE project_id = ? AND parent_folder_id IS ? ORDER BY created_at DESC",
-            (project_id, parent_folder_id),
-        ).fetchall()
-        return [dict(r) for r in rows]
+        with self.conn.cursor() as cur:
+            cur.execute(
+                "SELECT id, project_id, name, parent_folder_id, created_at FROM review_folders "
+                "WHERE project_id = %s AND parent_folder_id IS NOT DISTINCT FROM %s "
+                "ORDER BY created_at DESC",
+                (project_id, parent_folder_id),
+            )
+            return cur.fetchall()
 
     def get_folder(self, folder_id: str) -> dict | None:
-        row = self.conn.execute(
-            "SELECT id, project_id, name, parent_folder_id, created_at "
-            "FROM folders WHERE id = ?",
-            (folder_id,),
-        ).fetchone()
-        return dict(row) if row is not None else None
+        with self.conn.cursor() as cur:
+            cur.execute(
+                "SELECT id, project_id, name, parent_folder_id, created_at "
+                "FROM review_folders WHERE id = %s",
+                (folder_id,),
+            )
+            return cur.fetchone()
 
     def delete_folder(self, folder_id: str) -> None:
         """Remove a folder, every file (job) filed under it, and every
         subfolder (recursively) beneath it."""
-        stack = [folder_id]
-        all_folder_ids: list[str] = []
-        while stack:
-            fid = stack.pop()
-            all_folder_ids.append(fid)
-            children = self.conn.execute(
-                "SELECT id FROM folders WHERE parent_folder_id = ?", (fid,)
-            ).fetchall()
-            stack.extend(c["id"] for c in children)
+        with self.conn.cursor() as cur:
+            stack = [folder_id]
+            all_folder_ids: list[str] = []
+            while stack:
+                fid = stack.pop()
+                all_folder_ids.append(fid)
+                cur.execute(
+                    "SELECT id FROM review_folders WHERE parent_folder_id = %s", (fid,)
+                )
+                stack.extend(c["id"] for c in cur.fetchall())
 
-        for fid in all_folder_ids:
-            job_rows = self.conn.execute(
-                "SELECT id FROM jobs WHERE folder_id = ?", (fid,)
-            ).fetchall()
-            for jr in job_rows:
-                self.conn.execute("DELETE FROM segment_events WHERE job_id = ?", (jr["id"],))
-                self.conn.execute("DELETE FROM segments WHERE job_id = ?", (jr["id"],))
-            self.conn.execute("DELETE FROM jobs WHERE folder_id = ?", (fid,))
-            self.conn.execute("DELETE FROM folders WHERE id = ?", (fid,))
+            for fid in all_folder_ids:
+                cur.execute("SELECT id FROM review_jobs WHERE folder_id = %s", (fid,))
+                job_rows = cur.fetchall()
+                for jr in job_rows:
+                    cur.execute(
+                        "DELETE FROM review_segment_events WHERE job_id = %s", (jr["id"],)
+                    )
+                    cur.execute("DELETE FROM review_segments WHERE job_id = %s", (jr["id"],))
+                cur.execute("DELETE FROM review_jobs WHERE folder_id = %s", (fid,))
+                cur.execute("DELETE FROM review_folders WHERE id = %s", (fid,))
         self.conn.commit()
 
     # ---- projects ------------------------------------------------------------
@@ -270,13 +222,14 @@ class ReviewStore:
         deadline: float | None = None, created_by: str | None = None,
     ) -> str:
         project_id = uuid.uuid4().hex[:12]
-        self.conn.execute(
-            "INSERT INTO projects (id, name, job_type, source_lang, target_lang, "
-            "client, vendor, deadline, status, created_at, created_by) "
-            "VALUES (?,?,?,?,?,?,?,?,?,?,?)",
-            (project_id, name, job_type, source_lang, target_lang, client, vendor,
-             deadline, "created", time.time(), created_by),
-        )
+        with self.conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO review_projects (id, name, job_type, source_lang, target_lang, "
+                "client, vendor, deadline, status, created_at, created_by) "
+                "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                (project_id, name, job_type, source_lang, target_lang, client, vendor,
+                 deadline, "created", time.time(), created_by),
+            )
         self.conn.commit()
         return project_id
 
@@ -284,29 +237,33 @@ class ReviewStore:
         """Backfill a project's target language from its first translated file,
         so projects created before a language was chosen still show a real
         Source/Target pair once work starts."""
-        self.conn.execute(
-            "UPDATE projects SET target_lang = ? WHERE id = ? AND target_lang IS NULL",
-            (target_lang, project_id),
-        )
+        with self.conn.cursor() as cur:
+            cur.execute(
+                "UPDATE review_projects SET target_lang = %s "
+                "WHERE id = %s AND target_lang IS NULL",
+                (target_lang, project_id),
+            )
         self.conn.commit()
 
     def delete_project(self, project_id: str) -> None:
         """Remove a project and every file (job) filed under it."""
-        job_rows = self.conn.execute(
-            "SELECT id FROM jobs WHERE project_id = ?", (project_id,)
-        ).fetchall()
-        for jr in job_rows:
-            self.conn.execute("DELETE FROM segment_events WHERE job_id = ?", (jr["id"],))
-            self.conn.execute("DELETE FROM segments WHERE job_id = ?", (jr["id"],))
-        self.conn.execute("DELETE FROM jobs WHERE project_id = ?", (project_id,))
-        self.conn.execute("DELETE FROM folders WHERE project_id = ?", (project_id,))
-        self.conn.execute("DELETE FROM projects WHERE id = ?", (project_id,))
+        with self.conn.cursor() as cur:
+            cur.execute("SELECT id FROM review_jobs WHERE project_id = %s", (project_id,))
+            job_rows = cur.fetchall()
+            for jr in job_rows:
+                cur.execute(
+                    "DELETE FROM review_segment_events WHERE job_id = %s", (jr["id"],)
+                )
+                cur.execute("DELETE FROM review_segments WHERE job_id = %s", (jr["id"],))
+            cur.execute("DELETE FROM review_jobs WHERE project_id = %s", (project_id,))
+            cur.execute("DELETE FROM review_folders WHERE project_id = %s", (project_id,))
+            cur.execute("DELETE FROM review_projects WHERE id = %s", (project_id,))
         self.conn.commit()
 
     def get_project(self, project_id: str) -> dict | None:
-        row = self.conn.execute(
-            "SELECT * FROM projects WHERE id = ?", (project_id,)
-        ).fetchone()
+        with self.conn.cursor() as cur:
+            cur.execute("SELECT * FROM review_projects WHERE id = %s", (project_id,))
+            row = cur.fetchone()
         if row is None:
             return None
         return self._project_row_to_dict(row)
@@ -314,23 +271,22 @@ class ReviewStore:
     def list_projects(self, created_by: str | list[str] | None = None) -> list[dict]:
         if isinstance(created_by, str):
             created_by = [created_by]
-        if created_by is not None:
-            placeholders = ",".join("?" for _ in created_by)
-            rows = self.conn.execute(
-                f"SELECT * FROM projects WHERE created_by IN ({placeholders}) "
-                "ORDER BY created_at DESC",
-                tuple(created_by),
-            ).fetchall()
-        else:
-            rows = self.conn.execute(
-                "SELECT * FROM projects ORDER BY created_at DESC"
-            ).fetchall()
+        with self.conn.cursor() as cur:
+            if created_by is not None:
+                cur.execute(
+                    "SELECT * FROM review_projects WHERE created_by = ANY(%s) "
+                    "ORDER BY created_at DESC",
+                    (list(created_by),),
+                )
+            else:
+                cur.execute("SELECT * FROM review_projects ORDER BY created_at DESC")
+            rows = cur.fetchall()
         return [self._project_row_to_dict(r) for r in rows]
 
     def _project_row_to_dict(self, row) -> dict:
-        job_rows = self.conn.execute(
-            "SELECT id FROM jobs WHERE project_id = ?", (row["id"],)
-        ).fetchall()
+        with self.conn.cursor() as cur:
+            cur.execute("SELECT id FROM review_jobs WHERE project_id = %s", (row["id"],))
+            job_rows = cur.fetchall()
         counts: dict[str, int] = {}
         for jr in job_rows:
             for status, c in self._status_counts(jr["id"]).items():
@@ -345,20 +301,23 @@ class ReviewStore:
         }
 
     def _status_counts(self, job_id: str) -> dict:
-        rows = self.conn.execute(
-            "SELECT status, COUNT(*) c FROM segments WHERE job_id=? GROUP BY status",
-            (job_id,),
-        ).fetchall()
-        return {r["status"]: r["c"] for r in rows}
+        with self.conn.cursor() as cur:
+            cur.execute(
+                "SELECT status, COUNT(*) c FROM review_segments WHERE job_id=%s GROUP BY status",
+                (job_id,),
+            )
+            return {r["status"]: r["c"] for r in cur.fetchall()}
 
     def get_segments(self, job_id: str, status: str | None = None) -> list[dict]:
-        q = "SELECT * FROM segments WHERE job_id=?"
+        q = "SELECT * FROM review_segments WHERE job_id=%s"
         args: list = [job_id]
         if status:
-            q += " AND status=?"
+            q += " AND status=%s"
             args.append(status)
         q += " ORDER BY page, seg_id"
-        return [self._row_to_seg(r) for r in self.conn.execute(q, args).fetchall()]
+        with self.conn.cursor() as cur:
+            cur.execute(q, args)
+            return [self._row_to_seg(r) for r in cur.fetchall()]
 
     def _row_to_seg(self, r) -> dict:
         placeholders = json.loads(r["placeholders_json"])
@@ -378,67 +337,71 @@ class ReviewStore:
 
     def update_segment(self, job_id: str, seg_id: str, target: str, approve: bool, *,
                         reviewer: str = "unknown") -> dict:
-        row = self.conn.execute(
-            "SELECT * FROM segments WHERE job_id=? AND seg_id=?", (job_id, seg_id)
-        ).fetchone()
-        if row is None:
-            raise KeyError(f"segment {seg_id} not found in job {job_id}")
+        with self.conn.cursor() as cur:
+            cur.execute(
+                "SELECT * FROM review_segments WHERE job_id=%s AND seg_id=%s", (job_id, seg_id)
+            )
+            row = cur.fetchone()
+            if row is None:
+                raise KeyError(f"segment {seg_id} not found in job {job_id}")
 
-        old_target = row["target"]
-        notes = json.loads(row["notes_json"])
-        ok, detail = integrity.verify(row["source"], target)
-        if not ok:
-            # A human edit that drops/adds a math token is rejected, same gate as MT.
-            status, approved = "needs_human", 0
-            notes = _with_note(notes, f"edit rejected: placeholder mismatch ({detail})")
-            approve = False
-            action = "reject"
-        elif approve:
-            status, approved = "approved", 1
-            action = "approve"
-            tm = TranslationMemory(self.tm_path)
-            try:
-                tm.store(row["source"], target, engine="human", approved=True)
-            finally:
-                tm.close()
-        else:
-            status, approved = "edited", 0
-            action = "edit"
+            old_target = row["target"]
+            notes = json.loads(row["notes_json"])
+            ok, detail = integrity.verify(row["source"], target)
+            if not ok:
+                # A human edit that drops/adds a math token is rejected, same gate as MT.
+                status, approved = "needs_human", 0
+                notes = _with_note(notes, f"edit rejected: placeholder mismatch ({detail})")
+                approve = False
+                action = "reject"
+            elif approve:
+                status, approved = "approved", 1
+                action = "approve"
+                tm = TranslationMemory(self.tm_path)
+                try:
+                    tm.store(row["source"], target, engine="human", approved=True)
+                finally:
+                    tm.close()
+            else:
+                status, approved = "edited", 0
+                action = "edit"
 
-        self.conn.execute(
-            "UPDATE segments SET target=?, status=?, approved=?, notes_json=? "
-            "WHERE job_id=? AND seg_id=?",
-            (target, status, approved, json.dumps(notes, ensure_ascii=False), job_id, seg_id),
-        )
-        self.conn.execute(
-            "INSERT INTO segment_events (job_id, seg_id, action, reviewer, old_target, "
-            "new_target, created_at) VALUES (?,?,?,?,?,?,?)",
-            (job_id, seg_id, action, reviewer, old_target, target, time.time()),
-        )
-        self.conn.commit()
-        return self._row_to_seg(
-            self.conn.execute(
-                "SELECT * FROM segments WHERE job_id=? AND seg_id=?", (job_id, seg_id)
-            ).fetchone()
-        )
+            cur.execute(
+                "UPDATE review_segments SET target=%s, status=%s, approved=%s, notes_json=%s "
+                "WHERE job_id=%s AND seg_id=%s",
+                (target, status, approved, json.dumps(notes, ensure_ascii=False), job_id, seg_id),
+            )
+            cur.execute(
+                "INSERT INTO review_segment_events (job_id, seg_id, action, reviewer, "
+                "old_target, new_target, created_at) VALUES (%s,%s,%s,%s,%s,%s,%s)",
+                (job_id, seg_id, action, reviewer, old_target, target, time.time()),
+            )
+            self.conn.commit()
+
+            cur.execute(
+                "SELECT * FROM review_segments WHERE job_id=%s AND seg_id=%s", (job_id, seg_id)
+            )
+            return self._row_to_seg(cur.fetchone())
 
     def get_segment_history(self, job_id: str, seg_id: str) -> list[dict]:
-        rows = self.conn.execute(
-            "SELECT action, reviewer, old_target, new_target, created_at "
-            "FROM segment_events WHERE job_id=? AND seg_id=? ORDER BY created_at DESC",
-            (job_id, seg_id),
-        ).fetchall()
-        return [dict(r) for r in rows]
+        with self.conn.cursor() as cur:
+            cur.execute(
+                "SELECT action, reviewer, old_target, new_target, created_at "
+                "FROM review_segment_events WHERE job_id=%s AND seg_id=%s ORDER BY created_at DESC",
+                (job_id, seg_id),
+            )
+            return cur.fetchall()
 
     def get_job_history(self, job_id: str) -> list[dict]:
         """Every edit/approve/reject event across all of a document's segments,
         newest first — the per-document audit trail."""
-        rows = self.conn.execute(
-            "SELECT seg_id, action, reviewer, old_target, new_target, created_at "
-            "FROM segment_events WHERE job_id=? ORDER BY created_at DESC",
-            (job_id,),
-        ).fetchall()
-        return [dict(r) for r in rows]
+        with self.conn.cursor() as cur:
+            cur.execute(
+                "SELECT seg_id, action, reviewer, old_target, new_target, created_at "
+                "FROM review_segment_events WHERE job_id=%s ORDER BY created_at DESC",
+                (job_id,),
+            )
+            return cur.fetchall()
 
     def close(self) -> None:
         self.conn.close()
