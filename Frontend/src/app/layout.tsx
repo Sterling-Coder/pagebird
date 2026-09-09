@@ -27,7 +27,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${inter.variable} ${plexMono.variable} h-full antialiased`}
     >
       <body className="h-full flex flex-col bg-paper text-ink font-body">
-        <main className="flex flex-1 flex-col">{children}</main>
+        <main className="flex min-h-0 flex-1 flex-col">{children}</main>
       </body>
     </html>
   );
