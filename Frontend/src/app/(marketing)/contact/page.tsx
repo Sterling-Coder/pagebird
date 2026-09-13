@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import ContactForm from "@/components/ContactForm";
 
 export const metadata: Metadata = {
-  title: "Contact — Pagebird",
+  title: "Contact — Pagebirdy",
   description: "Send us the document you dread translating.",
 };
 
@@ -27,7 +27,7 @@ export default function ContactPage() {
         <div className="flex flex-col gap-10 md:pl-14">
           <div className="flex flex-col gap-2.5">
             <span className="font-pb-mono-brand text-[11px] font-bold text-pb-accent">GENERAL</span>
-            <h3 className="text-[19px] font-bold">hello@pagebird.com</h3>
+            <h3 className="text-[19px] font-bold">hello@pagebirdy.com</h3>
             <p className="text-sm leading-relaxed text-pb-muted">
               Questions about the product, pricing, or a document you&rsquo;d like to
               test.
@@ -35,14 +35,14 @@ export default function ContactPage() {
           </div>
           <div className="flex flex-col gap-2.5">
             <span className="font-pb-mono-brand text-[11px] font-bold text-pb-accent">SALES</span>
-            <h3 className="text-[19px] font-bold">sales@pagebird.com</h3>
+            <h3 className="text-[19px] font-bold">sales@pagebirdy.com</h3>
             <p className="text-sm leading-relaxed text-pb-muted">
               Enterprise volume, data residency, SSO and procurement.
             </p>
           </div>
           <div className="flex flex-col gap-2.5">
             <span className="font-pb-mono-brand text-[11px] font-bold text-pb-accent">SUPPORT</span>
-            <h3 className="text-[19px] font-bold">support@pagebird.com</h3>
+            <h3 className="text-[19px] font-bold">support@pagebirdy.com</h3>
             <p className="text-sm leading-relaxed text-pb-muted">
               Existing customers — [X]h response time on paid plans.
             </p>

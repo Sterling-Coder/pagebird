@@ -335,7 +335,7 @@ export function LoginForm() {
           </button>
 
           <p className="mt-4 text-center text-xs text-[#c9c4b0]">
-            {mode === "login" ? "New to Pagebird?" : "Already have an account?"}{" "}
+            {mode === "login" ? "New to Pagebirdy?" : "Already have an account?"}{" "}
             <button
               type="button"
               onClick={() => {

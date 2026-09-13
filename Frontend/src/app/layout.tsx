@@ -15,9 +15,9 @@ const plexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Pagebird — Translate any document without breaking the layout",
+  title: "Pagebirdy — Translate any document without breaking the layout",
   description:
-    "Pagebird translates DOC, PDF, INDD and IDML files into 30+ languages at 95% accuracy — text, images and layout, all preserved.",
+    "Pagebirdy translates DOC, PDF, INDD and IDML files into 30+ languages at 95% accuracy — text, images and layout, all preserved.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

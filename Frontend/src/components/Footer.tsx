@@ -44,10 +44,10 @@ export default function Footer() {
       </div>
       <div className="flex items-center justify-between pt-6">
         <span className="font-pb-mono-brand text-xs text-pb-faint">
-          © 2026 PAGEBIRD. ALL RIGHTS RESERVED.
+          © 2026 PAGEBIRDY. ALL RIGHTS RESERVED.
         </span>
         <span className="font-pb-mono-brand text-xs text-pb-faint">
-          [HELLO@PAGEBIRD.COM]
+          [HELLO@PAGEBIRDY.COM]
         </span>
       </div>
     </footer>

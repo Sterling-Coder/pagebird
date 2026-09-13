@@ -2,8 +2,8 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Product — Pagebird",
-  description: "The layout engine behind every Pagebird translation.",
+  title: "Product — Pagebirdy",
+  description: "The layout engine behind every Pagebirdy translation.",
 };
 
 const DEEP_DIVES = [
@@ -38,7 +38,7 @@ export default function ProductPage() {
           <span className="text-pb-accent italic">structure.</span>
         </h1>
         <p className="mt-6 max-w-2xl text-[17px] leading-relaxed text-pb-muted">
-          Pagebird reads your document as a full layout graph — frames, styles, tables,
+          Pagebirdy reads your document as a full layout graph — frames, styles, tables,
           anchors — translates the text inside it, then rewrites the same graph back
           into the original file format.
         </p>
@@ -49,7 +49,7 @@ export default function ProductPage() {
         <div className="border-[3px] border-pb-ink shadow-[14px_14px_0_var(--color-pb-accent)]">
           <div className="flex items-center gap-2.5 border-b-[3px] border-pb-card-ink bg-white px-5 py-3.5">
             <span className="font-pb-mono-brand text-[11.5px] text-pb-card-faint">
-              app.pagebird.com/jobs/q3-investor-deck
+              app.pagebirdy.com/jobs/q3-investor-deck
             </span>
           </div>
           <div className="flex h-auto flex-col bg-white md:h-[460px] md:flex-row">

@@ -2,8 +2,8 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Integrations — Pagebird",
-  description: "Wherever the file lives, Pagebird can reach it.",
+  title: "Integrations — Pagebirdy",
+  description: "Wherever the file lives, Pagebirdy can reach it.",
 };
 
 const INTEGRATIONS = [
@@ -86,11 +86,11 @@ export default function IntegrationsPage() {
           — integrations
         </span>
         <h1 className="font-pb-display mt-4.5 max-w-3xl text-5xl md:text-6xl">
-          Wherever the file lives, Pagebird can reach it.
+          Wherever the file lives, Pagebirdy can reach it.
         </h1>
         <p className="mt-5.5 max-w-xl text-[17px] leading-relaxed text-pb-muted">
           Watch a folder, connect a repo, or call the API directly. New and updated
-          files come back translated without anyone opening Pagebird.
+          files come back translated without anyone opening Pagebirdy.
         </p>
       </section>
 

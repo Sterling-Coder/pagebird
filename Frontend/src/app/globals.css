@@ -76,7 +76,7 @@ body {
   }
 }
 
-/* Pagebird marketing site theme — scoped to (marketing) route group via pb- prefix,
+/* Pagebirdy marketing site theme — scoped to (marketing) route group via pb- prefix,
    kept separate from the app's --color-* tokens above so /login and /app are unaffected. */
 @theme inline {
   --color-pb-paper: #153a2e;

@@ -5,7 +5,7 @@ const PROBLEMS = [
   {
     n: "01",
     title: "Text expands, boxes don't",
-    body: "German runs 30% longer than English. Pagebird reflows inside the original frame before anything overflows.",
+    body: "German runs 30% longer than English. Pagebirdy reflows inside the original frame before anything overflows.",
   },
   {
     n: "02",
@@ -23,7 +23,7 @@ const STEPS = [
   {
     n: "1",
     title: "Drop the file in",
-    body: "DOCX, PDF, PPTX, XLSX, IDML or HTML — Pagebird reads the layout tree, not a flattened text dump.",
+    body: "DOCX, PDF, PPTX, XLSX, IDML or HTML — Pagebirdy reads the layout tree, not a flattened text dump.",
     accent: false,
   },
   {
@@ -49,7 +49,7 @@ const FEATURES = [
   {
     n: "02",
     title: "Font substitution that matches",
-    body: "No Japanese cut in your typeface? Pagebird picks a metrically compatible one, not a generic fallback.",
+    body: "No Japanese cut in your typeface? Pagebirdy picks a metrically compatible one, not a generic fallback.",
   },
   {
     n: "03",
@@ -69,7 +69,7 @@ const FEATURES = [
   {
     n: "06",
     title: "API + watched folders",
-    body: "Point Pagebird at a SharePoint, Drive or S3 folder and every new file returns translated automatically.",
+    body: "Point Pagebirdy at a SharePoint, Drive or S3 folder and every new file returns translated automatically.",
   },
 ];
 
@@ -116,11 +116,11 @@ const PLANS = [
 const FAQS = [
   {
     q: "Does the translated file open in Word and InDesign normally?",
-    a: "Yes. Pagebird writes back into the original file format — styles, master pages and linked assets stay editable.",
+    a: "Yes. Pagebirdy writes back into the original file format — styles, master pages and linked assets stay editable.",
   },
   {
     q: "What happens with scanned PDFs?",
-    a: "Pagebird runs OCR, rebuilds the text layer in position, and returns a searchable PDF with the scan preserved underneath.",
+    a: "Pagebirdy runs OCR, rebuilds the text layer in position, and returns a searchable PDF with the scan preserved underneath.",
   },
   {
     q: "Can our own translators review the output?",
@@ -194,7 +194,7 @@ export default function Home() {
               <span className="text-pb-accent italic">language.</span>
             </h1>
             <p className="max-w-[460px] text-[17px] leading-relaxed text-pb-muted">
-              Pagebird translates DOCX, PDF, PPTX and InDesign files into 40+ languages
+              Pagebirdy translates DOCX, PDF, PPTX and InDesign files into 40+ languages
               and hands them back with every column, table, footnote and page break
               exactly where you left it.
             </p>
@@ -415,7 +415,7 @@ export default function Home() {
           <div className="flex flex-col gap-5.5 pt-6">
             <p className="font-pb-display max-w-3xl text-2xl font-semibold italic md:text-3xl">
               Our Q3 investor deck used to take a full day to reformat by hand after
-              translation. Pagebird gave it back in nine minutes, tables and all.
+              translation. Pagebirdy gave it back in nine minutes, tables and all.
             </p>
             <div className="flex items-center gap-3">
               <span className="h-2 w-2 bg-pb-accent" />
