@@ -213,7 +213,15 @@ export async function translateLinks(request: {
 }): Promise<{ jobId: string }> {
   const formData = new FormData();
   for (const file of request.files) {
-    formData.append("files", file);
+    // A folder upload (webkitdirectory) can easily contain the same leaf
+    // filename in different subfolders (e.g. "Unit01/CA001.ai" and
+    // "Unit02/CA001.ai" — routine for a lesson-per-folder asset library).
+    // `formData.append(name, file)` alone sends only `file.name` (the leaf)
+    // as the upload's filename, so the backend would save one over the
+    // other before translation ever ran. Sending the relative path keeps
+    // them distinct all the way to disk.
+    const relPath = (file as File & { webkitRelativePath?: string }).webkitRelativePath;
+    formData.append("files", file, relPath || file.name);
   }
   formData.append("target_lang", request.targetLanguage);
   if (request.projectId) {

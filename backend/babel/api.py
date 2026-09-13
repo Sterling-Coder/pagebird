@@ -1053,12 +1053,27 @@ async def translate_links_upload(
 
     saved_paths: list[str] = []
     total_size = 0
+    seen_rel_paths: set[str] = set()
     for f in files:
-        lname = os.path.basename((f.filename or "").replace("\\", "/"))
-        if not lname:
+        # Preserve the upload's relative path (a folder pick sends
+        # "Unit01/CA001.ai" style names) rather than collapsing to the leaf
+        # filename — two different subfolders reusing the same leaf name is
+        # routine for a lesson-per-folder asset library, and saving both to
+        # the same flat path silently overwrote one with the other before
+        # translation ever ran (permanent data loss, not just a display gap).
+        rel = (f.filename or "").replace("\\", "/").lstrip("/")
+        parts = [p for p in rel.split("/") if p not in ("", ".", "..")]
+        if not parts:
             continue
+        rel = "/".join(parts)
+        if rel in seen_rel_paths:
+            # the exact same relative path was selected twice in one
+            # upload — keep the first copy, skip re-reading a duplicate part
+            continue
+        seen_rel_paths.add(rel)
+        path = os.path.join(links_dir, *parts)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
         data = await f.read()
-        path = os.path.join(links_dir, lname)
         with open(path, "wb") as out:
             out.write(data)
         saved_paths.append(path)
@@ -1110,13 +1125,14 @@ async def translate_links_upload(
             store.close()
         raise HTTPException(status_code=500, detail=f"translation failed: {e}")
 
-    # Only the translated output is persisted to storage — the source
-    # .ai/.eps/.pdf/.psd files the user uploaded are never downloaded again
-    # (the download link only ever serves translated results), so keeping a
-    # durable copy of them was pure cost: it doubled the storage traffic for
-    # every links batch and is what made large batches (300+ files) so slow
-    # to upload. `saved_paths` still lives on local disk for the duration of
-    # this request (used by `_run` above) and is scratch space after that.
+    # Every translated output is persisted to storage. A file with no
+    # extractable text (pure artwork — the common case) never produces a
+    # translated output, so its untouched original is persisted instead
+    # (see `translate_links_folder`'s `untranslated_files`) rather than
+    # silently dropping it — a links batch is otherwise missing whatever
+    # fraction of its files had nothing to translate, both from any per-file
+    # listing and from the download zip's "original file everywhere else"
+    # fallback (`_links_zip_entries`).
     translated_dir = os.path.join(_out_dir(), f"translated_{lang.code}")
 
     async def _upload_one(gname: str) -> None:
@@ -1130,14 +1146,14 @@ async def translate_links_upload(
             logger.exception(
                 "upload(links): failed to persist translated %r for job %s (non-fatal)", gname, job_id)
 
-    async def _upload_original(oname: str) -> None:
-        # Pure artwork with no extractable text never produces a translated
-        # output — persist the untouched original under Links/ instead of
-        # just dropping the file, so it still shows up in a per-file list
-        # (and in the download zip's "original file everywhere else"
-        # fallback, `_links_zip_entries`) rather than silently vanishing.
-        # `saved_paths`/`links_dir` are still on local disk for this request.
-        opath = os.path.join(links_dir, oname)
+    async def _upload_original(item: dict) -> None:
+        # `path` is the file's real source path (possibly inside a
+        # subfolder — `saved_paths`/`links_dir` preserve the upload's
+        # relative structure), `name` is the disambiguated flat display name
+        # `translate_links_folder` assigned it. Both still live on local disk
+        # for the duration of this request.
+        opath = item["path"]
+        oname = item["name"]
         if not os.path.isfile(opath):
             return
         try:
@@ -1159,9 +1175,9 @@ async def translate_links_upload(
         async with upload_semaphore:
             await _upload_one(gname)
 
-    async def _upload_original_bounded(oname: str) -> None:
+    async def _upload_original_bounded(item: dict) -> None:
         async with upload_semaphore:
-            await _upload_original(oname)
+            await _upload_original(item)
 
     await asyncio.gather(
         *(_upload_one_bounded(g) for g in report.get("translated_files") or []),

@@ -692,14 +692,45 @@ def translate_links_folder(
     # concurrent chunk translation elsewhere (translate/verify.py).
     _MAX_CONCURRENT_LINKS = 6
 
-    def _out_path_for(path: str) -> str:
+    # Display/storage names are flat (no subfolders) even though a batch
+    # uploaded via folder-picker can carry the same leaf filename in several
+    # subfolders — two genuinely different files ("Unit01/CA001.ai" and
+    # "Unit02/CA001.ai") must not overwrite each other's translated output or
+    # original upload the way saving them by leaf name alone once did. Each
+    # namespace (translated output vs. persisted-original) is disambiguated
+    # independently since they land in different storage prefixes.
+    def _dedupe_name(name: str, used: set[str]) -> str:
+        if name not in used:
+            used.add(name)
+            return name
+        base, ext = os.path.splitext(name)
+        n = 2
+        candidate = f"{base}_{n}{ext}"
+        while candidate in used:
+            n += 1
+            candidate = f"{base}_{n}{ext}"
+        used.add(candidate)
+        return candidate
+
+    def _desired_out_name(path: str) -> str:
         base, ext = os.path.splitext(os.path.basename(path))
         if ext.lower() in (".psd",):
             ext = ".pdf"
-        return os.path.join(translated_dir, f"{base}{ext}")
+        return f"{base}{ext}"
+
+    translated_names_used: set[str] = set()
+    original_names_used: set[str] = set()
+
+    # Precomputed up front (one name per hash group's representative) since
+    # `translate_graphic` writes straight to this path — the name has to be
+    # settled before translation runs, not after.
+    out_name_by_representative = {
+        group[0]: _dedupe_name(_desired_out_name(group[0]), translated_names_used)
+        for group in by_hash.values()
+    }
 
     def _translate_one(path: str) -> str | None:
-        out_path = _out_path_for(path)
+        out_path = os.path.join(translated_dir, out_name_by_representative[path])
         try:
             translated = translate_graphic(path, out_path, lang, primary, secondary,
                                            with_ocr=with_ocr)
@@ -725,29 +756,33 @@ def translate_links_folder(
     # extractable text is the common case and was previously dropped
     # entirely (never written anywhere, never uploaded, invisible to both
     # the download zip and any per-file listing). The caller persists these
-    # by original name so "N files uploaded" and "N files visible" actually
+    # by original name (and its real source path, needed since it may live
+    # in a subfolder) so "N files uploaded" and "N files visible" actually
     # match, and nothing a user attached silently vanishes.
-    untranslated_files: list[str] = []
+    untranslated_files: list[dict] = []
     for group in by_hash.values():
         representative = group[0]
         result = result_by_path.get(representative)
         if result is None:
             for path in group:
-                untranslated_files.append(os.path.basename(path))
+                name = _dedupe_name(os.path.basename(path), original_names_used)
+                untranslated_files.append({"name": name, "path": path})
             continue
         translated_files.append(result)
         src_out = os.path.join(translated_dir, result)
         for duplicate in group[1:]:
-            dup_out = _out_path_for(duplicate)
+            dup_name = _dedupe_name(_desired_out_name(duplicate), translated_names_used)
+            dup_out = os.path.join(translated_dir, dup_name)
             if dup_out == src_out:
                 continue
             try:
                 shutil.copyfile(src_out, dup_out)
-                translated_files.append(os.path.basename(dup_out))
+                translated_files.append(dup_name)
             except OSError as e:
                 logger.info("translate_links_folder: failed to copy cached result to %s: %s",
                             duplicate, e)
-                untranslated_files.append(os.path.basename(duplicate))
+                name = _dedupe_name(os.path.basename(duplicate), original_names_used)
+                untranslated_files.append({"name": name, "path": duplicate})
     _progress(95, "finishing")
 
     logger.info("translate_links_folder: done, %d/%d file(s) had translatable text",
