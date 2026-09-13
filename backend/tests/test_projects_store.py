@@ -8,7 +8,7 @@ def _seg(sid, source, target, status="approved"):
 
 
 def _store(tmp_path):
-    return ReviewStore(str(tmp_path / "review.db"), tm_path=str(tmp_path / "tm.db"))
+    return ReviewStore(str(tmp_path / "review.db"))
 
 
 def test_create_and_list_project(tmp_path):

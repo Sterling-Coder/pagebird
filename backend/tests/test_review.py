@@ -1,8 +1,8 @@
 import json
+import time
 
 from babel.models import Segment
 from babel.review.store import ReviewStore
-from babel.tm.store import TranslationMemory
 
 
 def _seg(sid, source, target, placeholders=None, status="needs_human"):
@@ -12,7 +12,7 @@ def _seg(sid, source, target, placeholders=None, status="needs_human"):
 
 
 def _store(tmp_path):
-    return ReviewStore(str(tmp_path / "review.db"), tm_path=str(tmp_path / "tm.db"))
+    return ReviewStore(str(tmp_path / "review.db"))
 
 
 def test_save_and_list(tmp_path):
@@ -40,7 +40,7 @@ def test_edit_rejected_on_placeholder_mismatch(tmp_path):
     assert any("placeholder mismatch" in n for n in res["notes"])
 
 
-def test_approve_writes_tm_and_is_reused(tmp_path):
+def test_approve_marks_segment_approved(tmp_path):
     st = _store(tmp_path)
     jid = st.save_job("in.pdf", "out.pdf",
                       [_seg("a", "The ratio ⟦=5⟧", "The ratio ⟦=5⟧", {"⟦=5⟧": "5"})],
@@ -48,12 +48,6 @@ def test_approve_writes_tm_and_is_reused(tmp_path):
     res = st.update_segment(jid, "a", "La razón ⟦=5⟧", approve=True)
     assert res["status"] == "approved" and res["approved"]
     assert res["target_restored"] == "La razón 5"
-
-    # The approval is now an approved TM entry, reusable elsewhere.
-    tm = TranslationMemory(str(tmp_path / "tm.db"))
-    hit = tm.lookup("The ratio ⟦=5⟧")
-    tm.close()
-    assert hit == ("La razón ⟦=5⟧", True)
 
 
 def test_hardening_pragmas_and_schema(tmp_path):
@@ -149,8 +143,7 @@ def test_api_endpoints(tmp_path):
     from fastapi.testclient import TestClient
 
     api._REVIEW_DB = str(tmp_path / "review.db")
-    api._TM_DB = str(tmp_path / "tm.db")
-    ReviewStore(api._REVIEW_DB, tm_path=api._TM_DB).save_job(
+    ReviewStore(api._REVIEW_DB).save_job(
         "in.pdf", "out.pdf",
         [_seg("a", "Solve ⟦m0⟧", "Solve ⟦m0⟧", {"⟦m0⟧": "x"})], {"engine_primary": "identity"})
 
@@ -175,8 +168,7 @@ def test_api_reviewer_and_history(tmp_path):
     from fastapi.testclient import TestClient
 
     api._REVIEW_DB = str(tmp_path / "review.db")
-    api._TM_DB = str(tmp_path / "tm.db")
-    ReviewStore(api._REVIEW_DB, tm_path=api._TM_DB).save_job(
+    ReviewStore(api._REVIEW_DB).save_job(
         "in.pdf", "out.pdf",
         [_seg("a", "Solve ⟦m0⟧", "Solve ⟦m0⟧", {"⟦m0⟧": "x"})], {})
 
@@ -203,8 +195,7 @@ def test_translate_pdf_records_duration_and_meta(tmp_path, monkeypatch):
     doc.close()
 
     review_db = str(tmp_path / "review.db")
-    report = translate_pdf(str(src), out_dir=str(tmp_path / "out"),
-                            tm_path=str(tmp_path / "tm.db"), review_db=review_db)
+    report = translate_pdf(str(src), out_dir=str(tmp_path / "out"), review_db=review_db)
 
     import sqlite3
     conn = sqlite3.connect(review_db)
@@ -249,8 +240,38 @@ def test_translate_pdf_merges_ocr_image_regions_by_default(tmp_path, monkeypatch
     )
 
     without = translate_pdf(str(src), out_dir=str(tmp_path / "a"),
-                            tm_path=str(tmp_path / "tm1.db"), review_db=None, with_ocr=False)
+                            review_db=None, with_ocr=False)
     with_ocr = translate_pdf(str(src), out_dir=str(tmp_path / "b"),
-                             tm_path=str(tmp_path / "tm2.db"), review_db=None, with_ocr=True)
+                             review_db=None, with_ocr=True)
 
     assert with_ocr["segments_total"] == without["segments_total"] + 1
+
+
+def test_stale_processing_job_is_reaped_on_list(tmp_path):
+    """A job whose process crashed mid-translation is stuck at status=
+    "processing" forever — nothing else ever calls mark_job_failed for it.
+    list_jobs must notice and flip it to failed rather than leaving a
+    phantom in-progress row that never resolves."""
+    st = _store(tmp_path)
+    job_id = st.create_pending_job("in.idml", original_filename="in.idml")
+    # Backdate past the staleness threshold, simulating a job whose worker
+    # died a long time ago.
+    with st.conn.cursor() as cur:
+        cur.execute(
+            "UPDATE review_jobs SET created_at = %s WHERE id = %s",
+            (time.time() - st._STALE_PROCESSING_SECONDS - 60, job_id),
+        )
+    st.conn.commit()
+
+    jobs = st.list_jobs()
+    job = next(j for j in jobs if j["id"] == job_id)
+    assert job["status"] == "failed"
+    assert "never completed" in job["error"]
+
+
+def test_recent_processing_job_is_left_alone(tmp_path):
+    st = _store(tmp_path)
+    job_id = st.create_pending_job("in.idml", original_filename="in.idml")
+    jobs = st.list_jobs()
+    job = next(j for j in jobs if j["id"] == job_id)
+    assert job["status"] == "processing"

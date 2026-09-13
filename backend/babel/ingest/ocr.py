@@ -29,7 +29,9 @@ from __future__ import annotations
 import io
 import logging
 import os
+import re
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from functools import lru_cache
 
@@ -658,29 +660,54 @@ def ocr_pages(pdf_path: str, pages: list[int] | None = None,
         doc = fitz.open(pdf_path)
         lines: list[Line] = []
         try:
+            if engine == "rapidocr":
+                # Local CPU inference, not a network call — no benefit (and
+                # real risk, sharing a native model across threads) from
+                # running these concurrently, so this stays a plain loop.
+                for pno in pages:
+                    page = doc.load_page(pno)
+                    png = page.get_pixmap(dpi=dpi).tobytes("png")
+                    lines.extend(_rapidocr_lines(png, pno, page.rect, dpi))
+                return lines, f"OCR ({engine}): {len(lines)} lines from {len(pages)} page(s)"
+
+            # Vision/http are one network round trip per page — rendering the
+            # page to PNG (fitz, must stay single-threaded on one Document)
+            # happens up front here; the actual API calls below run
+            # concurrently since they're pure network I/O with no shared
+            # fitz state, which is what made a 20+ page scanned document take
+            # as long as 20 sequential API round trips.
+            items = []
             for pno in pages:
                 page = doc.load_page(pno)
-                png = page.get_pixmap(dpi=dpi).tobytes("png")
-                if engine == "rapidocr":
-                    lines.extend(_rapidocr_lines(png, pno, page.rect, dpi))
-                elif engine == "vision":
-                    try:
-                        lines.extend(_vision_lines(png, pno, page.rect, dpi))
-                    except Exception as exc:  # noqa: BLE001
-                        # One bad page abandons the whole pass, so this is worth
-                        # a stack trace rather than a one-line note nobody reads.
-                        logger.error("vision: page OCR aborted at p%d — no OCR lines "
-                                     "will be produced for this document",
-                                     pno + 1, exc_info=True)
-                        return [], f"OCR skipped: Vision failed ({exc})"
-                else:
-                    try:
-                        text = _ocr_http_call(png, f"page_{pno + 1}.png", "image/png")
-                    except Exception as exc:  # noqa: BLE001
-                        return [], f"OCR skipped: OCR service failed ({exc})"
-                    lines.extend(_http_lines(text, pno, page.rect))
+                items.append((pno, page.get_pixmap(dpi=dpi).tobytes("png"), page.rect))
         finally:
             doc.close()
+
+        def _ocr_one(item: tuple[int, bytes, "fitz.Rect"]) -> list[Line]:
+            pno, png, rect = item
+            if engine == "vision":
+                return _vision_lines(png, pno, rect, dpi)
+            text = _ocr_http_call(png, f"page_{pno + 1}.png", "image/png")
+            return _http_lines(text, pno, rect)
+
+        _MAX_CONCURRENT_OCR_CALLS = 6
+        with ThreadPoolExecutor(max_workers=_MAX_CONCURRENT_OCR_CALLS) as ex:
+            futures = {ex.submit(_ocr_one, item): item for item in items}
+            try:
+                for fut in as_completed(futures):
+                    lines.extend(fut.result())
+            except Exception as exc:  # noqa: BLE001
+                for f in futures:
+                    f.cancel()
+                # One bad page abandons the whole pass, so this is worth a
+                # stack trace rather than a one-line note nobody reads.
+                pno = futures[fut][0]
+                if engine == "vision":
+                    logger.error("vision: page OCR aborted at p%d — no OCR lines "
+                                 "will be produced for this document",
+                                 pno + 1, exc_info=True)
+                    return [], f"OCR skipped: Vision failed ({exc})"
+                return [], f"OCR skipped: OCR service failed ({exc})"
         return lines, f"OCR ({engine}): {len(lines)} lines from {len(pages)} page(s)"
 
     from google.cloud import documentai_v1 as documentai  # type: ignore[import-not-found]
@@ -707,6 +734,19 @@ def ocr_pages(pdf_path: str, pages: list[int] | None = None,
             lines.extend(_lines_from_document(result.document, idx, pno, w, h))
 
     return lines, f"OCR: {len(lines)} lines from {len(pages)} page(s)"
+
+
+# A literal backslash-letter escape (\t, \n, \r) never legitimately appears in
+# worksheet math text — it only shows up when the OCR engine misreads a
+# stylized "=" glyph (a bold double-bar, common in math worksheet fonts) as an
+# escape-looking token. Confidence still scores high because the engine is
+# reading *something* real, just the wrong thing. Scoped to "escape directly
+# touching a digit" so it never touches a genuine word.
+_OCR_EQUALS_MISREAD = re.compile(r"\\[tnr](?=\s*\d)")
+
+
+def _desanitize_ocr_text(text: str) -> str:
+    return _OCR_EQUALS_MISREAD.sub("= ", text)
 
 
 _BBOX_PAD_FRACTION = 0.2  # OCR boxes clip ascenders/descenders/punctuation dots short
@@ -792,75 +832,110 @@ def ocr_image_regions(pdf_path: str, regions: dict[int, list[tuple]] | None = No
 
         client, name = _client()
 
+    # Phase 1 (sequential, fitz-bound): render every region to a PNG crop up
+    # front — fitz's Document/Page objects aren't safe to touch from more
+    # than one thread at once, so all rendering happens on the one `doc`
+    # here before any concurrency starts.
     doc = fitz.open(pdf_path)
-    lines: list[Line] = []
-    refused: list[str] = []
+    crops: list[tuple[int, "fitz.Rect", bytes]] = []
     try:
         for pno, boxes in sorted(regions.items()):
             page = doc.load_page(pno)
             for box in boxes:
                 rect = fitz.Rect(box)
                 png = page.get_pixmap(clip=rect, dpi=dpi).tobytes("png")
+                crops.append((pno, rect, png))
+    finally:
+        doc.close()
 
-                if engine == "rapidocr":
-                    local = _rapidocr_lines(png, pno, rect, dpi)
-                elif engine == "vision":
-                    try:
-                        local = _vision_lines(png, pno, rect, dpi)
-                    except Exception as exc:  # noqa: BLE001
-                        logger.error("vision: image OCR aborted at p%d region "
-                                     "(%.0f,%.0f,%.0f,%.0f) — no image-OCR lines will "
-                                     "be produced for this document",
-                                     pno + 1, rect.x0, rect.y0, rect.x1, rect.y1,
-                                     exc_info=True)
-                        return [], f"image-OCR skipped: Vision failed ({exc})"
-                elif engine == "http":
-                    # No geometry comes back, so the whole crop is one block.
-                    # Fine for reading a figure's text; not precise enough to
-                    # mask individual labels inside it.
-                    try:
-                        text = _ocr_http_call(png, f"img_p{pno + 1}.png", "image/png")
-                    except Exception as exc:  # noqa: BLE001
-                        return [], f"image-OCR skipped: OCR service failed ({exc})"
-                    local = _http_lines(text, pno, rect)
-                else:
-                    from google.cloud import documentai_v1 as documentai  # type: ignore[import-not-found]
+    # Phase 2 (concurrent, network-bound): one OCR call per region is pure
+    # network I/O with no shared fitz state — a document with a few dozen
+    # labeled figures was paying for each region's round trip serially, this
+    # is what made that add up. rapidocr stays sequential (local CPU model,
+    # nothing to gain and a native-library thread-safety risk to take on).
+    def _ocr_one(item: tuple[int, "fitz.Rect", bytes]) -> list["Line"]:
+        pno, rect, png = item
+        if engine == "rapidocr":
+            return _rapidocr_lines(png, pno, rect, dpi)
+        if engine == "vision":
+            return _vision_lines(png, pno, rect, dpi)
+        if engine == "http":
+            # No geometry comes back, so the whole crop is one block. Fine
+            # for reading a figure's text; not precise enough to mask
+            # individual labels inside it.
+            text = _ocr_http_call(png, f"img_p{pno + 1}.png", "image/png")
+            return _http_lines(text, pno, rect)
 
-                    result = client.process_document(
-                        request=documentai.ProcessRequest(
-                            name=name,
-                            raw_document=documentai.RawDocument(
-                                content=png, mime_type="image/png"
-                            ),
-                        )
-                    )
-                    # crop-local coords → page coords
-                    local = _lines_from_document(
-                        result.document, 0, pno, rect.width, rect.height
-                    )
-                    for ln in local:
-                        x0, y0, x1, y1 = ln.bbox
-                        ln.bbox = (x0 + rect.x0, y0 + rect.y0,
-                                   x1 + rect.x0, y1 + rect.y0)
-                        for sp in ln.spans:
-                            sp.bbox = ln.bbox
+        from google.cloud import documentai_v1 as documentai  # type: ignore[import-not-found]
 
-                for ln in local:
-                    ln.in_image = True
-                    if not worth_translating(ln):
-                        # Part of the picture, not a label on it (a coin's motto,
-                        # a mint date). Covering it would damage the artwork for
-                        # a translation no reader was meant to read.
-                        refused.append(ln.raw_text.strip())
-                        continue
-                    color = _sample_foreground_color(page, fitz.Rect(ln.bbox))
-                    if color is not None:
-                        for sp in ln.spans:
-                            sp.color = color
-                    ln.bbox = _pad_bbox(ln.bbox)
+        result = client.process_document(
+            request=documentai.ProcessRequest(
+                name=name,
+                raw_document=documentai.RawDocument(content=png, mime_type="image/png"),
+            )
+        )
+        # crop-local coords → page coords
+        local = _lines_from_document(result.document, 0, pno, rect.width, rect.height)
+        for ln in local:
+            x0, y0, x1, y1 = ln.bbox
+            ln.bbox = (x0 + rect.x0, y0 + rect.y0, x1 + rect.x0, y1 + rect.y0)
+            for sp in ln.spans:
+                sp.bbox = ln.bbox
+        return local
+
+    raw_by_index: dict[int, list["Line"]] = {}
+    if engine == "rapidocr":
+        for i, item in enumerate(crops):
+            raw_by_index[i] = _ocr_one(item)
+    else:
+        _MAX_CONCURRENT_OCR_CALLS = 6
+        with ThreadPoolExecutor(max_workers=_MAX_CONCURRENT_OCR_CALLS) as ex:
+            futures = {ex.submit(_ocr_one, item): i for i, item in enumerate(crops)}
+            try:
+                for fut in as_completed(futures):
+                    raw_by_index[futures[fut]] = fut.result()
+            except Exception as exc:  # noqa: BLE001
+                for f in futures:
+                    f.cancel()
+                pno, rect, _png = crops[futures[fut]]
+                if engine == "vision":
+                    logger.error("vision: image OCR aborted at p%d region "
+                                 "(%.0f,%.0f,%.0f,%.0f) — no image-OCR lines will "
+                                 "be produced for this document",
+                                 pno + 1, rect.x0, rect.y0, rect.x1, rect.y1,
+                                 exc_info=True)
+                    return [], f"image-OCR skipped: Vision failed ({exc})"
+                return [], f"image-OCR skipped: OCR service failed ({exc})"
+
+    # Phase 3 (sequential, fitz-bound again): post-process results in
+    # original region order — color sampling needs a live `page`, so this
+    # reopens the document rather than trying to keep phase-1 page objects
+    # alive across the concurrent phase.
+    doc = fitz.open(pdf_path)
+    lines: list[Line] = []
+    refused: list[str] = []
+    try:
+        for i, item in enumerate(crops):
+            pno, rect, _png = item
+            page = doc.load_page(pno)
+            for ln in raw_by_index.get(i, []):
+                ln.in_image = True
+                for sp in ln.spans:
+                    sp.text = _desanitize_ocr_text(sp.text)
+                if not worth_translating(ln):
+                    # Part of the picture, not a label on it (a coin's motto,
+                    # a mint date). Covering it would damage the artwork for
+                    # a translation no reader was meant to read.
+                    refused.append(ln.raw_text.strip())
+                    continue
+                color = _sample_foreground_color(page, fitz.Rect(ln.bbox))
+                if color is not None:
                     for sp in ln.spans:
-                        sp.bbox = ln.bbox
-                    lines.append(ln)
+                        sp.color = color
+                ln.bbox = _pad_bbox(ln.bbox)
+                for sp in ln.spans:
+                    sp.bbox = ln.bbox
+                lines.append(ln)
     finally:
         doc.close()
 

@@ -25,6 +25,7 @@ export type JobSummary = {
   project_id?: string | null;
   job_type?: string;
   folder_id?: string | null;
+  meta?: { progress?: number; stage?: string } | null;
 };
 
 export type Folder = {
@@ -116,6 +117,14 @@ export async function listFolders(
 ): Promise<Folder[]> {
   const url = new URL(`${API_BASE_URL}/api/projects/${projectId}/folders`);
   if (parentFolderId) url.searchParams.set("parent_folder_id", parentFolderId);
+  const res = await fetch(url, { headers: await authHeaders() });
+  if (!res.ok) throw new Error(`Failed to load folders (${res.status})`);
+  return res.json();
+}
+
+export async function listAllFolders(projectId: string): Promise<Folder[]> {
+  const url = new URL(`${API_BASE_URL}/api/projects/${projectId}/folders`);
+  url.searchParams.set("all", "true");
   const res = await fetch(url, { headers: await authHeaders() });
   if (!res.ok) throw new Error(`Failed to load folders (${res.status})`);
   return res.json();

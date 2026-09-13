@@ -18,9 +18,11 @@ Run:  .venv/bin/uvicorn babel.api:app --reload --port 8000
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import os.path
+import re
 import threading
 from collections import deque
 
@@ -36,8 +38,10 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from pydantic import BaseModel, UUID4
 
 from babel import languages, storage
-from babel.auth import effective_owner_ids, get_or_create_profile, require_trial_active, require_user
-from babel.pipeline import rebuild_from_edits, regenerate_idml_from_review, translate_idml, translate_pdf
+from babel.auth import (effective_owner_ids, get_or_create_profile, invalidate_owner_ids_cache,
+                        require_trial_active, require_user)
+from babel.pipeline import (rebuild_from_edits, regenerate_idml_from_review, translate_idml,
+                            translate_links_folder, translate_pdf)
 from babel.review.store import ReviewStore
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
@@ -77,7 +81,6 @@ logging.getLogger().addHandler(_buffer_handler)
 logging.getLogger().setLevel(logging.INFO)
 
 _REVIEW_DB = os.environ.get("BABEL_REVIEW_DB", "babel_review.db")
-_TM_DB = os.environ.get("BABEL_TM_DB", "babel_tm.db")
 _UPLOAD_DIR = os.environ.get("BABEL_UPLOAD_DIR", "uploads")
 _OUT_DIR = os.environ.get("BABEL_OUT_DIR", "out")
 
@@ -95,7 +98,7 @@ app.add_middleware(
 
 
 def _store() -> ReviewStore:
-    return ReviewStore(_REVIEW_DB, tm_path=_TM_DB)
+    return ReviewStore(_REVIEW_DB)
 
 
 def _upload_dir() -> str:
@@ -104,6 +107,27 @@ def _upload_dir() -> str:
 
 def _out_dir() -> str:
     return os.environ.get("BABEL_OUT_DIR", _OUT_DIR)
+
+
+def _upload_with_retry(local_path: str, key: str, attempts: int = 3) -> None:
+    """Storage calls occasionally hit a transient network/DNS blip (connect
+    timeout to Supabase) rather than a real failure — one retry used to mean
+    the whole persist step aborted, leaving a job marked "complete" in the DB
+    while its files still pointed at local scratch space that Railway wipes
+    on redeploy: permanently undownloadable, with no indication anything was
+    wrong until someone tried."""
+    import time
+
+    last_error: Exception | None = None
+    for attempt in range(attempts):
+        try:
+            storage.upload_file(local_path, key)
+            return
+        except Exception as e:
+            last_error = e
+            if attempt < attempts - 1:
+                time.sleep(1.5 * (attempt + 1))
+    raise last_error  # type: ignore[misc]
 
 
 def _find_job(job_id: str) -> dict | None:
@@ -158,8 +182,13 @@ def _materialize_job_files(job: dict) -> tuple[str, str]:
     output_key = str(job.get("output") or "")
     local_source = os.path.join(tmp_dir, "source" + (os.path.splitext(source_key)[1] or ""))
     local_output = os.path.join(tmp_dir, "output" + (os.path.splitext(output_key)[1] or ""))
-    if source_key:
-        storage.download_to(source_key, local_source)
+    if source_key and not storage.download_to(source_key, local_source):
+        # A silently-discarded False here used to surface as a bare
+        # `FileNotFoundError` from whatever tried to open `local_source` next
+        # (IdmlPackage, fitz.open, ...) — no indication it was a Storage
+        # fetch failure (missing object, or a transient network/DNS/timeout
+        # reaching Supabase) rather than a real bug in the caller.
+        raise RuntimeError(f"failed to download source {source_key!r} from storage")
     if output_key:
         storage.download_to(output_key, local_output)
     return local_source, local_output
@@ -173,6 +202,194 @@ def _output_pdf_path(output: str) -> str:
     if output.lower().endswith(".pdf"):
         return output
     return os.path.splitext(output)[0] + ".pdf"
+
+
+_OUTPUT_HASH_RE = re.compile(r"^(.*)-[0-9a-f]{8}(\.[^.]+)$")
+
+
+def _strip_output_hash(name: str) -> str:
+    """Undo `idml/graphics.py`'s `_output_filename` disambiguation
+    (`{base}-{8 hex digits}{ext}`), back to the original file's own stem —
+    used to match a translated graphic back to the original it replaces."""
+    m = _OUTPUT_HASH_RE.match(name)
+    return m.group(1) if m else os.path.splitext(name)[0]
+
+
+def _links_zip_entries(job_id: str, lang_code: str | None) -> dict[str, bytes] | None:
+    """Every linked-graphic file this job has in Storage, keyed by its
+    "Links/<name>" path inside a zip — translated version where translation
+    happened, the original file everywhere else. Returns None if the job has
+    no persisted Links at all.
+
+    Storage keys are job-scoped (`jobs/{job_id}/Links/…`,
+    `jobs/{job_id}/Links_{lang}/…`) — unlike the shared-per-language local
+    disk folder `translate_idml` writes during processing, there is no
+    cross-job leak risk here to guard against.
+    """
+    original_names = storage.list_prefix(f"jobs/{job_id}/Links/")
+    translated_names = (
+        storage.list_prefix(f"jobs/{job_id}/Links_{lang_code}/") if lang_code else []
+    )
+    if not original_names and not translated_names:
+        return None
+
+    translated_by_stem = {_strip_output_hash(n): n for n in translated_names}
+    entries: dict[str, bytes] = {}
+    covered_stems: set[str] = set()
+    for oname in original_names:
+        stem = os.path.splitext(oname)[0]
+        covered_stems.add(stem)
+        tname = translated_by_stem.get(stem)
+        if tname:
+            data = storage.read_bytes(f"jobs/{job_id}/Links_{lang_code}/{tname}")
+            if data is not None:
+                entries[f"Links/{stem}{os.path.splitext(tname)[1]}"] = data
+                continue
+        data = storage.read_bytes(f"jobs/{job_id}/Links/{oname}")
+        if data is not None:
+            entries[f"Links/{oname}"] = data
+    # A translated graphic whose original wasn't (re-)attached this time
+    # still belongs in the bundle under its real name.
+    for stem, tname in translated_by_stem.items():
+        if stem in covered_stems:
+            continue
+        data = storage.read_bytes(f"jobs/{job_id}/Links_{lang_code}/{tname}")
+        if data is not None:
+            entries[f"Links/{tname}"] = data
+    return entries or None
+
+
+_LINK_MEDIA_TYPES = {
+    ".pdf": "application/pdf",
+    ".ai": "application/pdf",  # Adobe Illustrator files are PDF-compatible
+    ".eps": "application/postscript",
+    ".psd": "image/vnd.adobe.photoshop",
+}
+
+
+def _link_file_map(job_id: str, lang_code: str | None) -> dict[str, tuple[str, bool]]:
+    """Display name -> (storage key, is_translated) for every linked-graphic
+    file this job has in Storage. Same original/translated matching as
+    `_links_zip_entries`, but returns keys instead of eagerly reading bytes —
+    for listing files or fetching one at a time instead of the whole zip."""
+    original_names = storage.list_prefix(f"jobs/{job_id}/Links/")
+    translated_names = (
+        storage.list_prefix(f"jobs/{job_id}/Links_{lang_code}/") if lang_code else []
+    )
+    translated_by_stem = {_strip_output_hash(n): n for n in translated_names}
+    entries: dict[str, tuple[str, bool]] = {}
+    covered_stems: set[str] = set()
+    for oname in original_names:
+        stem = os.path.splitext(oname)[0]
+        covered_stems.add(stem)
+        tname = translated_by_stem.get(stem)
+        if tname:
+            entries[f"{stem}{os.path.splitext(tname)[1]}"] = (
+                f"jobs/{job_id}/Links_{lang_code}/{tname}",
+                True,
+            )
+        else:
+            entries[oname] = (f"jobs/{job_id}/Links/{oname}", False)
+    for stem, tname in translated_by_stem.items():
+        if stem in covered_stems:
+            continue
+        entries[tname] = (f"jobs/{job_id}/Links_{lang_code}/{tname}", True)
+    return entries
+
+
+@app.get("/api/jobs/{job_id}/links/list")
+def list_link_files(job_id: str, user: dict = Depends(require_user)) -> list[dict]:
+    """Every linked-graphic file for this job, for a Finder-style preview —
+    name, translated status, and whether the browser can render it inline."""
+    job = _find_owned_job(job_id, user)
+    meta = job.get("meta") or {}
+    file_map = _link_file_map(job_id, meta.get("target_lang"))
+    return sorted(
+        (
+            {
+                "name": name,
+                "translated": translated,
+                "previewable": os.path.splitext(name)[1].lower() in (".pdf", ".ai"),
+            }
+            for name, (_, translated) in file_map.items()
+        ),
+        key=lambda e: e["name"].lower(),
+    )
+
+
+@app.get("/api/jobs/{job_id}/links/file/{name}")
+def get_link_file(job_id: str, name: str, user: dict = Depends(require_user)) -> Response:
+    """Serve a single linked-graphic file's bytes (translated version if one
+    exists, the original otherwise) so the frontend can preview or download
+    it individually instead of pulling the whole zip bundle."""
+    job = _find_owned_job(job_id, user)
+    meta = job.get("meta") or {}
+    file_map = _link_file_map(job_id, meta.get("target_lang"))
+    entry = file_map.get(name)
+    if entry is None:
+        raise HTTPException(status_code=404, detail="file not found")
+    key, _translated = entry
+    data = storage.read_bytes(key)
+    if data is None:
+        raise HTTPException(status_code=404, detail="file not found")
+    media = _LINK_MEDIA_TYPES.get(os.path.splitext(name)[1].lower(), "application/octet-stream")
+    return Response(content=data, media_type=media)
+
+
+def _idml_zip_response(idml_key: str, job_id: str, lang_code: str | None) -> Response | None:
+    """Bundles an .idml with every one of its linked graphics — translated
+    where translation happened, the original file everywhere else — so
+    nothing is missing when InDesign asks to relink. Returns None if the job
+    has no persisted Links (nothing to bundle; caller serves the plain .idml).
+    """
+    import io
+    import zipfile
+
+    idml_bytes = storage.read_bytes(idml_key)
+    if idml_bytes is None:
+        return None
+
+    entries = _links_zip_entries(job_id, lang_code)
+    if entries is None:
+        return None
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr(os.path.basename(idml_key), idml_bytes)
+        for path, data in entries.items():
+            z.writestr(path, data)
+    buf.seek(0)
+
+    zip_name = os.path.splitext(os.path.basename(idml_key))[0] + ".zip"
+    return Response(
+        content=buf.getvalue(),
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{zip_name}"'},
+    )
+
+
+def _links_zip_response(job_id: str, lang_code: str | None, base_name: str) -> Response | None:
+    """Just the Links folder, no .idml — the standalone "download Links"
+    button next to a job's own .idml download. Returns None if the job has
+    no persisted Links."""
+    import io
+    import zipfile
+
+    entries = _links_zip_entries(job_id, lang_code)
+    if entries is None:
+        return None
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        for path, data in entries.items():
+            z.writestr(path, data)
+    buf.seek(0)
+
+    return Response(
+        content=buf.getvalue(),
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{base_name}-links.zip"'},
+    )
 
 
 class SegmentEdit(BaseModel):
@@ -272,11 +489,11 @@ def create_folder(project_id: str, body: FolderCreate, user: dict = Depends(requ
 
 @app.get("/api/projects/{project_id}/folders")
 def list_folders(project_id: str, parent_folder_id: str | None = None,
-                  user: dict = Depends(require_user)) -> list[dict]:
+                  all: bool = False, user: dict = Depends(require_user)) -> list[dict]:
     s = _store()
     try:
         _assert_owns_project(s, project_id, user)
-        return s.list_folders(project_id, parent_folder_id)
+        return s.list_folders(project_id, parent_folder_id, all=all)
     finally:
         s.close()
 
@@ -582,12 +799,14 @@ async def translate_upload(
         raise HTTPException(status_code=400, detail=str(e))
 
     upload_dir = _upload_dir()
-    os.makedirs(upload_dir, exist_ok=True)
-    # De-dupe filename so distinct uploads with the same name don't clobber.
+    # Each upload gets its own dir so concurrent uploads with same-named
+    # files never clobber each other.
     import uuid
 
-    stem, dot_ext = os.path.splitext(os.path.basename(name))
-    saved = os.path.join(upload_dir, f"{stem}-{uuid.uuid4().hex[:8]}{dot_ext}")
+    job_dir = os.path.join(upload_dir, uuid.uuid4().hex[:12])
+    os.makedirs(job_dir, exist_ok=True)
+
+    saved = os.path.join(job_dir, os.path.basename(name))
     data = await file.read()
     with open(saved, "wb") as f:
         f.write(data)
@@ -599,6 +818,33 @@ async def translate_upload(
     logger.info("upload received: %s (%d bytes) ext=%s target_lang=%s",
                 name, file_size, ext, lang.code)
 
+    # Persisted *before* translation starts — status="processing" — so the
+    # Files list shows a real in-progress row from any tab, surviving a
+    # navigation or a closed tab, instead of a client-side-only indicator
+    # that vanishes the moment the uploading tab is gone.
+    store = _store()
+    try:
+        job_id = store.create_pending_job(
+            saved, original_filename=name, file_hash=file_hash, file_size=file_size,
+            meta={"target_lang": lang.code}, project_id=project_id or None,
+            folder_id=folder_id or None, created_by=user["id"],
+        )
+    finally:
+        store.close()
+
+    def _progress_cb(percent: int, stage: str) -> None:
+        # Runs inside the threadpool worker doing the translation — a plain
+        # blocking DB call is fine here, same thread, not the event loop.
+        # Best-effort: a failed progress tick must never break translation.
+        try:
+            s = _store()
+            try:
+                s.update_job_progress(job_id, percent, stage)
+            finally:
+                s.close()
+        except Exception:
+            logger.exception("upload: failed to report progress for job %s (non-fatal)", job_id)
+
     # Translation is blocking (network LLM calls). Run it off the event loop
     # so a single upload doesn't freeze the whole server for other requests.
     def _run() -> dict:
@@ -606,10 +852,10 @@ async def translate_upload(
 
         if ext == ".pdf":
             logger.info("upload: .pdf path, running translate_pdf directly for %s", name)
-            report = translate_pdf(saved, out_dir=_out_dir(), tm_path=_TM_DB,
+            report = translate_pdf(saved, out_dir=_out_dir(),
                                    review_db=_REVIEW_DB, target_lang=lang.code,
                                    project_id=project_id or None, folder_id=folder_id or None, created_by=user["id"],
-                                   original_filename=name)
+                                   original_filename=name, job_id=job_id, progress_cb=_progress_cb)
             report["format"] = "pdf"
             report["has_output_pdf"] = True
             logger.info("upload: pipeline complete for %s (job_id=%s)",
@@ -623,12 +869,15 @@ async def translate_upload(
             # manual File > Save As in desktop InDesign). Lets local/dev use
             # exercise the full translate core without InDesign Server.
             logger.info("upload: .idml path, running translate_idml directly for %s", name)
-            report = translate_idml(saved, out_dir=_out_dir(), tm_path=_TM_DB,
+            report = translate_idml(saved, out_dir=_out_dir(),
                                     review_db=_REVIEW_DB, target_lang=lang.code,
                                     project_id=project_id or None, folder_id=folder_id or None, created_by=user["id"],
-                                    original_filename=name)
+                                    original_filename=name, job_id=job_id, progress_cb=_progress_cb)
             report["format"] = "idml"
-            report["has_output_pdf"] = False
+            # A best-effort draft PDF (no InDesign) is rendered alongside the
+            # .idml so the UI can offer a "Translated PDF" download/preview.
+            report["has_output_pdf"] = bool(report.get("has_draft_pdf"))
+            report["draft_pdf"] = bool(report.get("has_draft_pdf"))
             logger.info("upload: pipeline complete for %s (job_id=%s)",
                         name, report.get("job_id"))
             return report
@@ -637,10 +886,10 @@ async def translate_upload(
         if not conv.ok:
             raise RuntimeError(conv.message)
 
-        report = translate_idml(conv.idml, out_dir=_out_dir(), tm_path=_TM_DB,
+        report = translate_idml(conv.idml, out_dir=_out_dir(),
                                 review_db=_REVIEW_DB, target_lang=lang.code,
                                 project_id=project_id or None, folder_id=folder_id or None, created_by=user["id"],
-                                original_filename=name)
+                                original_filename=name, job_id=job_id, progress_cb=_progress_cb)
         report["source"] = saved  # show the original .indd name, not the intermediate .idml
 
         exp = export(report["output"], _out_dir())
@@ -649,13 +898,11 @@ async def translate_upload(
             # intermediate .idml. Since export failed, that job has no usable
             # deliverable (no PDF fallback in this INDD-only flow) — delete it
             # so it doesn't stay browsable/downloadable as a phantom success.
-            job_id = report.get("job_id")
-            if job_id:
-                store = _store()
-                try:
-                    store.delete_job(job_id)
-                finally:
-                    store.close()
+            store = _store()
+            try:
+                store.delete_job(job_id)
+            finally:
+                store.close()
             raise RuntimeError(exp.message)
 
         report["output"] = exp.indd
@@ -666,13 +913,11 @@ async def translate_upload(
         # intermediate .idml source/output — repoint it at the original
         # upload and the final exported .indd so /source, /output, and
         # /download all resolve the right files.
-        job_id = report.get("job_id")
-        if job_id:
-            store = _store()
-            try:
-                store.update_job_paths(job_id, source=saved, output=exp.indd)
-            finally:
-                store.close()
+        store = _store()
+        try:
+            store.update_job_paths(job_id, source=saved, output=exp.indd)
+        finally:
+            store.close()
 
         return report
 
@@ -682,12 +927,7 @@ async def translate_upload(
         logger.info("upload: pipeline failed for %s: %s", name, e)
         store = _store()
         try:
-            store.save_job(
-                saved, "", [], {},
-                original_filename=name, file_hash=file_hash, file_size=file_size,
-                duration_sec=time.time() - started, status="failed", error=str(e),
-                created_by=user["id"],
-            )
+            store.mark_job_failed(job_id, str(e), duration_sec=time.time() - started)
         finally:
             store.close()
         raise HTTPException(status_code=500, detail=f"translation failed: {e}")
@@ -704,18 +944,229 @@ async def translate_upload(
         output_ext = os.path.splitext(report["output"])[1] or ext
         source_key = f"jobs/{job_id}/{stem}{source_ext}"
         output_key = f"jobs/{job_id}/{stem}.{lang.code}{output_ext}"
+
         try:
-            await run_in_threadpool(storage.upload_file, report["source"], source_key)
-            await run_in_threadpool(storage.upload_file, report["output"], output_key)
+            await run_in_threadpool(_upload_with_retry, report["source"], source_key)
+            await run_in_threadpool(_upload_with_retry, report["output"], output_key)
+        except Exception as e:
+            # The two lines above are the ONLY thing that makes this job
+            # durably downloadable — if they can't be persisted after
+            # retrying, the job is not actually usable long-term even though
+            # translation itself succeeded. Mark it failed rather than
+            # leaving a "complete" row that 404s on every future download.
+            logger.exception("upload: failed to persist job %s to storage, marking failed", job_id)
             store = _store()
             try:
-                store.update_job_paths(job_id, source=source_key, output=output_key)
+                store.mark_job_failed(
+                    job_id, f"translated successfully but failed to persist to storage: {e}",
+                    duration_sec=time.time() - started,
+                )
             finally:
                 store.close()
-            report["source"] = source_key
-            report["output"] = output_key
+            raise HTTPException(
+                status_code=500,
+                detail=f"translation succeeded but saving the result failed: {e}",
+            )
+
+        # Keep the local output path (needed for the draft-PDF sibling below)
+        # before overwriting report["output"] with its storage key.
+        local_output_path = report["output"]
+        report["source"] = source_key
+        report["output"] = output_key
+
+        # Best-effort extras below: a missing draft-PDF preview or linked
+        # graphic must not fail a job whose actual source/output are already
+        # safely persisted above — log and move on.
+        try:
+            # The draft-PDF preview (idml jobs only, see pipeline.translate_idml)
+            # lives as a local .pdf sibling of the .idml output — upload it under
+            # the matching storage key so download_output's fmt="pdf" branch
+            # (_output_pdf_path) can find it later.
+            if report.get("draft_pdf"):
+                local_draft_pdf = os.path.splitext(local_output_path)[0] + ".pdf"
+                if os.path.exists(local_draft_pdf):
+                    draft_pdf_key = os.path.splitext(output_key)[0] + ".pdf"
+                    await run_in_threadpool(storage.upload_file, local_draft_pdf, draft_pdf_key)
         except Exception:
-            logger.exception("upload: failed to persist job %s to storage", job_id)
+            logger.exception("upload: failed to persist draft pdf for job %s (non-fatal)", job_id)
+
+        # Linked graphics are now their own independent upload/job (see
+        # /api/translate-links) rather than an attachment to this one — no
+        # per-document Links folder to persist here anymore. A document's own
+        # translate_idml still best-effort-translates a linked graphic when
+        # its *original absolute path* happens to resolve locally (rare in a
+        # hosted deployment), but that no longer has a matching upload/persist
+        # step; it stays an in-place edit of the .idml itself when it fires.
+
+        store = _store()
+        try:
+            store.update_job_paths(job_id, source=source_key, output=output_key)
+        finally:
+            store.close()
+
+    if project_id:
+        store = _store()
+        try:
+            store.set_project_target_lang_if_unset(project_id, lang.code)
+        finally:
+            store.close()
+
+    return report
+
+
+@app.post("/api/translate-links")
+async def translate_links_upload(
+    files: list[UploadFile] = File(...),
+    target_lang: str = Form(default=""),
+    project_id: str = Form(default=""),
+    folder_id: str = Form(default=""),
+    user: dict = Depends(require_user),
+) -> dict:
+    """Translate a batch of linked-graphic files (.ai/.eps/.pdf/.psd) as its
+    own independent job — no `.idml` involved, no relinking. See
+    `pipeline.translate_links_folder` for the trade-off this makes versus
+    the old design (Links attached to a specific `.idml` upload)."""
+    import time
+
+    require_trial_active(user)
+
+    if project_id:
+        s = _store()
+        try:
+            _assert_owns_project(s, project_id, user)
+        finally:
+            s.close()
+
+    if not files:
+        raise HTTPException(status_code=400, detail="attach at least one linked-graphic file")
+    try:
+        lang = languages.get(target_lang or None)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+    upload_dir = _upload_dir()
+    import uuid
+
+    job_dir = os.path.join(upload_dir, uuid.uuid4().hex[:12])
+    links_dir = os.path.join(job_dir, "Links")
+    os.makedirs(links_dir, exist_ok=True)
+
+    saved_paths: list[str] = []
+    total_size = 0
+    for f in files:
+        lname = os.path.basename((f.filename or "").replace("\\", "/"))
+        if not lname:
+            continue
+        data = await f.read()
+        path = os.path.join(links_dir, lname)
+        with open(path, "wb") as out:
+            out.write(data)
+        saved_paths.append(path)
+        total_size += len(data)
+
+    if not saved_paths:
+        raise HTTPException(status_code=400, detail="no valid files attached")
+
+    started = time.time()
+    display_name = f"{len(saved_paths)} linked graphic{'s' if len(saved_paths) != 1 else ''}"
+    logger.info("upload received (links): %d file(s) target_lang=%s", len(saved_paths), lang.code)
+
+    store = _store()
+    try:
+        job_id = store.create_pending_job(
+            "links", original_filename=display_name, file_size=total_size,
+            meta={"target_lang": lang.code, "job_type": "links", "total_files": len(saved_paths)},
+            project_id=project_id or None, folder_id=folder_id or None, created_by=user["id"],
+            job_type="links",
+        )
+    finally:
+        store.close()
+
+    def _progress_cb(percent: int, stage: str) -> None:
+        try:
+            s = _store()
+            try:
+                s.update_job_progress(job_id, percent, stage)
+            finally:
+                s.close()
+        except Exception:
+            logger.exception("upload(links): failed to report progress for job %s (non-fatal)", job_id)
+
+    def _run() -> dict:
+        return translate_links_folder(
+            saved_paths, out_dir=_out_dir(), review_db=_REVIEW_DB, target_lang=lang.code,
+            project_id=project_id or None, folder_id=folder_id or None, created_by=user["id"],
+            original_filename=display_name, job_id=job_id, progress_cb=_progress_cb,
+        )
+
+    try:
+        report = await run_in_threadpool(_run)
+    except Exception as e:
+        logger.info("upload(links): pipeline failed: %s", e)
+        store = _store()
+        try:
+            store.mark_job_failed(job_id, str(e), duration_sec=time.time() - started)
+        finally:
+            store.close()
+        raise HTTPException(status_code=500, detail=f"translation failed: {e}")
+
+    # Only the translated output is persisted to storage — the source
+    # .ai/.eps/.pdf/.psd files the user uploaded are never downloaded again
+    # (the download link only ever serves translated results), so keeping a
+    # durable copy of them was pure cost: it doubled the storage traffic for
+    # every links batch and is what made large batches (300+ files) so slow
+    # to upload. `saved_paths` still lives on local disk for the duration of
+    # this request (used by `_run` above) and is scratch space after that.
+    translated_dir = os.path.join(_out_dir(), f"translated_{lang.code}")
+
+    async def _upload_one(gname: str) -> None:
+        gpath = os.path.join(translated_dir, gname)
+        if not os.path.isfile(gpath):
+            return
+        try:
+            await run_in_threadpool(
+                _upload_with_retry, gpath, f"jobs/{job_id}/Links_{lang.code}/{gname}")
+        except Exception:
+            logger.exception(
+                "upload(links): failed to persist translated %r for job %s (non-fatal)", gname, job_id)
+
+    async def _upload_original(oname: str) -> None:
+        # Pure artwork with no extractable text never produces a translated
+        # output — persist the untouched original under Links/ instead of
+        # just dropping the file, so it still shows up in a per-file list
+        # (and in the download zip's "original file everywhere else"
+        # fallback, `_links_zip_entries`) rather than silently vanishing.
+        # `saved_paths`/`links_dir` are still on local disk for this request.
+        opath = os.path.join(links_dir, oname)
+        if not os.path.isfile(opath):
+            return
+        try:
+            await run_in_threadpool(
+                _upload_with_retry, opath, f"jobs/{job_id}/Links/{oname}")
+        except Exception:
+            logger.exception(
+                "upload(links): failed to persist original %r for job %s (non-fatal)", oname, job_id)
+
+    # These are independent uploads to Supabase Storage — doing them one at a
+    # time in a loop was pure serialized network latency, the actual cause of
+    # a 300+ file batch taking minutes just to finish persisting after
+    # translation itself was already done. A semaphore caps how many run at
+    # once so this doesn't hammer Storage with hundreds of concurrent PUTs.
+    _UPLOAD_CONCURRENCY = 8
+    upload_semaphore = asyncio.Semaphore(_UPLOAD_CONCURRENCY)
+
+    async def _upload_one_bounded(gname: str) -> None:
+        async with upload_semaphore:
+            await _upload_one(gname)
+
+    async def _upload_original_bounded(oname: str) -> None:
+        async with upload_semaphore:
+            await _upload_original(oname)
+
+    await asyncio.gather(
+        *(_upload_one_bounded(g) for g in report.get("translated_files") or []),
+        *(_upload_original_bounded(o) for o in report.get("untranslated_files") or []),
+    )
 
     if project_id:
         store = _store()
@@ -754,6 +1205,16 @@ def download_output(job_id: str, format: str | None = None, type: str | None = N
                      user: dict = Depends(require_user)) -> Response:
     job = _find_owned_job(job_id, user)
 
+    if job.get("job_type") == "links":
+        # An independent linked-graphics batch has no single .idml/source to
+        # speak of — its whole "output" is the Links bundle.
+        meta = job.get("meta") or {}
+        stem = os.path.splitext(os.path.basename(str(job.get("original_filename") or job_id)))[0]
+        zipped = _links_zip_response(job_id, meta.get("target_lang"), stem)
+        if zipped is None:
+            raise HTTPException(status_code=404, detail="no translated files for this job")
+        return zipped
+
     out = str(job["output"])
     fmt = (format or "").lower().strip()
     target_type = (type or "").lower().strip()
@@ -784,6 +1245,31 @@ def download_output(job_id: str, format: str | None = None, type: str | None = N
         raise HTTPException(status_code=404, detail="Source file not found")
 
     if fmt == "pdf":
+        meta = job.get("meta") or {}
+        store = _store()
+        try:
+            job_has_edits = store.has_edits(job_id)
+        finally:
+            store.close()
+        if job_has_edits and meta.get("format") == "idml" and source.lower().endswith(".idml"):
+            # Bring the draft PDF up to date with any post-export review edits
+            # (regenerate re-renders the PDF alongside the .idml) before serving it.
+            # Skipped entirely when the job has never been edited — re-downloading
+            # the source, re-applying segments, and re-uploading is real work that
+            # only ever changes anything once a review edit exists, and doing it
+            # unconditionally on every single download click was the actual cause
+            # of "it takes a long time to download, every time" for an unedited job.
+            try:
+                local_source, local_output = _materialize_job_files(job)
+                regenerate_idml_from_review(
+                    job, review_db=_REVIEW_DB, source_path=local_source, output_path=local_output
+                )
+                storage.upload_file(local_output, out)
+                local_draft_pdf = os.path.splitext(local_output)[0] + ".pdf"
+                if os.path.exists(local_draft_pdf):
+                    storage.upload_file(local_draft_pdf, _output_pdf_path(out))
+            except Exception:
+                logger.exception("download: failed to refresh draft pdf for job %s", job_id)
         pdf_key = _output_pdf_path(out)
         if storage.read_bytes(pdf_key) is not None:
             return _serve(pdf_key, "application/pdf")
@@ -795,23 +1281,46 @@ def download_output(job_id: str, format: str | None = None, type: str | None = N
 
     if fmt == "idml":
         meta = job.get("meta") or {}
-        if meta.get("format") == "idml" and source.lower().endswith(".idml"):
+        store = _store()
+        try:
+            job_has_edits = store.has_edits(job_id)
+        finally:
+            store.close()
+        if job_has_edits and meta.get("format") == "idml" and source.lower().endswith(".idml"):
             # Review-store approvals/edits made after the initial MT export
             # never get written back to the saved .idml on their own — bring
             # the file up to date before serving it (see
-            # pipeline.regenerate_idml_from_review).
+            # pipeline.regenerate_idml_from_review). Skipped when nobody has
+            # ever edited a segment: re-downloading the source, re-applying
+            # every segment, and re-uploading the result on every single
+            # download click — even the 2nd/3rd click on an untouched job —
+            # is exactly what made downloads feel slow every time.
             try:
                 local_source, local_output = _materialize_job_files(job)
                 regenerate_idml_from_review(
                     job, review_db=_REVIEW_DB, source_path=local_source, output_path=local_output
                 )
                 storage.upload_file(local_output, out)
+                # regenerate_idml_from_review also re-renders the draft-PDF
+                # preview sibling (best-effort) — keep the stored copy in step
+                # with it so download?format=pdf doesn't serve a stale preview.
+                local_draft_pdf = os.path.splitext(local_output)[0] + ".pdf"
+                if os.path.exists(local_draft_pdf):
+                    storage.upload_file(local_draft_pdf, _output_pdf_path(out))
             except Exception:
                 logger.exception("download: failed to regenerate idml for job %s", job_id)
-        if out.lower().endswith(".idml") and storage.read_bytes(out) is not None:
-            return _serve(out, "application/octet-stream")
+        lang_code = meta.get("target_lang")
+        if out.lower().endswith(".idml"):
+            zipped = _idml_zip_response(out, job_id, lang_code)
+            if zipped is not None:
+                return zipped
+            if storage.read_bytes(out) is not None:
+                return _serve(out, "application/octet-stream")
         idml_key = os.path.splitext(out)[0] + ".idml"
         if storage.read_bytes(idml_key) is not None:
+            zipped = _idml_zip_response(idml_key, job_id, lang_code)
+            if zipped is not None:
+                return zipped
             return _serve(idml_key, "application/octet-stream")
         if source.lower().endswith(".idml") and storage.read_bytes(source) is not None:
             return _serve(source, "application/octet-stream")
@@ -821,6 +1330,21 @@ def download_output(job_id: str, format: str | None = None, type: str | None = N
     if data is None:
         raise HTTPException(status_code=404, detail="output not found")
     return _serve(out, "application/octet-stream")
+
+
+@app.get("/api/jobs/{job_id}/links")
+def download_links(job_id: str, user: dict = Depends(require_user)) -> Response:
+    """Just the Links folder for this job, as a .zip — independent of the
+    .idml download, for a document whose linked graphics you want without
+    the translated file itself."""
+    job = _find_owned_job(job_id, user)
+    meta = job.get("meta") or {}
+    lang_code = meta.get("target_lang")
+    stem = os.path.splitext(os.path.basename(str(job.get("original_filename") or job_id)))[0]
+    zipped = _links_zip_response(job_id, lang_code, stem)
+    if zipped is None:
+        raise HTTPException(status_code=404, detail="no linked graphics for this job")
+    return zipped
 
 
 
@@ -945,6 +1469,7 @@ def accept_team_invite(body: TeamAccept, user: dict = Depends(require_user)) -> 
         headers=_team_headers(), timeout=10,
     )
     resp.raise_for_status()
+    invalidate_owner_ids_cache(user["id"])
     return {"ok": True}
 
 
@@ -957,6 +1482,7 @@ def decline_team_invite(body: TeamAccept, user: dict = Depends(require_user)) ->
         headers=_team_headers(), timeout=10,
     )
     resp.raise_for_status()
+    invalidate_owner_ids_cache(user["id"])
     return {"ok": True}
 
 
@@ -982,4 +1508,6 @@ def remove_team_member(other_user_id: UUID4, user: dict = Depends(require_user))
         headers=headers, timeout=10,
     )
     resp.raise_for_status()
+    invalidate_owner_ids_cache(user["id"])
+    invalidate_owner_ids_cache(str(other_user_id))
     return {"ok": True}

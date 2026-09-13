@@ -33,6 +33,10 @@ class Language:
     glossary: str | None = None  # filename in babel/glossary/
     fonts: dict[str, list[str]] = field(default_factory=dict)  # style -> candidates
     idml_font: str | None = None  # AppliedFont override for the IDML write-back path
+    size_delta: float = 0.0  # pt shaved off the source size before auto-fit starts
+                              # (dense scripts like CJK/Hangul render visually
+                              # heavier than Latin at the same point size, so the
+                              # source size alone reliably overflows the box)
 
 
 # Full-Unicode faces per script. First existing path wins; Windows / macOS /
@@ -85,6 +89,17 @@ _LATIN = {
 }
 
 
+# pt-PT uses the client's real body font (MyriadPro) rather than the generic
+# Arial/DejaVu chain — matches what's actually embedded (subsetted) in their
+# source PDFs, so translated prose no longer falls back to a generic face.
+# No client-supplied bold-italic; that style still falls through to _LATIN's
+# system chain.
+_MYRIAD = dict(_LATIN)
+_MYRIAD["regular"] = ["MyriadPro-Regular.otf"] + _LATIN["regular"]
+_MYRIAD["bold"] = ["MyriadPro-Bold.otf"] + _LATIN["bold"]
+_MYRIAD["italic"] = ["MyriadPro-It.otf"] + _LATIN["italic"]
+
+
 def _script(*paths: str) -> dict[str, list[str]]:
     """One face used for every style — these families ship no synthetic italics."""
     return {style: list(paths) for style in ("regular", "bold", "italic", "bolditalic")}
@@ -102,13 +117,15 @@ def _script_with_bold(regular: list[str], bold: list[str]) -> dict[str, list[str
 
 # Real bold faces per script (rather than reusing the regular weight for both):
 # a heading set in Korean or Hebrew comes out visibly bold instead of flat.
+# Client-supplied NotoSansSC (full, non-subsetted) leads; system faces stay as
+# fallback for a host without the bundled file for some reason.
 _CJK_SC = _script_with_bold(
-    ["NotoSansSC-Regular.ttf",
+    ["NotoSansSC-Regular.otf",
      "C:/Windows/Fonts/msyh.ttc", "C:/Windows/Fonts/simsun.ttc",
      "/System/Library/Fonts/PingFang.ttc",
      "/System/Library/Fonts/STHeiti Medium.ttc",
      "/System/Library/Fonts/Hiragino Sans GB.ttc"],
-    ["NotoSansSC-Bold.ttf",
+    ["NotoSansSC-Bold.otf",
      "C:/Windows/Fonts/msyhbd.ttc", "C:/Windows/Fonts/simsun.ttc",
      "/System/Library/Fonts/PingFang.ttc"],
 )
@@ -118,16 +135,16 @@ _CJK_JP = _script_with_bold(
     ["C:/Windows/Fonts/YuGothB.ttc", "C:/Windows/Fonts/msgothic.ttc",
      "/System/Library/Fonts/Hiragino Sans GB.ttc"],
 )
+# Client-supplied Malgun Gothic leads; system paths stay as fallback.
 _CJK_KR = _script_with_bold(
-    ["C:/Windows/Fonts/malgun.ttf", "/System/Library/Fonts/AppleSDGothicNeo.ttc"],
-    ["C:/Windows/Fonts/malgunbd.ttf", "/System/Library/Fonts/AppleSDGothicNeo.ttc"],
+    ["malgun.ttf", "C:/Windows/Fonts/malgun.ttf", "/System/Library/Fonts/AppleSDGothicNeo.ttc"],
+    ["malgunbd.ttf", "C:/Windows/Fonts/malgunbd.ttf", "/System/Library/Fonts/AppleSDGothicNeo.ttc"],
 )
-# Simplified Chinese, Devanagari, and the RTL scripts below lead with a
-# vendored face (see babel/fonts/README.md) so output does not depend on
-# what the host OS happens to have installed. System paths stay as a last
-# resort; `fonts.resolve` always prefers the bundled entry. (Japanese/Korean
-# above still lean on system fonts only — no vendored face for those yet,
-# so they'll hit the same "no installed font" error on a bare Linux host.)
+# Devanagari and the RTL scripts below lead with a vendored face (see
+# babel/fonts/README.md) so output does not depend on what the host OS happens
+# to have installed. System paths stay as a last resort; `fonts.resolve`
+# always prefers the bundled entry. (CJK/Hangul above still lean on system
+# fonts only — no vendored face for those yet.)
 _DEVANAGARI = _script_with_bold(
     ["NotoSansDevanagari-Regular.ttf", "C:/Windows/Fonts/Nirmala.ttf",
      "/System/Library/Fonts/Supplemental/Devanagari Sangam MN.ttc",
@@ -136,6 +153,12 @@ _DEVANAGARI = _script_with_bold(
      "/System/Library/Fonts/Supplemental/Devanagari Sangam MN.ttc",
      "/usr/share/fonts/truetype/lohit-devanagari/Lohit-Devanagari.ttf"],
 )
+# Client-supplied Adobe Arabic (babel/fonts/AdobeArabic-*.otf) does NOT shape
+# correctly through MuPDF's TextWriter — test_rtl.py caught it rendering
+# unshaped/unreordered ("25  من12 الصفحة" instead of proper presentation
+# forms). Noto Naskh Arabic is the proven-working face for the PDF render
+# path; leave Adobe Arabic bundled but unused here until that's root-caused
+# (possibly fine for the IDML path, where InDesign does its own shaping).
 _ARABIC = _script_with_bold(
     ["NotoNaskhArabic-Regular.ttf", "C:/Windows/Fonts/tahoma.ttf"],
     ["NotoNaskhArabic-Bold.ttf", "C:/Windows/Fonts/tahomabd.ttf"],
@@ -163,7 +186,7 @@ LANGUAGES: dict[str, Language] = {
     ),
     "fr": Language("fr", "French", "French (fr-FR)", deepl="FR", fonts=_LATIN),
     "pt": Language("pt", "Portuguese", "European Portuguese (pt-PT)",
-                   deepl="PT-PT", glossary="math_ptpt.json", fonts=_LATIN),
+                   deepl="PT-PT", glossary="math_ptpt.json", fonts=_MYRIAD),
     "de": Language("de", "German", "German (de-DE)", deepl="DE", fonts=_LATIN),
     "it": Language("it", "Italian", "Italian (it-IT)", deepl="IT", fonts=_LATIN),
     "pl": Language("pl", "Polish", "Polish (pl-PL)", deepl="PL", fonts=_LATIN),
@@ -196,12 +219,13 @@ LANGUAGES: dict[str, Language] = {
     "is": Language("is", "Icelandic", "Icelandic (is-IS)", fonts=_LATIN),
     "zh": Language("zh", "Chinese (Simplified)", "Simplified Chinese (zh-CN)",
                    wrapping="char", latin_script=False, deepl="ZH", fonts=_CJK_SC,
-                   idml_font="Noto Sans SC"),
+                   idml_font="Noto Sans SC", size_delta=1.5),
     "ja": Language("ja", "Japanese", "Japanese (ja-JP)",
                    wrapping="char", latin_script=False, deepl="JA", fonts=_CJK_JP,
                    idml_font="Noto Sans JP"),
     "ko": Language("ko", "Korean", "Korean (ko-KR)",
-                   latin_script=False, deepl="KO", fonts=_CJK_KR, idml_font="Noto Sans KR"),
+                   latin_script=False, deepl="KO", fonts=_CJK_KR, idml_font="Malgun Gothic",
+                   size_delta=1.5),
     "hi": Language("hi", "Hindi", "Hindi (hi-IN)",
                    latin_script=False, fonts=_DEVANAGARI, idml_font="Noto Sans Devanagari"),
     "ar": Language("ar", "Arabic", "Modern Standard Arabic",

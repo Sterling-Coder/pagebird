@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Optional
 
@@ -24,14 +25,28 @@ from babel import languages
 from babel.glossary import glossary
 
 _CHUNK = 40  # segments per LLM request
-_MAX_CONCURRENT_CHUNKS = 2
+_MAX_CONCURRENT_CHUNKS = 6  # OpenAI 429s are absorbed by SDK max_retries=8
+# A chunk can fail two different ways: the SDK's own max_retries handles
+# network/HTTP failures (429, timeout, ...), but a 200 response with
+# malformed/wrong-shaped JSON raises from our own _parse_batch and was never
+# retried at all — one bad sample from the model permanently dropped that
+# whole chunk's segments to needs_human/English. Retry the chunk itself a
+# few times (LLM sampling is non-deterministic, so a retry often succeeds)
+# before giving up.
+_CHUNK_ATTEMPTS = 3
+_CHUNK_RETRY_DELAY = 1.5  # seconds, linear backoff
+
+
+class PermanentEngineError(Exception):
+    """A failure that retrying/splitting cannot fix (e.g. exhausted quota, dead
+    key). Signals _attempt to give up immediately instead of storming the API."""
 
 
 class Engine:
     name = "base"
     failures: list[str] = []
 
-    def translate(self, texts: list[str]) -> list[str]:  # pragma: no cover
+    def translate(self, texts: list[str], progress_cb=None) -> list[str]:  # pragma: no cover
         raise NotImplementedError
 
 
@@ -57,11 +72,12 @@ class _ChunkedEngine(Engine):
         self.failures: list[str] = []
         self.failed_sources: set[str] = set()  # sources that came from a failed chunk
 
-    def translate(self, texts: list[str]) -> list[str]:
+    def translate(self, texts: list[str], progress_cb=None) -> list[str]:
         chunks = [texts[i:i + _CHUNK] for i in range(0, len(texts), _CHUNK)]
         if not chunks:
             return []
         results: list[list[str]] = [None] * len(chunks)
+        done = 0
         with ThreadPoolExecutor(max_workers=_MAX_CONCURRENT_CHUNKS) as ex:
             future_to_idx = {
                 ex.submit(self._safe_translate_chunk, i * _CHUNK, chunk): i
@@ -70,18 +86,63 @@ class _ChunkedEngine(Engine):
             for future in as_completed(future_to_idx):
                 idx = future_to_idx[future]
                 results[idx] = future.result()
+                done += 1
+                if progress_cb is not None:
+                    try:
+                        progress_cb(done, len(chunks))
+                    except Exception:
+                        pass  # progress reporting must never break translation
         out: list[str] = []
         for r in results:
             out.extend(r)
         return out
 
     def _safe_translate_chunk(self, start_index: int, chunk: list[str]) -> list[str]:
-        try:
-            return self._translate_chunk(chunk)
-        except Exception as e:  # quota, network, malformed reply
-            self.failures.append(f"chunk at {start_index}: {type(e).__name__}: {e}")
-            self.failed_sources.update(chunk)  # remember which sources failed
-            return list(chunk)
+        return self._attempt(start_index, chunk, top_level=True)
+
+    def _attempt(self, start_index: int, chunk: list[str], top_level: bool) -> list[str]:
+        # Full retry-with-backoff budget only at the top level, to absorb a
+        # genuine transient blip (network/rate-limit). Once we're already
+        # splitting a chunk that failed, the cause is a content mismatch
+        # (see below) that retrying-with-delay cannot fix — paying that same
+        # backoff at every level of the split tree turned one bad pair into
+        # minutes of dead waiting. Split nodes get exactly one fast attempt.
+        attempts = _CHUNK_ATTEMPTS if top_level else 1
+        last_error: Exception | None = None
+        for attempt in range(attempts):
+            try:
+                return self._translate_chunk(chunk)
+            except PermanentEngineError:
+                # Exhausted quota / dead key: retrying or splitting only storms
+                # the API. Fail the whole call at once so the caller disables
+                # this engine for the run instead of paying per-chunk.
+                raise
+            except Exception as e:  # network blip, malformed reply
+                last_error = e
+                if attempt < attempts - 1:
+                    time.sleep(_CHUNK_RETRY_DELAY * (attempt + 1))
+
+        # Observed in practice: the model sometimes returns N-1 items for an
+        # N-item chunk — it silently conflates two similar-looking source
+        # strings into one output line — and does it deterministically, so
+        # flat retries of the same chunk fail identically every time (this
+        # is not a rate-limit/network blip; those are already absorbed by
+        # the SDK's own retry and by the attempts loop above). Splitting the
+        # chunk in half isolates whichever pair is confusing the model into
+        # two smaller chunks, at worst bottoming out at single items — which
+        # can't be miscounted against each other.
+        if len(chunk) > 1:
+            mid = len(chunk) // 2
+            left = self._attempt(start_index, chunk[:mid], top_level=False)
+            right = self._attempt(start_index + mid, chunk[mid:], top_level=False)
+            return left + right
+
+        self.failures.append(
+            f"chunk at {start_index}: {type(last_error).__name__}: {last_error} "
+            f"(gave up after {attempts} attempt{'s' if attempts != 1 else ''})"
+        )
+        self.failed_sources.update(chunk)  # remember which sources failed
+        return list(chunk)
 
     def _translate_chunk(self, chunk: list[str]) -> list[str]:  # pragma: no cover
         raise NotImplementedError
@@ -90,7 +151,7 @@ class _ChunkedEngine(Engine):
 class IdentityEngine(Engine):
     name = "identity"
 
-    def translate(self, texts: list[str]) -> list[str]:
+    def translate(self, texts: list[str], progress_cb=None) -> list[str]:
         return list(texts)
 
 
@@ -239,15 +300,29 @@ class AnthropicEngine(_ChunkedEngine):
 
 
 class DeepLEngine(_ChunkedEngine):
+    # Process-wide circuit breaker. Once any job sees a 456/quota block, every
+    # later DeepLEngine build fails fast — the free quota is monthly, so it will
+    # not recover mid-session. Avoids re-probing (and re-storming) per upload.
+    _quota_blocked = False
+
     def __init__(self, lang=None):
         import deepl  # optional dep
 
         super().__init__()
+        if DeepLEngine._quota_blocked:
+            raise RuntimeError("DeepL quota exceeded earlier — running single-engine")
         self.lang = lang or languages.get(None)
         if not self.lang.deepl:
             raise ValueError(f"DeepL has no target for {self.lang.code}")
         self.name = f"deepl:{self.lang.deepl}"
         self.client = deepl.Translator(os.environ["DEEPL_AUTH_KEY"])
+        # The DeepL SDK retries a 456 with backoff (5×) on every chunk — turning
+        # a permanent quota block into minutes of dead waiting. Kill SDK-level
+        # retries; our own attempt/circuit-breaker logic handles the rest.
+        try:
+            self.client._client._max_retries = 0
+        except Exception:
+            pass
         self._glossary = self._ensure_glossary()
 
     def _ensure_glossary(self):
@@ -265,12 +340,22 @@ class DeepLEngine(_ChunkedEngine):
             return None  # translate without glossary rather than fail
 
     def _translate_chunk(self, chunk: list[str]) -> list[str]:
+        import deepl
+
+        if DeepLEngine._quota_blocked:
+            raise PermanentEngineError("DeepL quota exceeded")
         # DeepL leaves ⟦…⟧ untouched (unknown tokens are copied verbatim).
         kwargs = dict(source_lang="EN", target_lang=self.lang.deepl,
                       preserve_formatting=True)
         if self._glossary is not None:
             kwargs["glossary"] = self._glossary
-        results = self.client.translate_text(chunk, **kwargs)
+        try:
+            results = self.client.translate_text(chunk, **kwargs)
+        except deepl.QuotaExceededException as e:
+            # Permanent for the month — trip the breaker so all other in-flight
+            # and future chunks bail immediately instead of each hitting 456.
+            DeepLEngine._quota_blocked = True
+            raise PermanentEngineError("DeepL quota exceeded") from e
         if isinstance(results, list):
             return [r.text for r in results]
         return [results.text]

@@ -37,6 +37,16 @@ _MIN_SIZE = 5.0
 # PyMuPDF line boxes are metric-derived, so the baseline sits this far down the
 # box (ascender / (ascender - descender) for a normal text face).
 _BASE_RATIO = 0.81
+
+
+def _natural_size(seg: Segment, lang, size_hint: float | None = None) -> float:
+    """Starting size auto-fit shrinks from: the source size, minus a per-language
+    head start (`lang.size_delta`) for scripts that render visually heavier than
+    Latin at the same point size (dense Hangul/Han strokes), so those scripts
+    don't need a manual -1/-2 nudge to stop clipping.
+    """
+    base = size_hint or seg.size or 11.0
+    return max(_MIN_SIZE, base - lang.size_delta)
 # A shared column size never drops below this fraction of the column's natural
 # size — one runaway row must not shrink the whole table.
 _COLUMN_FLOOR = 0.7
@@ -968,15 +978,12 @@ def rebuild_pdf(src_pdf: str, segments: list[Segment], out_path: str,
             page_segs = by_page.get(pno, [])
             hidden = _hidden_duplicates(page_segs) | _image_shadowed_duplicates(page_segs)
             replace = [s for s in page_segs if s.id not in hidden and _replaceable(s, faces)]
-            if lang.direction == "rtl":
-                # A line mixing prose with math glyphs is laid out atom by atom,
-                # each drawn at a computed x. That bypasses MuPDF's bidi, which
-                # only orders a single appended run, and the math glyph has to
-                # keep its original face regardless. Approximating the ordering
-                # on a mathematics line is exactly the kind of silent corruption
-                # this pipeline exists to prevent, so these lines stay in the
-                # source language and are flagged for a reviewer instead.
-                replace = [s for s in replace if not s.has_math_font]
+            # A line mixing prose with math glyphs used to be skipped for RTL
+            # targets entirely, atom-by-atom placement bypasses MuPDF's bidi,
+            # which only orders a single appended run, and math glyphs must
+            # keep their original face regardless. `_place_with_math` now
+            # does its own word-level visual reordering for exactly this case
+            # (`_rtl_visual_order`) instead of leaving these lines in English.
             collides = _overlapping_math(replace, page_segs)
             replace = [s for s in replace if s.id not in collides]
             casualty_pool = [s for s in page_segs if s.id not in hidden]
@@ -1145,7 +1152,7 @@ def _fit_page(page_segs: list[Segment], lang, room: dict[str, float],
         rows = _rows(seg)
         limit_y = room.get(seg.id, box.y1)
         size, _, _ = _fit_lines(text, font, box.width, len(rows),
-                                seg.size or 11.0, lang.wrapping,
+                                _natural_size(seg, lang), lang.wrapping,
                                 _extra_lines(seg, font, limit_y),
                                 vspace=limit_y - rows[0][0].y0)
         fitted[seg.id] = size
@@ -1182,7 +1189,7 @@ def _block_extent(seg: Segment, lang, size_hint, limit_y, serif):
     box = fitz.Rect(seg.bbox)
     rows = _rows(seg)
     size, lines, _ = _fit_lines(text, font, box.width, len(rows),
-                                size_hint or seg.size or 11.0, lang.wrapping,
+                                _natural_size(seg, lang, size_hint), lang.wrapping,
                                 _extra_lines(seg, font, limit_y),
                                 vspace=limit_y - rows[0][0].y0)
     ys = _baselines(rows, box, len(lines), size, font, limit_y)
@@ -1293,7 +1300,7 @@ def _place(page, seg: Segment, lang, size_hint: float | None = None,
     if limit_y is None:
         limit_y = box.y1
     size, lines, overflow = _fit_lines(text, font, box.width, max_lines,
-                                       size_hint or seg.size or 11.0, lang.wrapping,
+                                       _natural_size(seg, lang, size_hint), lang.wrapping,
                                        _extra_lines(seg, font, limit_y),
                                        vspace=limit_y - rows[0][0].y0)
     baselines = _baselines(rows, box, len(lines), size, font, limit_y)
@@ -1497,7 +1504,7 @@ def _place_rotated(page, seg: Segment, lang, size_hint, serif) -> LineOutcome:
     # usually pad the height, not width, and spacing is less rigid.
     
     size, lines, overflow = _fit_lines(text, font, box.height, len(_rows(seg)),
-                                       size_hint or seg.size or 11.0, lang.wrapping)
+                                       _natural_size(seg, lang, size_hint), lang.wrapping)
 
     kwargs = dict(fontsize=size, color=_rgb(seg.color), rotate=seg.rotation)
     if font_path:
@@ -1527,6 +1534,39 @@ def _place_rotated(page, seg: Segment, lang, size_hint, serif) -> LineOutcome:
                        f"size={size:.2f} rotated={seg.rotation}")
 
 
+def _rtl_visual_order(line: list[list[tuple[str, bool]]]
+                      ) -> list[list[tuple[str, bool]]]:
+    """Reorder one wrapped line's atoms for right-to-left visual display.
+
+    Reversing the whole line gets the prose right (Arabic words read right to
+    left, so the first logical word belongs at the visual right edge — the
+    same effect as reversing character order in a pure-text RTL run, just at
+    word granularity). But a math run (a numeral, a fraction, an equation
+    fragment) is conventionally set left-to-right even embedded in Arabic
+    prose — "3/4" must stay "3/4", not become "4/3" — so any contiguous run
+    of math-only atoms that the line reversal just flipped gets un-flipped in
+    place, restoring its internal reading order while keeping its position
+    among the (now-reversed) prose atoms around it.
+    """
+    def is_math_atom(atom: list[tuple[str, bool]]) -> bool:
+        return all(is_math for _, is_math in atom)
+
+    rev = list(reversed(line))
+    out: list[list[tuple[str, bool]]] = []
+    i = 0
+    while i < len(rev):
+        if is_math_atom(rev[i]):
+            j = i
+            while j < len(rev) and is_math_atom(rev[j]):
+                j += 1
+            out.extend(reversed(rev[i:j]))
+            i = j
+        else:
+            out.append(rev[i])
+            i += 1
+    return out
+
+
 def _place_with_math(page, seg: Segment, lang, size_hint, limit_y, serif,
                      faces: dict[str, bytes], snaps: dict) -> LineOutcome:
     """Set a line that mixes prose with math glyphs.
@@ -1536,6 +1576,12 @@ def _place_with_math(page, seg: Segment, lang, size_hint, limit_y, serif,
     is the only faithful way to reproduce a symbol whose character identity the
     PDF does not record. That lets these lines be translated instead of being
     left in the source language to protect the equation.
+
+    For an RTL target, each wrapped line's atoms are re-ordered for visual
+    display first (`_rtl_visual_order`) and prose atoms are drawn through
+    `TextWriter(right_to_left=1)` instead of `insert_text` so Arabic/Hebrew
+    letters join correctly — math atoms are untouched either way, same opaque
+    original-face glyph, same width lookup.
     """
     atoms = _atoms(seg)
     if not atoms:
@@ -1573,12 +1619,30 @@ def _place_with_math(page, seg: Segment, lang, size_hint, limit_y, serif,
     else:
         text_kw.update(fontname="helv")
     space = font.text_length(" ", size)
+    rtl = lang.direction == "rtl"
 
     for line, y in zip(lines, baselines):
+        draw_line = _rtl_visual_order(line) if rtl else line
         x = box.x0
-        for i, word in enumerate(line):
+        for i, word in enumerate(draw_line):
             if i:
                 x += space
+            if rtl and all(not is_math for _, is_math in word):
+                # A prose atom in visual position: shaped and drawn as one
+                # run so Arabic/Hebrew letters take the right joining form.
+                # `right_to_left=1` only matters for shaping here (the atom
+                # is already in its final visual slot) — TextWriter doesn't
+                # report back a shaped width, so the advance still comes from
+                # the same unshaped `text_length` estimate the rest of the
+                # pipeline already accepts for RTL prose sizing.
+                text = "".join(p for p, _ in word)
+                w = font.text_length(text, size)
+                writer = fitz.TextWriter(page.rect)
+                writer.append(fitz.Point(x, y), text, font=font, fontsize=size,
+                              right_to_left=1)
+                writer.write_text(page, color=_rgb(seg.color))
+                x += w
+                continue
             for piece, is_math in word:
                 if is_math and (seg.id, piece) in snaps:
                     # A stacked fraction: replayed as the pixels it was, scaled

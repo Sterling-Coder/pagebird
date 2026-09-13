@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { JOB_TYPES } from "@/lib/jobTypes";
 import { createProject, type Project } from "@/lib/projects";
 
@@ -17,11 +17,19 @@ export function CreateJobModal({
   const [jobType, setJobType] = useState(JOB_TYPES[0].id);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // `creating` (state) only blocks the button on the *next* render — two
+  // clicks landing in the same tick (a real double-click, or a slow render)
+  // both read the old `disabled={false}` and both call handleCreate before
+  // React commits. This ref is set synchronously, so the second call bails
+  // immediately regardless of render timing — that's what created two
+  // identical projects from one double-click.
+  const submittingRef = useRef(false);
 
   if (!open) return null;
 
   async function handleCreate() {
-    if (!name.trim()) return;
+    if (!name.trim() || submittingRef.current) return;
+    submittingRef.current = true;
     setCreating(true);
     setError(null);
     try {
@@ -35,6 +43,7 @@ export function CreateJobModal({
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create job");
     } finally {
+      submittingRef.current = false;
       setCreating(false);
     }
   }

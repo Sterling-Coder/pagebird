@@ -6,13 +6,14 @@ import {
   listProjectFiles,
   getProject,
   listFolders,
+  listAllFolders,
   createFolder,
   deleteFolder,
-  getFolder,
   type JobSummary,
   type Folder,
 } from "@/lib/projects";
-import { listLanguages, translateDocument, deleteJob, API_BASE_URL, type Language } from "@/lib/translate";
+import { listLanguages, translateDocument, translateLinks, deleteJob, API_BASE_URL, type Language } from "@/lib/translate";
+import { downloadAuthed } from "@/lib/supabase/authFetch";
 import { ConfirmDialog } from "@/components/app/ConfirmDialog";
 
 const TRANSLATE_STAGES = ["Uploading", "Extracting text", "Translating", "Rebuilding document"];
@@ -24,26 +25,55 @@ export default function ProjectFilesPage() {
   const searchParams = useSearchParams();
   const folderId = searchParams.get("folder") ?? undefined;
   const inputRef = useRef<HTMLInputElement>(null);
+  const linksInputRef = useRef<HTMLInputElement>(null);
+  const linksFolderInputRef = useRef<HTMLInputElement>(null);
   const [files, setFiles] = useState<JobSummary[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
+  const [allFolders, setAllFolders] = useState<Folder[]>([]);
   const [breadcrumb, setBreadcrumb] = useState<Folder[]>([]);
   const [languages, setLanguages] = useState<Language[]>([]);
   const [targetLanguage, setTargetLanguage] = useState("es");
   const [projectTargetLang, setProjectTargetLang] = useState<string | null>(null);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [pendingLinkFiles, setPendingLinkFiles] = useState<File[]>([]);
+  // Set synchronously so a double-click can't fire the links translation twice.
+  const submittingLinksRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [creatingFolder, setCreatingFolder] = useState(false);
+  // Set synchronously (unlike state) so a double-click or Enter+click landing
+  // in the same tick doesn't both pass the disabled check and create two
+  // identical folders — the button had no in-flight guard at all before.
+  const creatingFolderRef = useRef(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [selectedFolders, setSelectedFolders] = useState<Set<string>>(new Set());
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const [deletingItems, setDeletingItems] = useState(false);
+  const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set());
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
-  const [inFlight, setInFlight] = useState<{ id: string; name: string; startedAt: number }[]>([]);
+  const [inFlight, setInFlight] = useState<
+    { id: string; name: string; startedAt: number | null }[]
+  >([]);
   const [, setTick] = useState(0);
 
   function refresh() {
-    listProjectFiles(params.projectId, folderId).then(setFiles).catch(() => setFiles([]));
+    listProjectFiles(params.projectId, folderId)
+      .then((fetched) => {
+        setFiles(fetched);
+        // The backend now persists a "processing" row the moment upload
+        // starts (survives navigating away / a closed tab, visible from any
+        // tab polling this list) — once that real row shows up here, drop
+        // this tab's own optimistic placeholder for the same file so it
+        // doesn't render twice.
+        const known = new Set(fetched.map((f) => f.original_filename));
+        setInFlight((prev) => prev.filter((f) => !known.has(f.name)));
+      })
+      .catch(() => setFiles([]));
     listFolders(params.projectId, folderId).then(setFolders).catch(() => setFolders([]));
+    // Every folder in the project, fetched once (not per breadcrumb level) —
+    // building the breadcrumb used to walk the parent chain one `getFolder`
+    // round trip at a time, so opening a folder 4 levels deep meant 4
+    // sequential network calls before the breadcrumb could even render.
+    listAllFolders(params.projectId).then(setAllFolders).catch(() => setAllFolders([]));
   }
 
   useEffect(() => {
@@ -54,26 +84,21 @@ export default function ProjectFilesPage() {
   }, [params.projectId, folderId]);
 
   useEffect(() => {
-    let cancelled = false;
-    async function buildBreadcrumb() {
-      if (!folderId) {
-        setBreadcrumb([]);
-        return;
-      }
-      const chain: Folder[] = [];
-      let current: string | undefined = folderId;
-      while (current) {
-        const folder: Folder = await getFolder(current);
-        chain.unshift(folder);
-        current = folder.parent_folder_id ?? undefined;
-      }
-      if (!cancelled) setBreadcrumb(chain);
+    if (!folderId) {
+      setBreadcrumb([]);
+      return;
     }
-    buildBreadcrumb().catch(() => setBreadcrumb([]));
-    return () => {
-      cancelled = true;
-    };
-  }, [folderId]);
+    const byId = new Map(allFolders.map((f) => [f.id, f]));
+    const chain: Folder[] = [];
+    let current: string | undefined = folderId;
+    while (current) {
+      const folder = byId.get(current);
+      if (!folder) break;  // allFolders hasn't loaded yet, or folder was deleted
+      chain.unshift(folder);
+      current = folder.parent_folder_id ?? undefined;
+    }
+    setBreadcrumb(chain);
+  }, [folderId, allFolders]);
 
   // Always poll while this page is open — not just while this tab kicked off
   // an upload. A reload, a return visit, or an upload started elsewhere all
@@ -108,29 +133,95 @@ export default function ProjectFilesPage() {
     setPendingFiles(Array.from(fileList));
   }
 
-  function handleConfirmTranslate() {
+  const LINK_EXTENSIONS = [".ai", ".eps", ".pdf", ".psd"];
+
+  function handleLinksPicked(fileList: FileList | null, filterByExtension = false) {
+    if (!fileList || fileList.length === 0) return;
+    let picked = Array.from(fileList);
+    if (filterByExtension) {
+      picked = picked.filter((f) =>
+        LINK_EXTENSIONS.some((ext) => f.name.toLowerCase().endsWith(ext))
+      );
+    }
+    if (picked.length) {
+      setError(null);
+      setPendingLinkFiles(picked);
+    }
+  }
+
+  function removePendingLinkFile(index: number) {
+    setPendingLinkFiles((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  async function handleConfirmTranslate() {
     if (pendingFiles.length === 0) return;
     const filesToTranslate = pendingFiles;
     setPendingFiles([]);
     setError(null);
 
-    for (const file of filesToTranslate) {
-      const tempId = `pending-${Date.now()}-${file.name}`;
-      setInFlight((prev) => [...prev, { id: tempId, name: file.name, startedAt: Date.now() }]);
+    // Show every file as queued immediately, so the list doesn't look like
+    // it silently dropped documents 2..N while document 1 is still running.
+    const tempIds = filesToTranslate.map((file, i) => `pending-${Date.now()}-${i}-${file.name}`);
+    setInFlight((prev) => [
+      ...prev,
+      ...filesToTranslate.map((file, i) => ({ id: tempIds[i], name: file.name, startedAt: null })),
+    ]);
 
-      translateDocument({ file, targetLanguage, projectId: params.projectId, folderId })
-        .then(() => refresh())
-        .catch((err) => {
-          setError(err instanceof Error ? err.message : `Upload failed: ${file.name}`);
-        })
-        .finally(() => {
-          setInFlight((prev) => prev.filter((f) => f.id !== tempId));
-        });
+    async function runOne(file: File, tempId: string) {
+      setInFlight((prev) =>
+        prev.map((f) => (f.id === tempId ? { ...f, startedAt: Date.now() } : f))
+      );
+      try {
+        await translateDocument({ file, targetLanguage, projectId: params.projectId, folderId });
+        refresh();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : `Upload failed: ${file.name}`);
+      } finally {
+        setInFlight((prev) => prev.filter((f) => f.id !== tempId));
+      }
+    }
+
+    // Fully parallel: documents no longer share anything that benefits from
+    // sequencing (no TM, and Links are their own independent upload/job now,
+    // not attached to a document batch), so there's nothing left to protect
+    // by staggering these.
+    await Promise.all(
+      filesToTranslate.map((file, i) => runOne(file, tempIds[i]))
+    );
+  }
+
+  async function handleConfirmTranslateLinks() {
+    if (pendingLinkFiles.length === 0 || submittingLinksRef.current) return;
+    submittingLinksRef.current = true;
+    const filesToTranslate = pendingLinkFiles;
+    setPendingLinkFiles([]);
+    setError(null);
+
+    const tempId = `pending-links-${Date.now()}`;
+    setInFlight((prev) => [
+      ...prev,
+      { id: tempId, name: `${filesToTranslate.length} linked graphic${filesToTranslate.length !== 1 ? "s" : ""}`, startedAt: Date.now() },
+    ]);
+
+    try {
+      await translateLinks({
+        files: filesToTranslate,
+        targetLanguage,
+        projectId: params.projectId,
+        folderId,
+      });
+      refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Links upload failed");
+    } finally {
+      setInFlight((prev) => prev.filter((f) => f.id !== tempId));
+      submittingLinksRef.current = false;
     }
   }
 
   async function handleCreateFolder() {
-    if (!newFolderName.trim()) return;
+    if (!newFolderName.trim() || creatingFolderRef.current) return;
+    creatingFolderRef.current = true;
     try {
       await createFolder(params.projectId, newFolderName.trim(), folderId);
       setNewFolderName("");
@@ -138,6 +229,8 @@ export default function ProjectFilesPage() {
       refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create folder");
+    } finally {
+      creatingFolderRef.current = false;
     }
   }
 
@@ -263,6 +356,38 @@ export default function ProjectFilesPage() {
         >
           Create folder
         </button>
+        <input
+          ref={linksInputRef}
+          type="file"
+          multiple
+          accept=".ai,.eps,.pdf,.psd"
+          className="hidden"
+          onChange={(e) => {
+            handleLinksPicked(e.target.files);
+            e.target.value = "";
+          }}
+        />
+        <input
+          ref={linksFolderInputRef}
+          type="file"
+          multiple
+          // @ts-expect-error non-standard attrs, Chrome/Safari/Firefox support them
+          webkitdirectory=""
+          directory=""
+          className="hidden"
+          onChange={(e) => {
+            handleLinksPicked(e.target.files, true);
+            e.target.value = "";
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => linksFolderInputRef.current?.click()}
+          title="Translate a batch of linked graphics (.ai/.eps/.pdf/.psd) on their own, independent of any document"
+          className="border border-rule px-4 py-2 font-mono text-[11px] uppercase tracking-widest text-ink-soft hover:text-ink"
+        >
+          Upload links
+        </button>
         {selectedFolders.size + selectedFiles.size > 0 ? (
           <button
             type="button"
@@ -331,10 +456,15 @@ export default function ProjectFilesPage() {
             </tr>
           ))}
           {inFlight.map((f) => {
-            const stageIndex = Math.min(
-              Math.floor((Date.now() - f.startedAt) / STAGE_DURATION_MS),
-              TRANSLATE_STAGES.length - 1
-            );
+            const stage =
+              f.startedAt === null
+                ? "Queued"
+                : TRANSLATE_STAGES[
+                    Math.min(
+                      Math.floor((Date.now() - f.startedAt) / STAGE_DURATION_MS),
+                      TRANSLATE_STAGES.length - 1
+                    )
+                  ];
             return (
               <tr key={f.id} className="border-b border-rule">
                 <td className="py-2" />
@@ -342,11 +472,13 @@ export default function ProjectFilesPage() {
                 <td className="py-2 text-ink-soft">—</td>
                 <td className="py-2">
                   <div className="h-4 w-24 overflow-hidden border border-rule">
-                    <div className="progress-indeterminate h-full w-full opacity-50" />
+                    <div
+                      className={`progress-indeterminate h-full w-full ${f.startedAt === null ? "opacity-20" : "opacity-50"}`}
+                    />
                   </div>
                 </td>
                 <td className="py-2 font-mono text-[10px] uppercase tracking-widest text-muted" colSpan={5}>
-                  {TRANSLATE_STAGES[stageIndex]}…
+                  {stage}…
                 </td>
               </tr>
             );
@@ -354,11 +486,14 @@ export default function ProjectFilesPage() {
           {files.map((f) => {
             const name = f.original_filename ?? f.id;
             const ext = name.includes(".") ? name.split(".").pop() : "—";
+            const processing = f.status === "processing";
             return (
               <tr
                 key={f.id}
-                onClick={() => router.push(`/app/jobs/${params.projectId}/files/${f.id}`)}
-                className="cursor-pointer border-b border-rule hover:bg-paper-dim"
+                onClick={() =>
+                  !processing && router.push(`/app/jobs/${params.projectId}/files/${f.id}`)
+                }
+                className={`border-b border-rule ${processing ? "" : "cursor-pointer hover:bg-paper-dim"}`}
               >
                 <td className="py-2" onClick={(e) => e.stopPropagation()}>
                   <input
@@ -376,31 +511,78 @@ export default function ProjectFilesPage() {
                 </td>
                 <td className="py-2 text-ink-soft">{ext}</td>
                 <td className="py-2">
-                  <div className="h-4 w-24 overflow-hidden border border-rule">
-                    <div
-                      className={`h-full ${f.status === "failed" ? "bg-red/40" : "bg-red"}`}
-                      style={{ width: f.status === "complete" || f.status === "failed" ? "100%" : "0%" }}
-                    />
-                  </div>
+                  {processing && typeof f.meta?.progress === "number" ? (
+                    <div className="flex flex-col gap-1">
+                      <div className="h-4 w-24 overflow-hidden border border-rule">
+                        <div
+                          className="h-full bg-red transition-[width] duration-500"
+                          style={{ width: `${f.meta.progress}%` }}
+                        />
+                      </div>
+                      <span className="font-mono text-[10px] text-muted">
+                        {f.meta.progress}%{f.meta.stage ? ` · ${f.meta.stage}` : ""}
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="h-4 w-24 overflow-hidden border border-rule">
+                      <div
+                        className={
+                          processing
+                            ? "progress-indeterminate h-full w-full opacity-50"
+                            : `h-full ${f.status === "failed" ? "bg-red/40" : "bg-red"}`
+                        }
+                        style={
+                          processing
+                            ? undefined
+                            : { width: f.status === "complete" || f.status === "failed" ? "100%" : "0%" }
+                        }
+                      />
+                    </div>
+                  )}
                 </td>
                 <td className="py-2 text-ink-soft">{projectTargetLang ?? "—"}</td>
                 <td className="py-2 text-ink-soft">—</td>
                 <td className="py-2 text-ink-soft">
                   {new Date(f.created_at * 1000).toLocaleDateString()}
                 </td>
-                <td className="py-2 text-ink-soft">0</td>
+                <td className="py-2 text-ink-soft">{processing ? "—" : 0}</td>
                 <td className="py-2" onClick={(e) => e.stopPropagation()}>
                   {f.status === "complete" ? (
-                    <a
-                      href={`${API_BASE_URL}/api/jobs/${f.id}/download`}
-                      download
+                    <button
+                      type="button"
+                      disabled={downloadingIds.has(f.id)}
+                      onClick={() => {
+                        const isIdml = (ext ?? "").toLowerCase() === "idml";
+                        const url = `${API_BASE_URL}/api/jobs/${f.id}/download${isIdml ? "?format=idml" : ""}`;
+                        setDownloadingIds((prev) => new Set(prev).add(f.id));
+                        downloadAuthed(url, name)
+                          .catch((err) =>
+                            setError(err instanceof Error ? err.message : `Download failed: ${name}`)
+                          )
+                          .finally(() =>
+                            setDownloadingIds((prev) => {
+                              const next = new Set(prev);
+                              next.delete(f.id);
+                              return next;
+                            })
+                          );
+                      }}
                       aria-label={`Download ${name}`}
-                      className="inline-flex h-6 w-6 items-center justify-center border border-rule text-ink-soft hover:border-ink hover:text-ink"
+                      aria-busy={downloadingIds.has(f.id)}
+                      title="Download translated document"
+                      className="inline-flex h-6 w-6 items-center justify-center border border-rule text-ink-soft hover:border-ink hover:text-ink disabled:opacity-50"
                     >
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="h-3.5 w-3.5">
-                        <path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16" />
-                      </svg>
-                    </a>
+                      {downloadingIds.has(f.id) ? (
+                        <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5 animate-spin">
+                          <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.75" opacity="0.25" />
+                          <path d="M21 12a9 9 0 0 0-9-9" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
+                        </svg>
+                      ) : (
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="h-3.5 w-3.5">
+                          <path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16" />
+                        </svg>
+                      )}
+                    </button>
                   ) : (
                     <span className="text-muted">—</span>
                   )}
@@ -471,6 +653,70 @@ export default function ProjectFilesPage() {
                 type="button"
                 onClick={handleConfirmTranslate}
                 disabled={pendingFiles.length === 0}
+                className="bg-red px-4 py-2 font-mono text-[11px] uppercase tracking-widest text-paper hover:opacity-90 disabled:opacity-40"
+              >
+                Translate
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {pendingLinkFiles.length > 0 ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40">
+          <div className="w-full max-w-sm border border-ink bg-paper p-6">
+            <p className="font-mono text-[11px] uppercase tracking-widest text-ink-soft">
+              Translate {pendingLinkFiles.length} linked graphic{pendingLinkFiles.length !== 1 ? "s" : ""}
+            </p>
+            <p className="mt-2 text-xs text-muted">
+              OCR + translate each file on its own — no document, no relinking.
+              Download the translated set as its own zip when done.
+            </p>
+            <ul className="mt-3 max-h-32 space-y-1 overflow-auto text-sm text-ink">
+              {pendingLinkFiles.map((f, i) => (
+                <li key={`${f.name}-${i}`} className="flex items-center justify-between">
+                  <span className="truncate">{f.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => removePendingLinkFile(i)}
+                    aria-label={`Remove ${f.name}`}
+                    className="ml-2 shrink-0 text-ink-soft hover:text-red"
+                  >
+                    ×
+                  </button>
+                </li>
+              ))}
+            </ul>
+
+            <label className="mt-4 block">
+              <span className="mb-2 block font-mono text-[10px] uppercase tracking-widest text-muted">
+                Translate to
+              </span>
+              <select
+                value={targetLanguage}
+                onChange={(e) => setTargetLanguage(e.target.value)}
+                className="w-full border border-rule bg-paper px-3 py-2 font-mono text-[11px] uppercase tracking-widest text-ink"
+              >
+                {languages.map((lang) => (
+                  <option key={lang.code} value={lang.code}>
+                    {lang.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setPendingLinkFiles([])}
+                className="border border-rule px-4 py-2 font-mono text-[11px] uppercase tracking-widest text-ink-soft hover:text-ink"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmTranslateLinks}
+                disabled={pendingLinkFiles.length === 0}
                 className="bg-red px-4 py-2 font-mono text-[11px] uppercase tracking-widest text-paper hover:opacity-90 disabled:opacity-40"
               >
                 Translate

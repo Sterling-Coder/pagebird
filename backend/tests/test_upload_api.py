@@ -25,7 +25,6 @@ def _sample_pdf() -> bytes:
 
 def _wire(monkeypatch, tmp_path):
     api._REVIEW_DB = str(tmp_path / "review.db")
-    api._TM_DB = str(tmp_path / "tm.db")
     monkeypatch.setenv("BABEL_UPLOAD_DIR", str(tmp_path / "uploads"))
     monkeypatch.setenv("BABEL_OUT_DIR", str(tmp_path / "out"))
 
@@ -343,7 +342,7 @@ def test_output_404_for_idml_without_preview(monkeypatch, tmp_path):
     # Save a job whose output is an .es.idml with no sibling preview PDF.
     from babel.models import Segment
 
-    store = ReviewStore(api._REVIEW_DB, tm_path=api._TM_DB)
+    store = ReviewStore(api._REVIEW_DB)
     jid = store.save_job(
         str(tmp_path / "in.idml"),
         str(tmp_path / "out" / "in.es.idml"),

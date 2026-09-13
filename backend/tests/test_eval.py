@@ -518,7 +518,7 @@ def _saved_job(tmp_path, segments) -> tuple[str, str]:
     from babel.models import Segment
 
     db = str(tmp_path / "review.db")
-    store = ReviewStore(db, tm_path=str(tmp_path / "tm.db"))
+    store = ReviewStore(db)
     try:
         job_id = store.save_job(
             str(tmp_path / "src.pdf"), str(tmp_path / "src.es.pdf"),
@@ -565,7 +565,7 @@ def test_idml_job_does_not_score_glyphs_against_the_pdf_path_font(tmp_path):
     _make_idml(src, "Write the missing number")
     _make_idml(out, "숫자를 쓰세요 ᴥ")
 
-    store = ReviewStore(db, tm_path=str(tmp_path / "tm.db"))
+    store = ReviewStore(db)
     try:
         job_id = store.save_job(
             str(src), str(out),
@@ -580,7 +580,7 @@ def test_idml_job_does_not_score_glyphs_against_the_pdf_path_font(tmp_path):
     result = runner.evaluate_job(job_id, review_db=db)
     tofu = result["layout"]["tofu"]
     assert tofu["available"] is False
-    assert "Noto Sans KR" in tofu["reason"]  # the font InDesign will actually use
+    assert "Malgun Gothic" in tofu["reason"]  # the font InDesign will actually use
     # An unmeasurable check must skip, never fail the job.
     assert "tofu" in result["gates"]["skipped"]
     assert "tofu" not in result["gates"]["failed"]
@@ -591,7 +591,7 @@ def test_freeze_gold_writes_restored_pairs(tmp_path):
     from babel.models import Segment
 
     db = str(tmp_path / "review.db")
-    store = ReviewStore(db, tm_path=str(tmp_path / "tm.db"))
+    store = ReviewStore(db)
     try:
         job_id = store.save_job(
             str(tmp_path / "src.pdf"), str(tmp_path / "src.es.pdf"),
@@ -666,10 +666,9 @@ def test_eval_endpoint_scores_caches_and_404s(monkeypatch, tmp_path):
     from babel.models import Segment
 
     api._REVIEW_DB = str(tmp_path / "review.db")
-    api._TM_DB = str(tmp_path / "tm.db")
     monkeypatch.setenv("BABEL_OUT_DIR", str(tmp_path / "out"))
 
-    store = ReviewStore(api._REVIEW_DB, tm_path=api._TM_DB)
+    store = ReviewStore(api._REVIEW_DB)
     try:
         job_id = store.save_job(
             str(tmp_path / "src.pdf"), str(tmp_path / "src.es.pdf"),
@@ -705,10 +704,9 @@ def test_eval_download_serves_markdown_and_json(monkeypatch, tmp_path):
     from babel.models import Segment
 
     api._REVIEW_DB = str(tmp_path / "review.db")
-    api._TM_DB = str(tmp_path / "tm.db")
     monkeypatch.setenv("BABEL_OUT_DIR", str(tmp_path / "out"))
 
-    store = ReviewStore(api._REVIEW_DB, tm_path=api._TM_DB)
+    store = ReviewStore(api._REVIEW_DB)
     try:
         job_id = store.save_job(
             str(tmp_path / "src.pdf"), str(tmp_path / "src.es.pdf"),

@@ -15,8 +15,10 @@ import {
   type TranslateResult,
 } from "@/lib/translate";
 import { SyncedDocumentPair } from "@/components/app/PdfPreview";
+import { LinksPreview } from "@/components/app/LinksPreview";
 import { ComingSoonWorkspace } from "@/components/app/ComingSoonWorkspace";
 import { getJobType } from "@/lib/jobTypes";
+import { downloadAuthed } from "@/lib/supabase/authFetch";
 
 export default function FileEditorPage() {
   const params = useParams<{ projectId: string; fileId: string }>();
@@ -29,6 +31,7 @@ export default function FileEditorPage() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const [history, setHistory] = useState<SegmentEvent[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   function toggleHistory() {
     setHistoryOpen((open) => {
@@ -48,6 +51,17 @@ export default function FileEditorPage() {
     let cancelled = false;
     async function load() {
       try {
+        const job = await getJob(params.fileId);
+        if (cancelled) return;
+        setResult(job);
+        // A links batch job has its own job_type regardless of the project
+        // it lives in ("document" projects can hold a links upload too) —
+        // check the job itself, not the parent project.
+        if (job.jobType === "links") {
+          setJobType("links");
+          setLoading(false);
+          return;
+        }
         const project = await getProject(params.projectId);
         if (cancelled) return;
         setJobType(project.job_type);
@@ -55,13 +69,11 @@ export default function FileEditorPage() {
           setLoading(false);
           return;
         }
-        const [job, segs, langs] = await Promise.all([
-          getJob(params.fileId),
+        const [segs, langs] = await Promise.all([
           getSegments(params.fileId).catch(() => []),
           listLanguages().catch(() => ({ languages: [], default: "es" })),
         ]);
         if (cancelled) return;
-        setResult(job);
         setSegments(segs);
         setLanguages(langs.languages);
       } catch (err) {
@@ -86,6 +98,14 @@ export default function FileEditorPage() {
     );
   }
 
+  if (jobType === "links" && result) {
+    return (
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col border-t border-rule bg-paper-dim">
+        <LinksPreview jobId={result.jobId} jobName={result.translatedFileName} />
+      </div>
+    );
+  }
+
   if (jobType && jobType !== "document") {
     const config = getJobType(jobType);
     return <ComingSoonWorkspace label={config?.label ?? jobType} />;
@@ -95,6 +115,34 @@ export default function FileEditorPage() {
     return (
       <div className="flex flex-1 items-center justify-center text-red">
         {error ?? "File not found"}
+      </div>
+    );
+  }
+
+  // .idml only opens in InDesign — there's no faithful in-browser render to
+  // compare it against, so skip the synced source/target preview and just
+  // offer the download.
+  const isIdml = result.translatedFileName.toLowerCase().endsWith(".idml");
+  if (isIdml) {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center border-t border-rule bg-paper-dim p-8 text-center">
+        <p className="font-mono text-[12px] text-ink">{result.translatedFileName}</p>
+        <p className="mt-2 max-w-sm text-xs leading-relaxed text-ink-soft">
+          No inline preview for .idml — open it in InDesign to view it.
+        </p>
+        <button
+          type="button"
+          disabled={downloading}
+          onClick={() => {
+            setDownloading(true);
+            downloadAuthed(result.downloadUrl, result.translatedFileName)
+              .catch((err) => setError(err instanceof Error ? err.message : "Download failed"))
+              .finally(() => setDownloading(false));
+          }}
+          className="mt-4 inline-block bg-ink px-6 py-3 font-mono text-[11px] uppercase tracking-widest text-paper transition-opacity hover:opacity-80 disabled:opacity-50"
+        >
+          {downloading ? "Preparing download…" : "Download →"}
+        </button>
       </div>
     );
   }

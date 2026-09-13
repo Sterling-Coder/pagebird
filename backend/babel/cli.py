@@ -1,7 +1,7 @@
 """babel CLI.
 
     python -m babel.cli inspect  <pdf> [--pages 0,1]
-    python -m babel.cli translate <pdf> --out out/ [--pages 0,1] [--tm babel_tm.db]
+    python -m babel.cli translate <pdf> --out out/ [--pages 0,1]
 """
 
 from __future__ import annotations
@@ -50,7 +50,7 @@ def cmd_inspect(args) -> int:
 
 def cmd_translate(args) -> int:
     report = translate_pdf(
-        args.pdf, out_dir=args.out, pages=_parse_pages(args.pages), tm_path=args.tm,
+        args.pdf, out_dir=args.out, pages=_parse_pages(args.pages),
         target_lang=getattr(args, "lang", None),
     )
     report_path = os.path.join(
@@ -77,7 +77,7 @@ def cmd_translate(args) -> int:
 
 
 def cmd_translate_idml(args) -> int:
-    report = translate_idml(args.idml, out_dir=args.out, tm_path=args.tm,
+    report = translate_idml(args.idml, out_dir=args.out,
                              target_lang=getattr(args, "lang", None))
     report_path = os.path.join(
         args.out, os.path.splitext(os.path.basename(args.idml))[0] + ".report.json"
@@ -242,7 +242,6 @@ def main(argv: list[str] | None = None) -> int:
     pt.add_argument("pdf")
     pt.add_argument("--out", default="out")
     pt.add_argument("--pages", default=None, help="comma-separated 0-based page numbers")
-    pt.add_argument("--tm", default="babel_tm.db")
     pt.add_argument("--lang", default=None, choices=sorted(languages.LANGUAGES),
                     help="target language (default: BABEL_TARGET_LANG or es)")
     pt.set_defaults(func=cmd_translate)
@@ -250,7 +249,6 @@ def main(argv: list[str] | None = None) -> int:
     pm = sub.add_parser("translate-idml", help="translate an IDML and write target IDML (+ optional PDF/INDD)")
     pm.add_argument("idml")
     pm.add_argument("--out", default="out")
-    pm.add_argument("--tm", default="babel_tm.db")
     pm.add_argument("--lang", default=None, choices=sorted(languages.LANGUAGES),
                     help="target language (default: BABEL_TARGET_LANG or es)")
     pm.add_argument("--export", action="store_true",

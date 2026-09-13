@@ -33,7 +33,7 @@ const inter = Inter({
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
   return (
     <div
-      className={`${fraunces.variable} ${spaceMono.variable} ${inter.variable} relative flex min-h-full flex-1 flex-col bg-pb-paper text-pb-ink antialiased`}
+      className={`${fraunces.variable} ${spaceMono.variable} ${inter.variable} relative flex min-h-screen shrink-0 flex-col bg-pb-paper text-pb-ink antialiased`}
     >
       <ParallaxCurves />
 

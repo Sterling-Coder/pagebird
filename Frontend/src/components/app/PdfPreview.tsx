@@ -646,6 +646,7 @@ export function SyncedDocumentPair({
   const editingSegment = segments.find((s) => s.seg_id === editingSegmentId) ?? null;
   const [lastEdit, setLastEdit] = useState<{ segId: string; previousText: string } | null>(null);
   const [undoing, setUndoing] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [activeSegmentId, setActiveSegmentId] = useState<string | null>(null);
   const sourcePaneRef = useRef<SyncedPaneHandle | null>(null);
@@ -846,10 +847,14 @@ export function SyncedDocumentPair({
             ) : null}
             <button
               type="button"
-              onClick={() => downloadAuthed(downloadUrl, fileName)}
-              className="bg-ink px-3 py-1.5 font-mono text-[11px] uppercase tracking-widest text-paper transition-opacity hover:opacity-80"
+              disabled={downloading}
+              onClick={() => {
+                setDownloading(true);
+                downloadAuthed(downloadUrl, fileName).finally(() => setDownloading(false));
+              }}
+              className="bg-ink px-3 py-1.5 font-mono text-[11px] uppercase tracking-widest text-paper transition-opacity hover:opacity-80 disabled:opacity-50"
             >
-              Download
+              {downloading ? "Preparing…" : "Download"}
             </button>
           </div>
         </div>

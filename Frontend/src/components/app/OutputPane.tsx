@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import type { Segment, TranslateResult } from "@/lib/translate";
 import { SyncedDocumentPair } from "./PdfPreview";
 import { downloadAuthed } from "@/lib/supabase/authFetch";
@@ -17,6 +20,8 @@ export function OutputPane({
   file: File | null;
   segments: Segment[];
 }) {
+  const [downloading, setDownloading] = useState(false);
+
   return (
     <div className="flex min-w-[320px] flex-1 flex-col p-6">
       <p className="font-mono text-[11px] uppercase tracking-widest text-muted">
@@ -77,10 +82,16 @@ export function OutputPane({
               </p>
               <button
                 type="button"
-                onClick={() => downloadAuthed(result.downloadUrl, result.translatedFileName)}
-                className="mt-4 inline-block bg-ink px-6 py-3 font-mono text-[11px] uppercase tracking-widest text-paper transition-opacity hover:opacity-80"
+                disabled={downloading}
+                onClick={() => {
+                  setDownloading(true);
+                  downloadAuthed(result.downloadUrl, result.translatedFileName).finally(() =>
+                    setDownloading(false)
+                  );
+                }}
+                className="mt-4 inline-block bg-ink px-6 py-3 font-mono text-[11px] uppercase tracking-widest text-paper transition-opacity hover:opacity-80 disabled:opacity-50"
               >
-                Download →
+                {downloading ? "Preparing download…" : "Download →"}
               </button>
             </div>
           )

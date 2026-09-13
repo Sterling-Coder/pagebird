@@ -117,6 +117,7 @@ export function UploadPane({
           <p className="mt-2 text-xs text-muted">PDF · INDD · IDML</p>
         </div>
       )}
+
       <button
         type="button"
         onClick={onTranslate}

@@ -57,7 +57,7 @@ def _report(tmp_path, lang):
     src = str(tmp_path / "in.pdf")
     _pdf_with_a_figure(src)
     return translate_pdf(src, out_dir=str(tmp_path / "out"),
-                         tm_path=str(tmp_path / "tm.db"), review_db=None,
+                         review_db=None,
                          target_lang=lang)
 
 
@@ -124,9 +124,9 @@ def test_review_job_records_the_language_and_direction(tmp_path):
     _pdf_with_a_figure(src)
     db = str(tmp_path / "review.db")
     translate_pdf(src, out_dir=str(tmp_path / "out"),
-                  tm_path=str(tmp_path / "tm.db"), review_db=db, target_lang="ar")
+                  review_db=db, target_lang="ar")
 
-    store = ReviewStore(db, tm_path=str(tmp_path / "tm.db"))
+    store = ReviewStore(db)
     try:
         job = store.list_jobs()[0]
     finally:

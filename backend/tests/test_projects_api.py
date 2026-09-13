@@ -7,7 +7,6 @@ import babel.api as api
 
 def _client(tmp_path):
     api._REVIEW_DB = str(tmp_path / "review.db")
-    api._TM_DB = str(tmp_path / "tm.db")
     return TestClient(api.app)
 
 
@@ -61,7 +60,7 @@ def test_delete_job(tmp_path):
     client = _client(tmp_path)
     seg = Segment(id="a", page=0, bbox=(0, 0, 1, 1), font="f", size=11, color=0,
                   source="Hi", target="Hi", placeholders={}, status="approved")
-    jid = ReviewStore(api._REVIEW_DB, tm_path=api._TM_DB).save_job(
+    jid = ReviewStore(api._REVIEW_DB).save_job(
         "in.pdf", "out.pdf", [seg], {})
 
     res = client.delete(f"/api/jobs/{jid}")
@@ -106,7 +105,7 @@ def test_job_history_endpoint(tmp_path):
     client = _client(tmp_path)
     seg = Segment(id="a", page=0, bbox=(0, 0, 1, 1), font="f", size=11, color=0,
                   source="Hello", target="Hello", placeholders={}, status="needs_human")
-    jid = ReviewStore(api._REVIEW_DB, tm_path=api._TM_DB).save_job(
+    jid = ReviewStore(api._REVIEW_DB).save_job(
         "in.pdf", "out.pdf", [seg], {})
 
     client.patch(f"/api/segments/{jid}/a",
@@ -202,7 +201,7 @@ def test_list_files_scoped_by_folder(tmp_path):
 
     seg = Segment(id="a", page=0, bbox=(0, 0, 1, 1), font="f", size=11, color=0,
                   source="Hi", target="Hi", placeholders={}, status="approved")
-    store = ReviewStore(api._REVIEW_DB, tm_path=api._TM_DB)
+    store = ReviewStore(api._REVIEW_DB)
     root_jid = store.save_job("root.pdf", "out.pdf", [seg], {}, project_id=project_id)
     folder_jid = store.save_job("in.pdf", "out.pdf", [seg], {},
                                  project_id=project_id, folder_id=folder_id)

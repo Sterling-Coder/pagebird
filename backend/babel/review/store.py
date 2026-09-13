@@ -3,8 +3,7 @@ has something to load, edit, and approve.
 
 This is what turns "MT output" into "high accuracy": every segment the pipeline
 was unsure about (needs_human, disagreement, glossary miss) surfaces here for a
-person to fix, and every approval writes back to the shared translation memory
-so the correction is reused everywhere.
+person to fix.
 
 Backed by Supabase Postgres (via SUPABASE_DB_URL) — not local SQLite. A local
 SQLite file lived on Railway's container disk, which resets to empty on every
@@ -27,10 +26,24 @@ from psycopg.rows import dict_row
 
 from babel.config import load_env
 from babel.models import Segment
-from babel.tm.store import TranslationMemory
 from babel.translate import integrity
 
 load_env()
+
+
+def _pg_safe(value):
+    """Postgres text columns cannot store a NUL (0x00) byte at all — psycopg
+    raises `PostgreSQL text fields cannot contain NUL (0x00) bytes` before
+    even sending the query. Malformed OCR output or a garbled IDML/PDF
+    content stream occasionally produces one; strip it here at the DB
+    boundary rather than chasing every possible upstream source of it."""
+    if isinstance(value, str):
+        return value.replace("\x00", "")
+    if isinstance(value, dict):
+        return {k: _pg_safe(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [_pg_safe(v) for v in value]
+    return value
 
 
 def _db_url() -> str:
@@ -48,11 +61,10 @@ def _db_url() -> str:
 
 
 class ReviewStore:
-    def __init__(self, path: str = "", tm_path: str = "babel_tm.db"):
+    def __init__(self, path: str = ""):
         # `path` (an old SQLite filename) is accepted for call-site
         # compatibility but unused now — everything reads from SUPABASE_DB_URL.
         self.conn = psycopg.connect(_db_url(), row_factory=dict_row, autocommit=False)
-        self.tm_path = tm_path
 
     # ---- write ---------------------------------------------------------------
 
@@ -76,9 +88,10 @@ class ReviewStore:
                 "original_filename, file_hash, file_size, duration_sec, status, error, "
                 "project_id, job_type, folder_id, created_by) "
                 "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
-                (job_id, source, output, time.time(), json.dumps(meta, ensure_ascii=False),
-                 original_filename, file_hash, file_size, duration_sec, status, error,
-                 project_id, job_type, folder_id, created_by),
+                (job_id, _pg_safe(source), _pg_safe(output), time.time(),
+                 json.dumps(_pg_safe(meta), ensure_ascii=False),
+                 _pg_safe(original_filename), file_hash, file_size, duration_sec, status,
+                 _pg_safe(error), project_id, job_type, folder_id, created_by),
             )
             for s in segments:
                 if not s.is_translatable:
@@ -88,14 +101,128 @@ class ReviewStore:
                     "status, disagreement, has_math_font, placeholders_json, bbox_json, "
                     "notes_json, approved) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
                     (
-                        job_id, s.id, s.page, s.source, s.target, s.status,
+                        job_id, s.id, s.page, _pg_safe(s.source), _pg_safe(s.target), s.status,
                         int(s.disagreement), int(s.has_math_font),
-                        json.dumps(s.placeholders, ensure_ascii=False),
-                        json.dumps(s.bbox), json.dumps(s.notes, ensure_ascii=False), 0,
+                        json.dumps(_pg_safe(s.placeholders), ensure_ascii=False),
+                        json.dumps(s.bbox), json.dumps(_pg_safe(s.notes), ensure_ascii=False), 0,
                     ),
                 )
         self.conn.commit()
         return job_id
+
+    def create_pending_job(
+        self, source: str, *,
+        original_filename: str | None = None,
+        file_hash: str | None = None,
+        file_size: int | None = None,
+        meta: dict | None = None,
+        project_id: str | None = None,
+        job_type: str = "document",
+        folder_id: str | None = None,
+        created_by: str | None = None,
+    ) -> str:
+        """Inserts a job row before translation starts, status="processing",
+        no output/segments yet — so the Files list shows a real, persisted
+        in-progress row (visible from any tab, surviving a navigation or a
+        closed tab) instead of a client-side-only illusion that vanishes the
+        moment the uploading tab is gone. `finalize_job` fills in the rest
+        once translation completes."""
+        job_id = uuid.uuid4().hex[:12]
+        with self.conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO review_jobs (id, source, created_at, meta_json, "
+                "original_filename, file_hash, file_size, status, "
+                "project_id, job_type, folder_id, created_by) "
+                "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                (job_id, _pg_safe(source), time.time(), json.dumps(_pg_safe(meta or {}), ensure_ascii=False),
+                 _pg_safe(original_filename), file_hash, file_size, "processing",
+                 project_id, job_type, folder_id, created_by),
+            )
+        self.conn.commit()
+        return job_id
+
+    def finalize_job(
+        self, job_id: str, output: str, segments: list[Segment], meta: dict, *,
+        duration_sec: float | None = None,
+        status: str = "complete",
+        error: str | None = None,
+    ) -> None:
+        """Fills in a job row created by `create_pending_job` once translation
+        finishes — output, meta, segments, final status — same data `save_job`
+        would insert for a fresh row, just as an UPDATE onto the existing id
+        instead of a new INSERT (the placeholder is already what every other
+        tab has been polling and showing as "processing")."""
+        with self.conn.cursor() as cur:
+            cur.execute(
+                "UPDATE review_jobs SET output=%s, meta_json=%s, duration_sec=%s, "
+                "status=%s, error=%s WHERE id=%s",
+                (_pg_safe(output), json.dumps(_pg_safe(meta), ensure_ascii=False), duration_sec,
+                 status, _pg_safe(error), job_id),
+            )
+            for s in segments:
+                if not s.is_translatable:
+                    continue  # empty/whitespace-only segments aren't reviewable
+                cur.execute(
+                    "INSERT INTO review_segments (job_id, seg_id, page, source, target, "
+                    "status, disagreement, has_math_font, placeholders_json, bbox_json, "
+                    "notes_json, approved) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                    (
+                        job_id, s.id, s.page, _pg_safe(s.source), _pg_safe(s.target), s.status,
+                        int(s.disagreement), int(s.has_math_font),
+                        json.dumps(_pg_safe(s.placeholders), ensure_ascii=False),
+                        json.dumps(s.bbox), json.dumps(_pg_safe(s.notes), ensure_ascii=False), 0,
+                    ),
+                )
+        self.conn.commit()
+
+    def update_job_progress(self, job_id: str, percent: int, stage: str) -> None:
+        """Merges {"progress": percent, "stage": stage} into a pending job's
+        meta so the Files list can show real percentage instead of an
+        indeterminate bar. Best-effort/advisory — a read-modify-write on
+        meta_json, not wrapped in any stronger consistency than that, since a
+        missed or stale progress tick is harmless (the next one corrects it)."""
+        with self.conn.cursor() as cur:
+            cur.execute("SELECT meta_json FROM review_jobs WHERE id = %s", (job_id,))
+            row = cur.fetchone()
+            if row is None:
+                return
+            meta = json.loads(row["meta_json"] or "{}")
+            meta["progress"] = percent
+            meta["stage"] = _pg_safe(stage)
+            cur.execute(
+                "UPDATE review_jobs SET meta_json = %s WHERE id = %s",
+                (json.dumps(_pg_safe(meta), ensure_ascii=False), job_id),
+            )
+        self.conn.commit()
+
+    def merge_job_meta(self, job_id: str, patch: dict) -> None:
+        """Merges arbitrary keys into a job's meta — same read-modify-write
+        shape as `update_job_progress`, generalized. Used e.g. to record
+        `has_links` once linked graphics are persisted, so the Files list can
+        show a "download Links" affordance without a live storage check per
+        row."""
+        with self.conn.cursor() as cur:
+            cur.execute("SELECT meta_json FROM review_jobs WHERE id = %s", (job_id,))
+            row = cur.fetchone()
+            if row is None:
+                return
+            meta = json.loads(row["meta_json"] or "{}")
+            meta.update(_pg_safe(patch))
+            cur.execute(
+                "UPDATE review_jobs SET meta_json = %s WHERE id = %s",
+                (json.dumps(_pg_safe(meta), ensure_ascii=False), job_id),
+            )
+        self.conn.commit()
+
+    def mark_job_failed(self, job_id: str, error: str, duration_sec: float | None = None) -> None:
+        """Marks a pending job as failed without ever having produced output
+        or segments — the pipeline raised before `finalize_job` could run."""
+        with self.conn.cursor() as cur:
+            cur.execute(
+                "UPDATE review_jobs SET status='failed', error=%s, duration_sec=%s WHERE id=%s",
+                (_pg_safe(error), duration_sec, job_id),
+            )
+        self.conn.commit()
 
     def update_job_paths(self, job_id: str, source: str | None = None,
                           output: str | None = None) -> None:
@@ -119,6 +246,32 @@ class ReviewStore:
 
     # ---- read ----------------------------------------------------------------
 
+    # A job stuck in "processing" this long never recovers on its own: the
+    # server process that was running it crashed or restarted mid-translation,
+    # so nothing ever ran `finalize_job`/`mark_job_failed` for it. No
+    # background sweep for this — it's checked lazily, right here, the next
+    # time anyone lists jobs, and flipped to `failed` so it stops looking like
+    # a phantom in-progress upload forever.
+    _STALE_PROCESSING_SECONDS = 30 * 60
+
+    def _reap_stale_processing(self, rows: list[dict]) -> None:
+        now = time.time()
+        for r in rows:
+            if r["status"] != "processing":
+                continue
+            if now - r["created_at"] <= self._STALE_PROCESSING_SECONDS:
+                continue
+            with self.conn.cursor() as cur:
+                cur.execute(
+                    "UPDATE review_jobs SET status='failed', "
+                    "error='job never completed (server restarted or crashed mid-translation)' "
+                    "WHERE id=%s AND status='processing'",
+                    (r["id"],),
+                )
+            self.conn.commit()
+            r["status"] = "failed"
+            r["error"] = "job never completed (server restarted or crashed mid-translation)"
+
     def list_jobs(self, created_by: str | list[str] | None = None) -> list[dict]:
         if isinstance(created_by, str):
             created_by = [created_by]
@@ -138,13 +291,14 @@ class ReviewStore:
                     "folder_id, created_by FROM review_jobs ORDER BY created_at DESC"
                 )
             rows = cur.fetchall()
+        self._reap_stale_processing(rows)
+        counts_by_job = self._status_counts_batch([r["id"] for r in rows])
         out = []
         for r in rows:
-            counts = self._status_counts(r["id"])
             out.append({
                 "id": r["id"], "source": r["source"], "output": r["output"],
                 "created_at": r["created_at"], "meta": json.loads(r["meta_json"]),
-                "status_counts": counts,
+                "status_counts": counts_by_job.get(r["id"], {}),
                 "original_filename": r["original_filename"], "file_hash": r["file_hash"],
                 "file_size": r["file_size"], "duration_sec": r["duration_sec"],
                 "status": r["status"], "error": r["error"],
@@ -168,14 +322,25 @@ class ReviewStore:
         return folder_id
 
     def list_folders(self, project_id: str,
-                      parent_folder_id: str | None = None) -> list[dict]:
+                      parent_folder_id: str | None = None, all: bool = False) -> list[dict]:
+        """`all=True` returns every folder in the project regardless of
+        nesting, in one query — lets a caller (the breadcrumb) resolve a
+        folder's whole ancestor chain from a single fetch instead of walking
+        parent_folder_id one `get_folder` round trip at a time."""
         with self.conn.cursor() as cur:
-            cur.execute(
-                "SELECT id, project_id, name, parent_folder_id, created_at FROM review_folders "
-                "WHERE project_id = %s AND parent_folder_id IS NOT DISTINCT FROM %s "
-                "ORDER BY created_at DESC",
-                (project_id, parent_folder_id),
-            )
+            if all:
+                cur.execute(
+                    "SELECT id, project_id, name, parent_folder_id, created_at "
+                    "FROM review_folders WHERE project_id = %s ORDER BY created_at DESC",
+                    (project_id,),
+                )
+            else:
+                cur.execute(
+                    "SELECT id, project_id, name, parent_folder_id, created_at FROM review_folders "
+                    "WHERE project_id = %s AND parent_folder_id IS NOT DISTINCT FROM %s "
+                    "ORDER BY created_at DESC",
+                    (project_id, parent_folder_id),
+                )
             return cur.fetchall()
 
     def get_folder(self, folder_id: str) -> dict | None:
@@ -266,7 +431,10 @@ class ReviewStore:
             row = cur.fetchone()
         if row is None:
             return None
-        return self._project_row_to_dict(row)
+        with self.conn.cursor() as cur:
+            cur.execute("SELECT id FROM review_jobs WHERE project_id = %s", (row["id"],))
+            job_ids = [jr["id"] for jr in cur.fetchall()]
+        return self._project_row_to_dict(row, job_ids, self._status_counts_batch(job_ids))
 
     def list_projects(self, created_by: str | list[str] | None = None) -> list[dict]:
         if isinstance(created_by, str):
@@ -281,15 +449,33 @@ class ReviewStore:
             else:
                 cur.execute("SELECT * FROM review_projects ORDER BY created_at DESC")
             rows = cur.fetchall()
-        return [self._project_row_to_dict(r) for r in rows]
-
-    def _project_row_to_dict(self, row) -> dict:
+        if not rows:
+            return []
+        # Batched across every project in one pair of queries — this used to
+        # be a query for this project's job ids PLUS one more per job for its
+        # status counts, repeated per project, which is what made a Projects
+        # page with any real number of jobs slow to load.
+        project_ids = [r["id"] for r in rows]
         with self.conn.cursor() as cur:
-            cur.execute("SELECT id FROM review_jobs WHERE project_id = %s", (row["id"],))
+            cur.execute(
+                "SELECT id, project_id FROM review_jobs WHERE project_id = ANY(%s)",
+                (project_ids,),
+            )
             job_rows = cur.fetchall()
-        counts: dict[str, int] = {}
+        jobs_by_project: dict[str, list[str]] = {}
         for jr in job_rows:
-            for status, c in self._status_counts(jr["id"]).items():
+            jobs_by_project.setdefault(jr["project_id"], []).append(jr["id"])
+        counts_by_job = self._status_counts_batch([jr["id"] for jr in job_rows])
+        return [
+            self._project_row_to_dict(r, jobs_by_project.get(r["id"], []), counts_by_job)
+            for r in rows
+        ]
+
+    def _project_row_to_dict(self, row, job_ids: list[str],
+                              counts_by_job: dict[str, dict[str, int]]) -> dict:
+        counts: dict[str, int] = {}
+        for jid in job_ids:
+            for status, c in counts_by_job.get(jid, {}).items():
                 counts[status] = counts.get(status, 0) + c
         return {
             "id": row["id"], "name": row["name"], "job_type": row["job_type"],
@@ -297,7 +483,7 @@ class ReviewStore:
             "client": row["client"], "vendor": row["vendor"],
             "deadline": row["deadline"], "status": row["status"],
             "created_at": row["created_at"], "created_by": row["created_by"],
-            "file_count": len(job_rows), "status_counts": counts,
+            "file_count": len(job_ids), "status_counts": counts,
         }
 
     def _status_counts(self, job_id: str) -> dict:
@@ -307,6 +493,25 @@ class ReviewStore:
                 (job_id,),
             )
             return {r["status"]: r["c"] for r in cur.fetchall()}
+
+    def _status_counts_batch(self, job_ids: list[str]) -> dict[str, dict[str, int]]:
+        """Same as `_status_counts`, for many jobs in one round trip — listing
+        N jobs used to cost N+1 queries (one per job just for its status
+        counts), which is what made the Files/Projects lists visibly slow to
+        load against a remote Postgres."""
+        if not job_ids:
+            return {}
+        with self.conn.cursor() as cur:
+            cur.execute(
+                "SELECT job_id, status, COUNT(*) c FROM review_segments "
+                "WHERE job_id = ANY(%s) GROUP BY job_id, status",
+                (job_ids,),
+            )
+            rows = cur.fetchall()
+        out: dict[str, dict[str, int]] = {}
+        for r in rows:
+            out.setdefault(r["job_id"], {})[r["status"]] = r["c"]
+        return out
 
     def get_segments(self, job_id: str, status: str | None = None) -> list[dict]:
         q = "SELECT * FROM review_segments WHERE job_id=%s"
@@ -337,6 +542,7 @@ class ReviewStore:
 
     def update_segment(self, job_id: str, seg_id: str, target: str, approve: bool, *,
                         reviewer: str = "unknown") -> dict:
+        target = _pg_safe(target)
         with self.conn.cursor() as cur:
             cur.execute(
                 "SELECT * FROM review_segments WHERE job_id=%s AND seg_id=%s", (job_id, seg_id)
@@ -357,11 +563,6 @@ class ReviewStore:
             elif approve:
                 status, approved = "approved", 1
                 action = "approve"
-                tm = TranslationMemory(self.tm_path)
-                try:
-                    tm.store(row["source"], target, engine="human", approved=True)
-                finally:
-                    tm.close()
             else:
                 status, approved = "edited", 0
                 action = "edit"
@@ -402,6 +603,19 @@ class ReviewStore:
                 (job_id,),
             )
             return cur.fetchall()
+
+    def has_edits(self, job_id: str) -> bool:
+        """True if any segment of this job was ever approved/edited/rejected
+        via the review UI. Lets a download skip re-downloading the source,
+        re-applying review state, and re-uploading the result — real work
+        that only ever changes anything when this is True — for the common
+        case of a job nobody has touched since translation finished."""
+        with self.conn.cursor() as cur:
+            cur.execute(
+                "SELECT 1 FROM review_segment_events WHERE job_id=%s LIMIT 1",
+                (job_id,),
+            )
+            return cur.fetchone() is not None
 
     def close(self) -> None:
         self.conn.close()

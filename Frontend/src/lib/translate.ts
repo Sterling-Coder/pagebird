@@ -24,6 +24,7 @@ export type TranslateResult = {
   pages: number | null;
   downloadUrl: string;
   previewUrl: string | null;
+  jobType: string;
 };
 
 export type Segment = {
@@ -133,6 +134,7 @@ function jobToResult(job: {
   original_filename?: string | null;
   format?: string;
   has_output_pdf?: boolean;
+  job_type?: string;
 }): TranslateResult {
   const jobId = (job.job_id ?? job.id) as string;
   if (!jobId) throw new Error("Backend did not return a job id.");
@@ -148,6 +150,7 @@ function jobToResult(job: {
       job.has_output_pdf ?? Boolean(job.output)
         ? `${API_BASE_URL}/api/jobs/${jobId}/output`
         : null,
+    jobType: job.job_type ?? "document",
   };
 }
 
@@ -196,4 +199,59 @@ export async function translateDocument(
     ...result,
     pages: typeof report.pages === "number" ? report.pages : null,
   };
+}
+
+/** Translate a batch of linked-graphic files (.ai/.eps/.pdf/.psd) as its own
+ * independent job — no `.idml` involved, no relinking. See
+ * `pipeline.translate_links_folder` on the backend for the trade-off this
+ * makes versus attaching Links to a specific document upload. */
+export async function translateLinks(request: {
+  files: File[];
+  targetLanguage: string;
+  projectId?: string;
+  folderId?: string;
+}): Promise<{ jobId: string }> {
+  const formData = new FormData();
+  for (const file of request.files) {
+    formData.append("files", file);
+  }
+  formData.append("target_lang", request.targetLanguage);
+  if (request.projectId) {
+    formData.append("project_id", request.projectId);
+  }
+  if (request.folderId) {
+    formData.append("folder_id", request.folderId);
+  }
+
+  const res = await fetch(`${API_BASE_URL}/api/translate-links`, {
+    method: "POST",
+    headers: await authHeaders(),
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(body?.detail ?? `Links translation failed (${res.status})`);
+  }
+
+  const report = await res.json();
+  return { jobId: report.job_id };
+}
+
+export type LinkFile = {
+  name: string;
+  translated: boolean;
+  previewable: boolean;
+};
+
+export async function listLinkFiles(jobId: string): Promise<LinkFile[]> {
+  const res = await fetch(`${API_BASE_URL}/api/jobs/${jobId}/links/list`, {
+    headers: await authHeaders(),
+  });
+  if (!res.ok) throw new Error(`Failed to load linked graphics (${res.status})`);
+  return res.json();
+}
+
+export function linkFileUrl(jobId: string, name: string): string {
+  return `${API_BASE_URL}/api/jobs/${jobId}/links/file/${encodeURIComponent(name)}`;
 }

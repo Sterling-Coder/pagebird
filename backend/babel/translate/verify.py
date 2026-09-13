@@ -14,11 +14,13 @@ from __future__ import annotations
 
 import json
 import os
+from concurrent.futures import ThreadPoolExecutor
 
 from babel import languages
 from babel.glossary import glossary
 
 _CHUNK = 30
+_MAX_CONCURRENT_CHUNKS = 6  # matches translate/engine.py's chunk concurrency
 
 _SYSTEM = (
     "You are a bilingual QA reviewer for K-12 mathematics materials translated "
@@ -69,15 +71,31 @@ class _Base:
     _tgt_key = "tgt"  # overridden with the actual language code by subclasses
 
     def verify(self, pairs: list[tuple[str, str]]) -> list[str]:
-        out: list[str] = []
-        for i in range(0, len(pairs), _CHUNK):
-            chunk = pairs[i : i + _CHUNK]
+        chunks = [pairs[i : i + _CHUNK] for i in range(0, len(pairs), _CHUNK)]
+        if not chunks:
+            return []
+
+        def _safe_verify_chunk(chunk: list[tuple[str, str]]) -> list[str]:
             try:
-                out.extend(self._verify_chunk(chunk))
+                return self._verify_chunk(chunk)
             except Exception:
                 # QA is a bonus pass; a dead key or exhausted quota must not fail
                 # the translation job that already succeeded. No verdict, no flag.
-                out.extend([""] * len(chunk))
+                return [""] * len(chunk)
+
+        # Chunks used to run one at a time — a document with 200 segments paid
+        # for 5 full sequential LLM round-trips here alone, on top of the
+        # translation pass, which already runs its own chunks concurrently.
+        results: list[list[str]] = [None] * len(chunks)  # type: ignore[list-item]
+        with ThreadPoolExecutor(max_workers=_MAX_CONCURRENT_CHUNKS) as ex:
+            future_to_idx = {ex.submit(_safe_verify_chunk, c): i for i, c in enumerate(chunks)}
+            for future in future_to_idx:
+                idx = future_to_idx[future]
+                results[idx] = future.result()
+
+        out: list[str] = []
+        for r in results:
+            out.extend(r)
         return out
 
     def _payload(self, chunk: list[tuple[str, str]]) -> str:

@@ -159,12 +159,11 @@ def test_urdu_letters_actually_put_ink_on_the_page(tmp_path):
     assert inked > 40, f"Urdu drew almost nothing: {inked} inked columns"
 
 
-def test_mixed_prose_and_math_line_is_left_untouched_in_rtl(tmp_path):
-    """Setting prose and math glyphs on one RTL line needs bidi across atoms
-    drawn in two different faces, which MuPDF cannot do for us — its bidi runs
-    over a single appended run, and the math glyph has to keep its original
-    face. Rather than approximate the ordering on a mathematics line, leave it
-    in the source language and let a reviewer place it.
+def test_mixed_prose_and_math_line_translates_in_rtl(tmp_path):
+    """A line mixing prose with math glyphs used to be left untouched for RTL
+    targets (bidi across two different faces was more than MuPDF's single-run
+    bidi could do). `_place_with_math` now reorders the wrapped atoms itself
+    (`_rtl_visual_order`) before drawing, so these lines translate instead.
     """
     src = str(tmp_path / "in.pdf")
     _source_pdf(src, "3 divided by 4")
@@ -179,11 +178,34 @@ def test_mixed_prose_and_math_line_is_left_untouched_in_rtl(tmp_path):
     out = str(tmp_path / "out.pdf")
     outcomes = rebuild_pdf(src, [seg], out, target_lang="ar")
 
-    assert outcomes and outcomes[0].action == "skipped_math"
+    assert outcomes and outcomes[0].action == "replaced"
     doc = fitz.open(out)
-    text = doc.load_page(0).get_text()
+    page = doc.load_page(0)
+    text = page.get_text()
+    n_images = len(page.get_images())
     doc.close()
-    assert "3 divided by 4" in text  # untouched, not half-translated
+    assert "divided by" not in text  # English prose gone
+    assert _is_shaped(text)  # Arabic prose shaped into presentation forms
+    # The two math tokens (3, 4) drew as images (no `math_fonts`/`faces`
+    # entry, so `_place_with_math` falls back to the snapped source pixels)
+    # rather than as extractable glyphs.
+    assert n_images == 2
+
+
+def test_rtl_visual_order_keeps_math_run_internal_order():
+    """`_rtl_visual_order` must reverse prose position but never a math run's
+    own internal reading order — "1", "/", "2" stays "1/2", not "2/1", even
+    though the run as a whole moves to the other side of the line."""
+    from babel.reassemble.pdf import _rtl_visual_order
+
+    word = lambda s, math=False: [(s, math)]
+    line = [word("ابدأ"), word("1", True), word("/", True), word("2", True),
+            word("انتهى")]
+
+    visual = _rtl_visual_order(line)
+
+    assert visual == [word("انتهى"), word("1", True), word("/", True),
+                       word("2", True), word("ابدأ")]
 
 
 def test_rotated_axis_label_is_drawn_right_to_left(tmp_path):

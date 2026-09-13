@@ -145,13 +145,31 @@ def require_trial_active(user: dict) -> None:
         )
 
 
+_owner_ids_cache: dict[str, tuple[float, list[str]]] = {}
+
+
+def invalidate_owner_ids_cache(user_id: str) -> None:
+    """Call after a team-membership change (accept/decline/remove) so the
+    affected user doesn't wait out the cache TTL to see the new project set."""
+    _owner_ids_cache.pop(user_id, None)
+
+
 def effective_owner_ids(user_id: str) -> list[str]:
     """The set of user ids whose projects `user_id` may access: themselves,
     plus anyone who invited them and whose invite they've accepted.
 
     One-directional and consent-gated: accepting an invite lets you see the
     *owner's* projects — it does not give the owner access to yours. A
-    pending (not yet accepted) invite grants nothing."""
+    pending (not yet accepted) invite grants nothing.
+
+    Cached per user for the same TTL as `require_user`'s token cache — this
+    was a live Supabase round trip on *every* call, including every 5-second
+    poll of the Files page and every job/project list/ownership check, which
+    is what made navigation feel slow to load."""
+    cached = _owner_ids_cache.get(user_id)
+    if cached and cached[0] > time.monotonic():
+        return cached[1]
+
     if not _SUPABASE_URL or not _SUPABASE_SERVICE_ROLE_KEY:
         raise HTTPException(status_code=500, detail="Supabase is not configured on the server")
 
@@ -164,4 +182,6 @@ def effective_owner_ids(user_id: str) -> list[str]:
     resp.raise_for_status()
     ids = {row["owner_id"] for row in resp.json()}
     ids.add(user_id)
-    return list(ids)
+    result = list(ids)
+    _owner_ids_cache[user_id] = (time.monotonic() + _TOKEN_CACHE_TTL, result)
+    return result

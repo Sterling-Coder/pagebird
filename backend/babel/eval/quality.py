@@ -1,20 +1,9 @@
 """Translation-quality metrics — axis A, model-based.
 
-Reference-free is the realistic default here: the pipeline produces target text
-for documents nobody has hand-translated, so there is usually no gold reference
-to score against. **COMET-KIWI** needs only (source, target) and is the headline
+Reference-free is the only mode here: the pipeline produces target text for
+documents nobody has hand-translated, so there is usually no gold reference to
+score against. **COMET-KIWI** needs only (source, target) and is the headline
 number for that case.
-
-When references *do* exist they come from the review loop itself — every
-human-approved segment is written back to the TM by `review.store.update_segment`,
-so `babel_tm.db` accumulates a gold corpus for free. `runner.freeze_gold_from_tm`
-snapshots it to JSONL. Two rules for that corpus:
-
-  * freeze it and score against the snapshot, never the live TM, or the numbers
-    move under you between runs;
-  * a segment that came back as `tm_hit` was *served* from the TM, so scoring it
-    against that same TM entry measures the cache, not the engine. `chrf` and
-    `comet` exclude `tm_hit` segments for exactly this reason.
 
 BLEU is available but not reported by default: these segments are short (labels,
 headings, "Answers"), and sentence-level BLEU on a five-token string is close to
