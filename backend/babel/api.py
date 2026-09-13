@@ -1069,6 +1069,7 @@ async def translate_links_upload(
         if rel in seen_rel_paths:
             # the exact same relative path was selected twice in one
             # upload — keep the first copy, skip re-reading a duplicate part
+            logger.info("upload(links): skipped duplicate relative path %r in one upload", rel)
             continue
         seen_rel_paths.add(rel)
         path = os.path.join(links_dir, *parts)
@@ -1082,9 +1083,22 @@ async def translate_links_upload(
     if not saved_paths:
         raise HTTPException(status_code=400, detail="no valid files attached")
 
+    # A production-traceable count at every stage of this pipeline (received
+    # -> saved -> translated -> uploaded) is what actually lets a "why is my
+    # file missing" report be answered from logs alone, without reproducing
+    # the upload — this is the shape the 357-vs-199 filename-collision bug
+    # (and its 137-file predecessor, dropped-with-no-text files) should have
+    # been caught by well before a client noticed the count mismatch.
+    if len(saved_paths) != len(files):
+        logger.warning(
+            "upload(links): received %d file part(s) but saved %d (empty/invalid names "
+            "or duplicate relative paths were skipped — see prior log lines)",
+            len(files), len(saved_paths))
+
     started = time.time()
     display_name = f"{len(saved_paths)} linked graphic{'s' if len(saved_paths) != 1 else ''}"
-    logger.info("upload received (links): %d file(s) target_lang=%s", len(saved_paths), lang.code)
+    logger.info("upload received (links): %d file(s), %.1f MB, target_lang=%s",
+                len(saved_paths), total_size / (1 << 20), lang.code)
 
     store = _store()
     try:
@@ -1135,18 +1149,24 @@ async def translate_links_upload(
     # fallback (`_links_zip_entries`).
     translated_dir = os.path.join(_out_dir(), f"translated_{lang.code}")
 
-    async def _upload_one(gname: str) -> None:
+    async def _upload_one(gname: str) -> bool:
         gpath = os.path.join(translated_dir, gname)
         if not os.path.isfile(gpath):
-            return
+            logger.error(
+                "upload(links): translated file %r missing on local disk for job %s "
+                "(should be unreachable — translate_links_folder reported it as written)",
+                gname, job_id)
+            return False
         try:
             await run_in_threadpool(
                 _upload_with_retry, gpath, f"jobs/{job_id}/Links_{lang.code}/{gname}")
         except Exception:
             logger.exception(
                 "upload(links): failed to persist translated %r for job %s (non-fatal)", gname, job_id)
+            return False
+        return True
 
-    async def _upload_original(item: dict) -> None:
+    async def _upload_original(item: dict) -> bool:
         # `path` is the file's real source path (possibly inside a
         # subfolder — `saved_paths`/`links_dir` preserve the upload's
         # relative structure), `name` is the disambiguated flat display name
@@ -1155,13 +1175,18 @@ async def translate_links_upload(
         opath = item["path"]
         oname = item["name"]
         if not os.path.isfile(opath):
-            return
+            logger.error(
+                "upload(links): original file %r missing on local disk for job %s "
+                "(should be unreachable)", oname, job_id)
+            return False
         try:
             await run_in_threadpool(
                 _upload_with_retry, opath, f"jobs/{job_id}/Links/{oname}")
         except Exception:
             logger.exception(
                 "upload(links): failed to persist original %r for job %s (non-fatal)", oname, job_id)
+            return False
+        return True
 
     # These are independent uploads to Supabase Storage — doing them one at a
     # time in a loop was pure serialized network latency, the actual cause of
@@ -1171,18 +1196,32 @@ async def translate_links_upload(
     _UPLOAD_CONCURRENCY = 8
     upload_semaphore = asyncio.Semaphore(_UPLOAD_CONCURRENCY)
 
-    async def _upload_one_bounded(gname: str) -> None:
+    async def _upload_one_bounded(gname: str) -> bool:
         async with upload_semaphore:
-            await _upload_one(gname)
+            return await _upload_one(gname)
 
-    async def _upload_original_bounded(item: dict) -> None:
+    async def _upload_original_bounded(item: dict) -> bool:
         async with upload_semaphore:
-            await _upload_original(item)
+            return await _upload_original(item)
 
-    await asyncio.gather(
-        *(_upload_one_bounded(g) for g in report.get("translated_files") or []),
-        *(_upload_original_bounded(o) for o in report.get("untranslated_files") or []),
+    translated_names = report.get("translated_files") or []
+    untranslated_items = report.get("untranslated_files") or []
+    upload_results = await asyncio.gather(
+        *(_upload_one_bounded(g) for g in translated_names),
+        *(_upload_original_bounded(o) for o in untranslated_items),
     )
+    persisted_count = sum(1 for ok in upload_results if ok)
+    total_count = len(translated_names) + len(untranslated_items)
+    # The end-to-end count for this job — received -> saved -> translated ->
+    # persisted — so a client-reported "my file is missing" can be answered
+    # by grepping this job id's logs instead of reproducing the upload.
+    logger.info("upload(links): job %s persisted %d/%d file(s) to storage",
+                job_id, persisted_count, total_count)
+    if persisted_count != total_count:
+        logger.error(
+            "upload(links): job %s only persisted %d/%d file(s) — some translated "
+            "work was lost to a storage upload failure, see prior exceptions",
+            job_id, persisted_count, total_count)
 
     if project_id:
         store = _store()

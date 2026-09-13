@@ -709,6 +709,12 @@ def translate_links_folder(
         while candidate in used:
             n += 1
             candidate = f"{base}_{n}{ext}"
+        # Worth a real log line, not just a name silently changing under the
+        # hood — this is the exact "two files, one filename" case that used
+        # to cause silent data loss, and a client asking "where's my file"
+        # should be answerable by grepping the job id for "renamed".
+        logger.info("translate_links_folder: renamed %r -> %r to avoid overwriting "
+                    "a different file with the same name", name, candidate)
         used.add(candidate)
         return candidate
 
@@ -785,8 +791,20 @@ def translate_links_folder(
                 untranslated_files.append({"name": name, "path": duplicate})
     _progress(95, "finishing")
 
-    logger.info("translate_links_folder: done, %d/%d file(s) had translatable text",
-                len(translated_files), len(paths))
+    logger.info(
+        "translate_links_folder: done — %d input file(s), %d unique by content, "
+        "%d translated, %d persisted untranslated (%d output file(s) total)",
+        len(paths), len(unique_paths), len(translated_files), len(untranslated_files),
+        len(translated_files) + len(untranslated_files))
+    if len(translated_files) + len(untranslated_files) != len(paths):
+        # Every input file should land in exactly one of these two lists —
+        # anything else means a file was lost somewhere in this function and
+        # needs investigating before it ships, not discovered later as a
+        # client-reported missing-file count mismatch.
+        logger.error(
+            "translate_links_folder: output count (%d) != input count (%d) — "
+            "a file was dropped somewhere in this batch",
+            len(translated_files) + len(untranslated_files), len(paths))
 
     report = {
         "target_lang": lang.code,
