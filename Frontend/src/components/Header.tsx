@@ -20,7 +20,7 @@ export default function Header() {
         className="text-[27px] italic"
         style={{ fontFamily: "var(--font-fraunces), Georgia, serif" }}
       >
-        page<span className="text-pb-accent">bird</span>
+        page<span className="text-pb-accent">birdy</span>
       </Link>
       <nav className="hidden items-center gap-9 text-[13.5px] font-semibold tracking-wide uppercase md:flex">
         {NAV.map((item) => (

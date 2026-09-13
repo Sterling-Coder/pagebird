@@ -48,14 +48,24 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s
 logger = logging.getLogger("babel.api")
 
 # ---- in-app log tail --------------------------------------------------
-# Lets the frontend show what the server is doing (upload received, LLM
-# calls, pipeline stages) without a separate terminal. A bounded ring
-# buffer of formatted lines, fed by a logging.Handler attached to the
-# root logger so it picks up babel.*, uvicorn.access, and httpx request
-# logs alike. Polled via GET /api/logs — no SSE, simplest thing that works.
+# Lets the frontend show what the server is doing (upload received,
+# translation progress, job done/failed) without a separate terminal. This
+# panel is client-visible (an MVP "server activity" widget, unauthenticated,
+# shown in the app UI) — it must never carry internal engineering detail:
+# stack traces, file paths, thread-pool/OCR/engine internals, uvicorn access
+# lines, httpx request logs. Those stay on the normal `babel.*` loggers
+# (stdout, per `logging.basicConfig` below) and are never fed to this
+# buffer. Only an explicit call to `_activity()` reaches a client, so
+# there's exactly one place to check when deciding what's shown.
+#
+# A bounded ring buffer of formatted lines, fed by a logging.Handler
+# attached to a single dedicated logger (NOT the root logger — that's what
+# used to leak every internal log line to this same client-facing panel).
+# Polled via GET /api/logs — no SSE, simplest thing that works.
 _LOG_BUFFER: deque[dict] = deque(maxlen=1000)
 _LOG_LOCK = threading.Lock()
 _LOG_NEXT_ID = 0
+_ACTIVITY_LOGGER_NAME = "babel.activity"
 
 
 class _BufferLogHandler(logging.Handler):
@@ -72,13 +82,29 @@ class _BufferLogHandler(logging.Handler):
                 "level": record.levelname,
                 "logger": record.name,
                 "line": line,
+                # Whoever's upload/job this line is about — GET /api/logs
+                # filters to only the caller's own owner-id set, so one
+                # customer polling the panel never sees another customer's
+                # activity ("Uploaded Q3-report.pdf") leak through.
+                "owner_id": getattr(record, "owner_id", None),
             })
 
 
-_buffer_handler = _BufferLogHandler()
-_buffer_handler.setFormatter(logging.Formatter("%(asctime)s %(name)s %(message)s"))
-logging.getLogger().addHandler(_buffer_handler)
-logging.getLogger().setLevel(logging.INFO)
+_activity_handler = _BufferLogHandler()
+_activity_handler.setFormatter(logging.Formatter("%(asctime)s %(message)s"))
+_activity_logger = logging.getLogger(_ACTIVITY_LOGGER_NAME)
+_activity_logger.addHandler(_activity_handler)
+_activity_logger.setLevel(logging.INFO)
+_activity_logger.propagate = False  # never let this also land in the normal babel.* stdout logs twice
+
+
+def _activity(message: str, owner_id: str | None = None) -> None:
+    """Log one client-visible line — plain English, no internal detail. This
+    is the ONLY thing that reaches the frontend's Logs panel; everything
+    else logged via `logger` (module-level, e.g. `logging.getLogger("babel.api")`)
+    stays server-side. `owner_id` scopes the line to that user/team — GET
+    /api/logs only ever returns the caller's own lines."""
+    _activity_logger.info(message, extra={"owner_id": owner_id})
 
 _REVIEW_DB = os.environ.get("BABEL_REVIEW_DB", "babel_review.db")
 _UPLOAD_DIR = os.environ.get("BABEL_UPLOAD_DIR", "uploads")
@@ -419,11 +445,17 @@ def health() -> dict:
 
 
 @app.get("/api/logs")
-def get_logs(since: int = 0) -> dict:
+def get_logs(since: int = 0, user: dict = Depends(require_user)) -> dict:
     """Log lines newer than `since` (the `id` of the last line the caller
-    already has). Poll this with the last-seen id to tail the server."""
+    already has), scoped to the caller's own activity — never another
+    customer's. Poll this with the last-seen id to tail the server."""
+    owner_ids = effective_owner_ids(user["id"])
     with _LOG_LOCK:
-        lines = [entry for entry in _LOG_BUFFER if entry["id"] > since]
+        lines = [
+            {k: v for k, v in entry.items() if k != "owner_id"}
+            for entry in _LOG_BUFFER
+            if entry["id"] > since and entry.get("owner_id") in owner_ids
+        ]
     return {"lines": lines}
 
 
@@ -817,6 +849,7 @@ async def translate_upload(
 
     logger.info("upload received: %s (%d bytes) ext=%s target_lang=%s",
                 name, file_size, ext, lang.code)
+    _activity(f"Uploaded {name} — translating to {lang.name}", owner_id=user["id"])
 
     # Persisted *before* translation starts — status="processing" — so the
     # Files list shows a real in-progress row from any tab, surviving a
@@ -925,12 +958,15 @@ async def translate_upload(
         report = await run_in_threadpool(_run)
     except Exception as e:  # surface pipeline failure to the UI, but still record it
         logger.info("upload: pipeline failed for %s: %s", name, e)
+        _activity(f"Translation failed for {name}", owner_id=user["id"])
         store = _store()
         try:
             store.mark_job_failed(job_id, str(e), duration_sec=time.time() - started)
         finally:
             store.close()
         raise HTTPException(status_code=500, detail=f"translation failed: {e}")
+
+    _activity(f"Finished translating {name}", owner_id=user["id"])
 
     # The pipeline wrote source/output to local scratch space (Railway's disk
     # resets on every redeploy) and pointed the job row at those local paths.
@@ -1099,6 +1135,7 @@ async def translate_links_upload(
     display_name = f"{len(saved_paths)} linked graphic{'s' if len(saved_paths) != 1 else ''}"
     logger.info("upload received (links): %d file(s), %.1f MB, target_lang=%s",
                 len(saved_paths), total_size / (1 << 20), lang.code)
+    _activity(f"Uploaded {display_name} — translating to {lang.name}", owner_id=user["id"])
 
     store = _store()
     try:
@@ -1132,12 +1169,17 @@ async def translate_links_upload(
         report = await run_in_threadpool(_run)
     except Exception as e:
         logger.info("upload(links): pipeline failed: %s", e)
+        _activity(f"Translation failed for {display_name}", owner_id=user["id"])
         store = _store()
         try:
             store.mark_job_failed(job_id, str(e), duration_sec=time.time() - started)
         finally:
             store.close()
         raise HTTPException(status_code=500, detail=f"translation failed: {e}")
+
+    _activity(f"Translated {len(report.get('translated_files') or [])} of "
+             f"{report.get('total_files', len(saved_paths))} file(s) in {display_name}",
+             owner_id=user["id"])
 
     # Every translated output is persisted to storage. A file with no
     # extractable text (pure artwork — the common case) never produces a
@@ -1222,6 +1264,11 @@ async def translate_links_upload(
             "upload(links): job %s only persisted %d/%d file(s) — some translated "
             "work was lost to a storage upload failure, see prior exceptions",
             job_id, persisted_count, total_count)
+        _activity(f"{display_name}: {persisted_count} of {total_count} file(s) ready — "
+                 f"some files failed to save, contact support if any are missing",
+                 owner_id=user["id"])
+    else:
+        _activity(f"{display_name} ready to download", owner_id=user["id"])
 
     if project_id:
         store = _store()

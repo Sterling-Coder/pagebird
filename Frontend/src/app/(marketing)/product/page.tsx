@@ -59,7 +59,7 @@ export default function ProductPage() {
                 className="text-pb-card-ink px-1 pb-4 text-lg italic"
                 style={{ fontFamily: "var(--font-fraunces), Georgia, serif" }}
               >
-                page<span className="text-pb-accent">bird</span>
+                page<span className="text-pb-accent">birdy</span>
               </span>
               <span className="text-pb-card-ink flex items-center gap-2.5 border-l-[3px] border-pb-accent bg-white px-2.5 py-2 text-[13px] font-semibold">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="h-4 w-4">

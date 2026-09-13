@@ -156,7 +156,7 @@ export function LoginForm() {
           className="text-3xl italic"
           style={{ fontFamily: "var(--font-login-display), Georgia, serif" }}
         >
-          page<span className="text-[#e08a6f]">bird</span>
+          page<span className="text-[#e08a6f]">birdy</span>
         </span>
 
         {awaitingOtp ? (

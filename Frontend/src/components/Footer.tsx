@@ -25,7 +25,7 @@ export default function Footer() {
           className="text-6xl italic md:text-8xl"
           style={{ fontFamily: "var(--font-fraunces), Georgia, serif" }}
         >
-          page<span className="text-pb-accent">bird</span>
+          page<span className="text-pb-accent">birdy</span>
         </span>
         <div className="grid grid-cols-2 gap-10 pt-3 md:grid-cols-4 md:gap-12">
           {COLUMNS.map((col) => (

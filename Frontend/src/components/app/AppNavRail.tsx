@@ -62,7 +62,7 @@ export function AppNavRail() {
           className={`${fraunces.variable} text-lg italic text-[#f2ede0]`}
           style={{ fontFamily: "var(--font-navrail-display), Georgia, serif" }}
         >
-          page<span className="text-[#e08a6f]">bird</span>
+          page<span className="text-[#e08a6f]">birdy</span>
         </span>
       </div>
 

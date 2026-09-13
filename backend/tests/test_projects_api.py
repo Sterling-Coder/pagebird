@@ -38,15 +38,24 @@ def test_get_job_404(tmp_path):
 
 
 def test_get_logs_returns_new_lines_since_cursor(tmp_path):
+    # The client-facing panel only ever shows explicit `_activity()` calls —
+    # plain internal `logger.info` on babel.* loggers must NOT reach it (that
+    # used to leak stack traces/file paths/thread-pool internals to an
+    # unauthenticated, client-visible endpoint). It's also scoped per caller:
+    # a line logged for a different owner_id must not come back for this one.
     client = _client(tmp_path)
-    logging.getLogger("babel.api").info("marker-one")
+    logging.getLogger("babel.api").info("internal-marker")
+    api._activity("marker-one", owner_id="user-a")
+    api._activity("someone-elses-activity", owner_id="user-b")
     res = client.get("/api/logs")
     assert res.status_code == 200
     lines = res.json()["lines"]
     assert any("marker-one" in l["line"] for l in lines)
+    assert not any("internal-marker" in l["line"] for l in lines)
+    assert not any("someone-elses-activity" in l["line"] for l in lines)
     last_id = lines[-1]["id"]
 
-    logging.getLogger("babel.api").info("marker-two")
+    api._activity("marker-two", owner_id="user-a")
     res = client.get("/api/logs", params={"since": last_id})
     lines2 = res.json()["lines"]
     assert any("marker-two" in l["line"] for l in lines2)
