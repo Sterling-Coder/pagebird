@@ -135,10 +135,17 @@ function jobToResult(job: {
   format?: string;
   has_output_pdf?: boolean;
   job_type?: string;
+  meta?: { format?: string } | null;
 }): TranslateResult {
   const jobId = (job.job_id ?? job.id) as string;
   if (!jobId) throw new Error("Backend did not return a job id.");
-  const format = job.format === "idml" ? "idml" : "pdf";
+  // POST /api/translate's own response carries a top-level `format`; a job
+  // refetched later via GET /api/jobs/{id} only has it nested under `meta`
+  // (the raw DB row shape) — without this fallback every .idml job's
+  // download button silently asked for `?format=pdf` instead, 404ing
+  // whenever no draft PDF had been rendered for it.
+  const rawFormat = job.format ?? job.meta?.format;
+  const format = rawFormat === "idml" ? "idml" : "pdf";
   return {
     jobId,
     translatedFileName: `${job.output ?? job.original_filename ?? jobId}`
