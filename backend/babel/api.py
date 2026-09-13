@@ -241,7 +241,8 @@ def _strip_output_hash(name: str) -> str:
     return m.group(1) if m else os.path.splitext(name)[0]
 
 
-def _links_zip_entries(job_id: str, lang_code: str | None) -> dict[str, bytes] | None:
+def _links_zip_entries(job_id: str, lang_code: str | None,
+                       pair_by_stem: bool = True) -> dict[str, bytes] | None:
     """Every linked-graphic file this job has in Storage, keyed by its
     "Links/<name>" path inside a zip — translated version where translation
     happened, the original file everywhere else. Returns None if the job has
@@ -251,6 +252,14 @@ def _links_zip_entries(job_id: str, lang_code: str | None) -> dict[str, bytes] |
     `jobs/{job_id}/Links_{lang}/…`) — unlike the shared-per-language local
     disk folder `translate_idml` writes during processing, there is no
     cross-job leak risk here to guard against.
+
+    `pair_by_stem=True` (an `.idml`'s own attached Links) matches a
+    translated file back to the SAME original it replaces, so the zip never
+    contains both. `pair_by_stem=False` (a standalone `/api/translate-links`
+    batch) must NOT do that pairing: there, `Links/` and `Links_{lang}/`
+    hold entirely different, unrelated source files that only sometimes
+    happen to share a stem (e.g. a companion `.ai` + `.psd` pair) —
+    "pairing" them silently dropped one of the two from the zip.
     """
     original_names = storage.list_prefix(f"jobs/{job_id}/Links/")
     translated_names = (
@@ -259,8 +268,23 @@ def _links_zip_entries(job_id: str, lang_code: str | None) -> dict[str, bytes] |
     if not original_names and not translated_names:
         return None
 
-    translated_by_stem = {_strip_output_hash(n): n for n in translated_names}
     entries: dict[str, bytes] = {}
+
+    if not pair_by_stem:
+        used_names: set[str] = set()
+        for oname in original_names:
+            name = _dedupe_flat_name(oname, used_names)
+            data = storage.read_bytes(f"jobs/{job_id}/Links/{oname}")
+            if data is not None:
+                entries[f"Links/{name}"] = data
+        for tname in translated_names:
+            name = _dedupe_flat_name(tname, used_names)
+            data = storage.read_bytes(f"jobs/{job_id}/Links_{lang_code}/{tname}")
+            if data is not None:
+                entries[f"Links/{name}"] = data
+        return entries or None
+
+    translated_by_stem = {_strip_output_hash(n): n for n in translated_names}
     covered_stems: set[str] = set()
     for oname in original_names:
         stem = os.path.splitext(oname)[0]
@@ -285,6 +309,24 @@ def _links_zip_entries(job_id: str, lang_code: str | None) -> dict[str, bytes] |
     return entries or None
 
 
+def _dedupe_flat_name(name: str, used: set[str]) -> str:
+    """Same collision-safe rename as `translate_links_folder`'s own
+    disambiguation — needed again here because two files that are
+    independently unique within their own storage prefix (`Links/` vs
+    `Links_{lang}/`) can still collide once flattened into one list/zip."""
+    if name not in used:
+        used.add(name)
+        return name
+    base, ext = os.path.splitext(name)
+    n = 2
+    candidate = f"{base}_{n}{ext}"
+    while candidate in used:
+        n += 1
+        candidate = f"{base}_{n}{ext}"
+    used.add(candidate)
+    return candidate
+
+
 _LINK_MEDIA_TYPES = {
     ".pdf": "application/pdf",
     ".ai": "application/pdf",  # Adobe Illustrator files are PDF-compatible
@@ -295,31 +337,25 @@ _LINK_MEDIA_TYPES = {
 
 def _link_file_map(job_id: str, lang_code: str | None) -> dict[str, tuple[str, bool]]:
     """Display name -> (storage key, is_translated) for every linked-graphic
-    file this job has in Storage. Same original/translated matching as
-    `_links_zip_entries`, but returns keys instead of eagerly reading bytes —
-    for listing files or fetching one at a time instead of the whole zip."""
+    file in a standalone links batch. Every file is independently either
+    translated (`Links_{lang}/`) or untranslated-original (`Links/`), never
+    both — unlike an .idml's own attached Links, there is no "same source,
+    two states" pairing to do here, so this is a plain union. Pairing by
+    stem (as `_links_zip_entries` does for that other case) would wrongly
+    merge two different, unrelated files that happen to share a base name
+    (e.g. a companion `.ai` + `.psd` asset pair), silently dropping one."""
     original_names = storage.list_prefix(f"jobs/{job_id}/Links/")
     translated_names = (
         storage.list_prefix(f"jobs/{job_id}/Links_{lang_code}/") if lang_code else []
     )
-    translated_by_stem = {_strip_output_hash(n): n for n in translated_names}
     entries: dict[str, tuple[str, bool]] = {}
-    covered_stems: set[str] = set()
+    used_names: set[str] = set()
     for oname in original_names:
-        stem = os.path.splitext(oname)[0]
-        covered_stems.add(stem)
-        tname = translated_by_stem.get(stem)
-        if tname:
-            entries[f"{stem}{os.path.splitext(tname)[1]}"] = (
-                f"jobs/{job_id}/Links_{lang_code}/{tname}",
-                True,
-            )
-        else:
-            entries[oname] = (f"jobs/{job_id}/Links/{oname}", False)
-    for stem, tname in translated_by_stem.items():
-        if stem in covered_stems:
-            continue
-        entries[tname] = (f"jobs/{job_id}/Links_{lang_code}/{tname}", True)
+        name = _dedupe_flat_name(oname, used_names)
+        entries[name] = (f"jobs/{job_id}/Links/{oname}", False)
+    for tname in translated_names:
+        name = _dedupe_flat_name(tname, used_names)
+        entries[name] = (f"jobs/{job_id}/Links_{lang_code}/{tname}", True)
     return entries
 
 
@@ -394,14 +430,17 @@ def _idml_zip_response(idml_key: str, job_id: str, lang_code: str | None) -> Res
     )
 
 
-def _links_zip_response(job_id: str, lang_code: str | None, base_name: str) -> Response | None:
+def _links_zip_response(job_id: str, lang_code: str | None, base_name: str,
+                        pair_by_stem: bool = True) -> Response | None:
     """Just the Links folder, no .idml — the standalone "download Links"
-    button next to a job's own .idml download. Returns None if the job has
-    no persisted Links."""
+    button next to a job's own .idml download, OR the whole deliverable for
+    a standalone `/api/translate-links` batch job (`pair_by_stem=False` for
+    that case — see `_links_zip_entries`). Returns None if the job has no
+    persisted Links."""
     import io
     import zipfile
 
-    entries = _links_zip_entries(job_id, lang_code)
+    entries = _links_zip_entries(job_id, lang_code, pair_by_stem=pair_by_stem)
     if entries is None:
         return None
 
@@ -1312,7 +1351,7 @@ def download_output(job_id: str, format: str | None = None, type: str | None = N
         # speak of — its whole "output" is the Links bundle.
         meta = job.get("meta") or {}
         stem = os.path.splitext(os.path.basename(str(job.get("original_filename") or job_id)))[0]
-        zipped = _links_zip_response(job_id, meta.get("target_lang"), stem)
+        zipped = _links_zip_response(job_id, meta.get("target_lang"), stem, pair_by_stem=False)
         if zipped is None:
             raise HTTPException(status_code=404, detail="no translated files for this job")
         return zipped
