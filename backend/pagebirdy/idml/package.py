@@ -30,6 +30,13 @@ from pagebirdy.idml.render import _nums
 from pagebirdy.models import Segment
 from pagebirdy.protect.mathguard import _TOKEN_RE, Allocator
 
+# An .idml is a zip of XML uploaded by the user — parsing it with lxml's
+# default settings (external entity/DTD resolution on) is a classic XXE
+# vector (local file read, SSRF, or billion-laughs DoS via a crafted
+# Stories/Spreads/MasterSpreads XML). Every `etree.fromstring` call in this
+# module must go through this hardened parser instead of the bare default.
+_XML_PARSER = etree.XMLParser(resolve_entities=False, no_network=True, huge_tree=False)
+
 _MATH_FONT_KEYS = ("math", "pi lt", "pilt", "mathematicalpi")
 # InDesign's forced line/paragraph break, embedded mid-run in Content text.
 # Sent raw to an LLM, at least one model reliably corrupts it into unrelated
@@ -75,11 +82,11 @@ class IdmlPackage:
                 data = z.read(n)
                 self._entries[n] = data
                 if n.startswith("Stories/") and n.endswith(".xml"):
-                    self._stories[n] = etree.fromstring(data)
+                    self._stories[n] = etree.fromstring(data, parser=_XML_PARSER)
                 elif n.startswith("Spreads/") and n.endswith(".xml"):
-                    self._spreads[n] = etree.fromstring(data)
+                    self._spreads[n] = etree.fromstring(data, parser=_XML_PARSER)
                 elif n.startswith("MasterSpreads/") and n.endswith(".xml"):
-                    self._master_spreads[n] = etree.fromstring(data)
+                    self._master_spreads[n] = etree.fromstring(data, parser=_XML_PARSER)
 
         self._style_size_cache: dict[str, float | None] = {}
         self._style_justification_cache: dict[str, str | None] = {}
@@ -358,7 +365,7 @@ class IdmlPackage:
         data = self._entries.get(name)
         if not data:
             return
-        tree = etree.fromstring(data)
+        tree = etree.fromstring(data, parser=_XML_PARSER)
         changed = False
         for el in tree.iter():
             if _localname(el) == "DocumentPreference" and el.get("PageBinding"):
@@ -433,7 +440,7 @@ def _parse_style_defs(styles_xml: bytes | None) -> dict[str, dict]:
     defs: dict[str, dict] = {}
     if not styles_xml:
         return defs
-    tree = etree.fromstring(styles_xml)
+    tree = etree.fromstring(styles_xml, parser=_XML_PARSER)
     for el in tree.iter():
         if not isinstance(el.tag, str):
             continue

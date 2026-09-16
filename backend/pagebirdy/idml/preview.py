@@ -24,6 +24,13 @@ from urllib.parse import unquote, urlparse
 import fitz
 from lxml import etree
 
+# An .idml is a zip of XML uploaded by the user — parsing it with lxml's
+# default settings (external entity/DTD resolution on) is a classic XXE
+# vector (local file read, SSRF, or billion-laughs DoS via a crafted Story
+# XML). Every `etree.fromstring` call in this module must go through this
+# hardened parser instead of the bare default.
+_XML_PARSER = etree.XMLParser(resolve_entities=False, no_network=True, huge_tree=False)
+
 
 def _localname(el) -> str:
     if not isinstance(el.tag, str):
@@ -72,7 +79,7 @@ def _story_texts(z: zipfile.ZipFile) -> dict[str, list[str]]:
     for name in z.namelist():
         if not (name.startswith("Stories/") and name.endswith(".xml")):
             continue
-        root = etree.fromstring(z.read(name))
+        root = etree.fromstring(z.read(name), parser=_XML_PARSER)
         for story in _iter(root, "Story"):
             # the idPkg:Story package root has the same localname as the Story
             # content node; only the content node carries a Self id
@@ -146,7 +153,7 @@ def render_idml(idml_path: str, out_pdf: str, dpi: int = 0,
         stats = {"pages": 0, "frames": 0, "images": 0, "overflow": 0, "missing_images": 0}
 
         for name in spread_names:
-            root = etree.fromstring(z.read(name))
+            root = etree.fromstring(z.read(name), parser=_XML_PARSER)
             for page_el in _iter(root, "Page"):
                 gb = _floats(page_el.get("GeometricBounds"))
                 if len(gb) < 4:
@@ -285,7 +292,7 @@ def _story_style(z: zipfile.ZipFile,
     for name in z.namelist():
         if not (name.startswith("Stories/") and name.endswith(".xml")):
             continue
-        root = etree.fromstring(z.read(name))
+        root = etree.fromstring(z.read(name), parser=_XML_PARSER)
         for story in _iter(root, "Story"):
             if not story.get("Self") or story.get("Self") != story_id:
                 continue
