@@ -1,36 +1,49 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Pagebirdy frontend
 
-## Getting Started
+Next.js (App Router) app — the marketing site and the actual translation product.
 
-First, run the development server:
+## Run
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000). Needs the backend running (default `http://localhost:8000`, see `NEXT_PUBLIC_API_BASE_URL`) and Supabase env vars for auth to work.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Layout
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+src/app/
+  (marketing)/     public site — home, /product, /integrations, /contact
+  login/           email + Google/Apple sign-in (Google/Apple show "coming soon")
+  auth/callback/   Supabase OAuth callback
+  app/             the actual product, behind auth
+    jobs/          projects → folders → files, Finder-style file/links preview, translation editor
 
-## Learn More
+src/components/
+  app/             product UI — upload pane, output pane, PDF preview/editor, links Finder view, logs panel
+  (root)           marketing UI — header, footer, login form, contact form, demo video modal
 
-To learn more about Next.js, take a look at the following resources:
+src/lib/
+  translate.ts     job/translate API calls (upload, download, links batch, job status)
+  projects.ts      projects/folders CRUD
+  supabase/        Supabase client + authenticated fetch helper
+  pdfjs.ts         pdf.js loader for in-browser PDF rendering
+  logs.ts          polls the backend's client-scoped activity log panel
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Key flows
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **Document upload** → `translate.ts`'s `translateDocument` → backend job → poll status → `SyncedDocumentPair` (source/target side-by-side, segment editing, undo) in `PdfPreview.tsx`.
+- **Links batch upload** (`.ai`/`.eps`/`.pdf`/`.psd` folder) → `translateLinks` → `LinksPreview.tsx`, a Finder-style split view (file list left, full preview right) backed by per-file list/fetch endpoints rather than a whole-zip download.
+- **Auth** — Supabase, cookie-based session via `@supabase/ssr`; `authFetch.ts` attaches the auth header to every backend call.
 
-## Deploy on Vercel
+## Environment
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Not committed. Needed: `NEXT_PUBLIC_API_BASE_URL` (backend URL), Supabase project URL + anon key for the client, service-role key server-side where used.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Notes
+
+- Format list / integrations page reflect what's actually built vs. roadmap — `.idml` is the proven, tested path; the integrations grid (Slack, Zapier, GitHub, S3, REST API) is marked "coming soon" since none of it is wired up yet.
+- The wordmark is split as `page` + `<span>birdy</span>` in JSX in a few components (Header, Footer, LoginForm, AppNavRail, product page) — a plain-text search for "pagebirdy" won't find it there.
