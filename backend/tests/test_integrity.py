@@ -1,4 +1,4 @@
-from babel.translate import integrity
+from pagebirdy.translate import integrity
 
 
 def test_preserved_ok():

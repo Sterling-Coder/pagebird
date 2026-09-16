@@ -18,8 +18,8 @@ import re
 import fitz
 import pytest
 
-from babel.models import Segment
-from babel.reassemble.pdf import rebuild_pdf
+from pagebirdy.models import Segment
+from pagebirdy.reassemble.pdf import rebuild_pdf
 
 AR_BODY = "ابحث عن فرص لوصف أماكن الأشياء في مواقف من الحياة الواقعية"
 # Long enough to fill all three of its source rows, so the block reaches the
@@ -281,7 +281,7 @@ def test_ocr_typo_still_counts_as_a_duplicate_of_the_real_text(tmp_path):
     Exact substring matching missed this and drew both, so the two Arabic
     renderings landed on top of each other.
     """
-    from babel.reassemble.pdf import _image_shadowed_duplicates
+    from pagebirdy.reassemble.pdf import _image_shadowed_duplicates
 
     ocr = Segment(id="ocr", page=0, bbox=(509, 82, 583, 98), font="OCR",
                   size=12, color=0, source="Math on tha go",
@@ -296,7 +296,7 @@ def test_ocr_typo_still_counts_as_a_duplicate_of_the_real_text(tmp_path):
 
 def test_unrelated_overlapping_text_is_not_suppressed():
     """Different content that happens to overlap must both survive."""
-    from babel.reassemble.pdf import _image_shadowed_duplicates
+    from pagebirdy.reassemble.pdf import _image_shadowed_duplicates
 
     ocr = Segment(id="ocr", page=0, bbox=(500, 80, 600, 100), font="OCR",
                   size=12, color=0, source="GO !", target="انطلق!",
@@ -588,7 +588,7 @@ def test_a_fragmented_expression_keeps_its_order(tmp_path):
 
 def test_pieces_of_one_expression_are_merged():
     """Real geometry of (6⁴/12⁴)² from the grade 8 exponents page."""
-    from babel.reassemble.pdf import _merged
+    from pagebirdy.reassemble.pdf import _merged
 
     pieces = [fitz.Rect(435.6, 282.4, 452.1, 311.6),   # "(6" and its exponent
               fitz.Rect(439.5, 292.7, 460.3, 311.9),   # the fraction bar
@@ -606,7 +606,7 @@ def test_separate_lines_are_stamped_separately():
     Left unbounded it would swallow the page and stamp the whole of it back
     unmirrored.
     """
-    from babel.reassemble.pdf import _merged
+    from pagebirdy.reassemble.pdf import _merged
 
     lines = [fitz.Rect(40, 100, 300, 114), fitz.Rect(40, 116, 300, 130),
              fitz.Rect(40, 132, 300, 146)]

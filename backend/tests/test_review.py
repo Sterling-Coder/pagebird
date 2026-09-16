@@ -1,8 +1,8 @@
 import json
 import time
 
-from babel.models import Segment
-from babel.review.store import ReviewStore
+from pagebirdy.models import Segment
+from pagebirdy.review.store import ReviewStore
 
 
 def _seg(sid, source, target, placeholders=None, status="needs_human"):
@@ -139,7 +139,7 @@ def test_update_segment_defaults_reviewer_unknown(tmp_path):
 
 
 def test_api_endpoints(tmp_path):
-    import babel.api as api
+    import pagebirdy.api as api
     from fastapi.testclient import TestClient
 
     api._REVIEW_DB = str(tmp_path / "review.db")
@@ -164,7 +164,7 @@ def test_api_endpoints(tmp_path):
 
 
 def test_api_reviewer_and_history(tmp_path):
-    import babel.api as api
+    import pagebirdy.api as api
     from fastapi.testclient import TestClient
 
     api._REVIEW_DB = str(tmp_path / "review.db")
@@ -186,7 +186,7 @@ def test_translate_pdf_records_duration_and_meta(tmp_path, monkeypatch):
     for k in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "DEEPL_AUTH_KEY", "BABEL_LLM_PROVIDER"):
         monkeypatch.delenv(k, raising=False)
     import fitz
-    from babel.pipeline import translate_pdf
+    from pagebirdy.pipeline import translate_pdf
 
     src = tmp_path / "doc.pdf"
     doc = fitz.open()
@@ -219,8 +219,8 @@ def test_translate_pdf_merges_ocr_image_regions_by_default(tmp_path, monkeypatch
     for k in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "DEEPL_AUTH_KEY", "BABEL_LLM_PROVIDER"):
         monkeypatch.delenv(k, raising=False)
     import fitz
-    from babel.models import Line, Span
-    from babel.pipeline import translate_pdf
+    from pagebirdy.models import Line, Span
+    from pagebirdy.pipeline import translate_pdf
 
     src = tmp_path / "doc.pdf"
     doc = fitz.open()
@@ -233,7 +233,7 @@ def test_translate_pdf_merges_ocr_image_regions_by_default(tmp_path, monkeypatch
         spans=[Span(text="GO!", font="OCR", size=14, color=0, bbox=(400, 400, 460, 420))],
         block=9000, from_ocr=True, in_image=True,
     )
-    import babel.ingest.ocr as ocr_mod
+    import pagebirdy.ingest.ocr as ocr_mod
     monkeypatch.setattr(
         ocr_mod, "ocr_image_regions",
         lambda path, regions=None, dpi=300: ([banner_line], "image-OCR (fake): 1 lines"),

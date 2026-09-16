@@ -9,8 +9,8 @@ vendored ones or whatever the host happened to have.
 import fitz
 import pytest
 
-from babel.pipeline import translate_pdf
-from babel.reassemble.pdf import figure_pages
+from pagebirdy.pipeline import translate_pdf
+from pagebirdy.reassemble.pdf import figure_pages
 
 
 @pytest.fixture(autouse=True)
@@ -18,7 +18,7 @@ def _offline(monkeypatch):
     """Force the identity engine for every test in this module.
 
     These tests assert that nothing lands in `needs_human`, which only holds if
-    translation is a passthrough. Any test that imports `babel.api` calls
+    translation is a passthrough. Any test that imports `pagebirdy.api` calls
     `load_env()`, which loads a real OPENAI_API_KEY out of backend/.env into the
     process — so in a full-suite run these hit the live API, the call fails, and
     every segment gets flagged. A test must not depend on whether the developer
@@ -118,7 +118,7 @@ def test_review_job_records_the_language_and_direction(tmp_path):
     Without it the caret jumps and trailing punctuation drifts to the wrong end
     while editing RTL text, which reviewers report as a translation bug.
     """
-    from babel.review.store import ReviewStore
+    from pagebirdy.review.store import ReviewStore
 
     src = str(tmp_path / "in.pdf")
     _pdf_with_a_figure(src)

@@ -12,10 +12,10 @@ import fitz
 import pytest
 from PIL import Image
 
-from babel.idml import graphics
-from babel.models import Line, Span
-from babel.translate.engine import Engine
-from babel.translate.translator import Translator
+from pagebirdy.idml import graphics
+from pagebirdy.models import Line, Span
+from pagebirdy.translate.engine import Engine
+from pagebirdy.translate.translator import Translator
 
 
 class MapEngine(Engine):
@@ -106,7 +106,7 @@ def test_translate_graphic_handles_psd_end_to_end(tmp_path, monkeypatch):
         f.write(b"not a real psd, never read directly by translate_graphic")
     out_pdf = str(tmp_path / "out" / "translated.pdf")
 
-    from babel import languages
+    from pagebirdy import languages
     lang = languages.get("es")
     eng = MapEngine({"Hello world": "Hola mundo"})
 
@@ -158,7 +158,7 @@ def test_translate_linked_graphics_reuses_byte_identical_file_across_jobs(tmp_pa
 
     monkeypatch.setattr(graphics, "translate_graphic", fake_translate_graphic)
 
-    from babel import languages
+    from pagebirdy import languages
     lang = languages.get("es")
     out_dir = str(tmp_path / "out")
 
@@ -192,7 +192,7 @@ def test_translate_linked_graphics_caches_nothing_to_translate_too(tmp_path, mon
 
     monkeypatch.setattr(graphics, "translate_graphic", fake_translate_graphic)
 
-    from babel import languages
+    from pagebirdy import languages
     lang = languages.get("es")
     out_dir = str(tmp_path / "out")
 

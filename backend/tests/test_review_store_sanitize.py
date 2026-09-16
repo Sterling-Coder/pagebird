@@ -5,7 +5,7 @@ so every write path strips it at the DB boundary. Pure function, no DB
 needed — the Postgres-backed ReviewStore itself can't be exercised without a
 live SUPABASE_DB_URL."""
 
-from babel.review.store import _pg_safe
+from pagebirdy.review.store import _pg_safe
 
 
 def test_strips_nul_from_string():

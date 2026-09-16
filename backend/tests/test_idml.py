@@ -3,11 +3,11 @@ import zipfile
 import pytest
 from lxml import etree
 
-from babel.idml.package import IdmlPackage, _reflect_transform, _page_ranges, _mirror_spread
-from babel.pipeline import regenerate_idml_from_review
-from babel.review.store import ReviewStore
-from babel.translate.engine import Engine
-from babel.translate.translator import Translator
+from pagebirdy.idml.package import IdmlPackage, _reflect_transform, _page_ranges, _mirror_spread
+from pagebirdy.pipeline import regenerate_idml_from_review
+from pagebirdy.review.store import ReviewStore
+from pagebirdy.translate.engine import Engine
+from pagebirdy.translate.translator import Translator
 
 STORY = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <idPkg:Story xmlns:idPkg="http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging" DOMVersion="16.0">
@@ -184,7 +184,7 @@ def test_apply_leaves_applied_font_untouched_when_idml_font_none(tmp_path):
 def test_translate_idml_passes_idml_font_for_chinese(tmp_path, monkeypatch):
     for k in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "DEEPL_AUTH_KEY", "BABEL_LLM_PROVIDER"):
         monkeypatch.delenv(k, raising=False)
-    from babel.pipeline import translate_idml
+    from pagebirdy.pipeline import translate_idml
 
     src = str(tmp_path / "in.idml")
     _make_idml(src)  # module-level STORY fixture: Minion Pro prose + numeric + math runs
@@ -203,7 +203,7 @@ def test_translate_idml_passes_idml_font_for_chinese(tmp_path, monkeypatch):
 def test_translate_idml_leaves_applied_font_alone_for_spanish(tmp_path, monkeypatch):
     for k in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "DEEPL_AUTH_KEY", "BABEL_LLM_PROVIDER"):
         monkeypatch.delenv(k, raising=False)
-    from babel.pipeline import translate_idml
+    from pagebirdy.pipeline import translate_idml
 
     src = str(tmp_path / "in.idml")
     _make_idml(src)
@@ -222,12 +222,12 @@ def test_translate_idml_logs_stage_progress(tmp_path, monkeypatch, caplog):
         monkeypatch.delenv(k, raising=False)
     import logging
 
-    from babel.pipeline import translate_idml
+    from pagebirdy.pipeline import translate_idml
 
     src = str(tmp_path / "in.idml")
     _make_idml(src)
 
-    with caplog.at_level(logging.INFO, logger="babel.pipeline"):
+    with caplog.at_level(logging.INFO, logger="pagebirdy.pipeline"):
         report = translate_idml(src, out_dir=str(tmp_path / "out"),
                                  review_db=None,
                                  target_lang="es")

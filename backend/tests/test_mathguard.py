@@ -1,5 +1,5 @@
-from babel.models import Line, Span
-from babel.protect.mathguard import build_segment, build_segments
+from pagebirdy.models import Line, Span
+from pagebirdy.protect.mathguard import build_segment, build_segments
 
 
 def _line(spans, block=0, page=0, y=0):
@@ -28,7 +28,7 @@ def test_coordinate_tuple_protected():
     assert "⟦=(-3, -2)⟧" in seg.source
     assert list(seg.placeholders.values()) == ["(-3, -2)"]
     # ...and the integrity gate treats it as one protected unit.
-    from babel.translate import integrity
+    from pagebirdy.translate import integrity
     assert integrity.tokens(seg.source) == integrity.tokens("x ⟦=(-3, -2)⟧ y")
 
 

@@ -1,7 +1,7 @@
 import fitz
 
-from babel.models import Segment
-from babel.reassemble.pdf import (
+from pagebirdy.models import Segment
+from pagebirdy.reassemble.pdf import (
     _border_average_color,
     _image_shadowed_duplicates,
     _rows,
@@ -285,7 +285,7 @@ def test_unrenderable_characters_fall_back_to_plain_equivalents():
     """
     import os
 
-    from babel.reassemble.pdf import _drawable, _font
+    from pagebirdy.reassemble.pdf import _drawable, _font
 
     for path in ("C:/Windows/Fonts/Nirmala.ttf", "C:/Windows/Fonts/malgun.ttf"):
         if not os.path.exists(path):
@@ -302,7 +302,7 @@ def test_characters_the_font_can_draw_are_left_alone():
     carries the real dash keeps it rather than being flattened to ASCII."""
     import os
 
-    from babel.reassemble.pdf import _drawable, _font
+    from pagebirdy.reassemble.pdf import _drawable, _font
 
     path = "C:/Windows/Fonts/arial.ttf"
     if not os.path.exists(path):

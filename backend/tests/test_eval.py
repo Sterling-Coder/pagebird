@@ -15,8 +15,8 @@ import zipfile
 import fitz
 import pytest
 
-from babel.eval import integrity, layout_idml, layout_pdf, quality, runner, scorecard
-from babel.review.store import ReviewStore
+from pagebirdy.eval import integrity, layout_idml, layout_pdf, quality, runner, scorecard
+from pagebirdy.review.store import ReviewStore
 
 
 def _pdf_text(data: bytes) -> str:
@@ -515,7 +515,7 @@ def test_idml_pair_evaluation_end_to_end(tmp_path):
 
 def _saved_job(tmp_path, segments) -> tuple[str, str]:
     """Persist real Segments through ReviewStore so runner reads a genuine row."""
-    from babel.models import Segment
+    from pagebirdy.models import Segment
 
     db = str(tmp_path / "review.db")
     store = ReviewStore(db)
@@ -558,7 +558,7 @@ def test_idml_job_does_not_score_glyphs_against_the_pdf_path_font(tmp_path):
     """InDesign sets IDML runs in Language.idml_font, not the PDF reassembler's
     face. Checking Korean IDML text against Arial failed real jobs on ornament
     characters that the actual target font renders fine."""
-    from babel.models import Segment
+    from pagebirdy.models import Segment
 
     db = str(tmp_path / "review.db")
     src, out = tmp_path / "s.idml", tmp_path / "s.ko.idml"
@@ -588,7 +588,7 @@ def test_idml_job_does_not_score_glyphs_against_the_pdf_path_font(tmp_path):
 
 
 def test_freeze_gold_writes_restored_pairs(tmp_path):
-    from babel.models import Segment
+    from pagebirdy.models import Segment
 
     db = str(tmp_path / "review.db")
     store = ReviewStore(db)
@@ -638,7 +638,7 @@ def test_quality_pairs_are_restored_and_exclude_tm_hits():
 
 
 def test_mqm_scoring_weights_severities_and_ignores_unscored_chunks():
-    from babel.eval import mqm
+    from pagebirdy.eval import mqm
 
     items = [{"seg_id": "a", "src": "one two three four five", "mt": "x"},
              {"seg_id": "b", "src": "six seven eight nine ten", "mt": "y"},
@@ -662,8 +662,8 @@ def test_eval_endpoint_scores_caches_and_404s(monkeypatch, tmp_path):
     """The UI panel's contract: a scorecard, cached, and honest about bad ids."""
     from fastapi.testclient import TestClient
 
-    import babel.api as api
-    from babel.models import Segment
+    import pagebirdy.api as api
+    from pagebirdy.models import Segment
 
     api._REVIEW_DB = str(tmp_path / "review.db")
     monkeypatch.setenv("BABEL_OUT_DIR", str(tmp_path / "out"))
@@ -700,8 +700,8 @@ def test_eval_endpoint_scores_caches_and_404s(monkeypatch, tmp_path):
 def test_eval_download_serves_markdown_and_json(monkeypatch, tmp_path):
     from fastapi.testclient import TestClient
 
-    import babel.api as api
-    from babel.models import Segment
+    import pagebirdy.api as api
+    from pagebirdy.models import Segment
 
     api._REVIEW_DB = str(tmp_path / "review.db")
     monkeypatch.setenv("BABEL_OUT_DIR", str(tmp_path / "out"))
@@ -749,7 +749,7 @@ def test_eval_download_serves_markdown_and_json(monkeypatch, tmp_path):
 def test_pdf_report_renders_readable_text_and_marks_skips(tmp_path):
     """The PDF must carry the same verdicts as the screen — and must not print a
     skipped check as if it had passed."""
-    from babel.eval import report_pdf
+    from pagebirdy.eval import report_pdf
 
     result = {
         "job_id": "j1", "format": "pdf", "target_lang": "es",
@@ -854,7 +854,7 @@ def test_pdf_report_renders_readable_text_and_marks_skips(tmp_path):
 def test_pdf_report_embeds_a_font_covering_the_target_script(tmp_path):
     """Base-14 fonts are Latin-only — a Korean report would render as the very
     empty boxes the tofu metric exists to catch."""
-    from babel.eval import report_pdf
+    from pagebirdy.eval import report_pdf
 
     result = {
         "job_id": "j2", "format": "idml", "target_lang": "ko",
@@ -864,7 +864,7 @@ def test_pdf_report_embeds_a_font_covering_the_target_script(tmp_path):
         "layout_score": scorecard.layout_score({}, fmt="idml"),
         "gates": {"passed": True, "checks": [], "failed": [], "skipped": []},
     }
-    from babel import languages
+    from pagebirdy import languages
 
     if not any(os.path.exists(p) for p in languages.get("ko").fonts["regular"]):
         pytest.skip("no Korean face installed on this machine")
@@ -887,7 +887,7 @@ def test_pdf_report_embeds_a_font_covering_the_target_script(tmp_path):
 
 def test_report_filename_strips_header_unsafe_characters():
     """Uploads carry arbitrary names; a quote or newline here is header injection."""
-    import babel.api as api
+    import pagebirdy.api as api
 
     name = api._report_filename({"original_filename": 'a"b\nc/d.pdf'}, "job1", "md")
     assert '"' not in name and "\n" not in name and "/" not in name
@@ -914,7 +914,7 @@ def test_markdown_report_states_why_idml_has_no_composite():
 
 
 def test_mqm_parse_rejects_malformed_and_unknown_severities():
-    from babel.eval import mqm
+    from pagebirdy.eval import mqm
 
     assert mqm._parse("not json", 2) == [[], []]
     # Wrong length means the model lost alignment; no verdict is safer than a
@@ -935,7 +935,7 @@ def test_overflow_tolerance_scales_with_the_line_height():
     overflowing, with a median overshoot of 1.6pt on a 13.5pt line. Overflow
     means the text gained a line, which is a whole line height lower.
     """
-    from babel.eval.layout_pdf import _OVERFLOW_SLACK
+    from pagebirdy.eval.layout_pdf import _OVERFLOW_SLACK
 
     line = 13.5
     tolerance = max(1.0, line * _OVERFLOW_SLACK)
@@ -975,7 +975,7 @@ def test_tofu_scores_what_reassembly_draws_not_the_stored_text():
     """
     import os
 
-    from babel import languages
+    from pagebirdy import languages
 
     if not any(os.path.exists(p) for p in languages.get("ko").fonts["regular"]):
         pytest.skip("no Korean face installed on this machine")

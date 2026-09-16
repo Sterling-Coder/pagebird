@@ -2,7 +2,7 @@
 
 import pytest
 
-from babel import languages
+from pagebirdy import languages
 
 
 def test_arabic_is_rtl_and_wraps_at_spaces():

@@ -17,7 +17,7 @@ const plexMono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   title: "Pagebirdy — Translate any document without breaking the layout",
   description:
-    "Pagebirdy translates DOC, PDF, INDD and IDML files into 30+ languages at 95% accuracy — text, images and layout, all preserved.",
+    "Pagebirdy translates InDesign (IDML), PDF and INDD files into 40+ languages — fonts, layout, images and text, all preserved.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

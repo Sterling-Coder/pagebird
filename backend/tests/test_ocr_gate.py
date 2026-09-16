@@ -27,8 +27,8 @@ by 20% afterwards so redaction clears the whole glyph, which inflates them.
 
 import pytest
 
-from babel.ingest.ocr import MIN_IMAGE_CONFIDENCE, MIN_IMAGE_SIZE, worth_translating
-from babel.models import Line, Span
+from pagebirdy.ingest.ocr import MIN_IMAGE_CONFIDENCE, MIN_IMAGE_SIZE, worth_translating
+from pagebirdy.models import Line, Span
 
 
 def _line(text, w, h, confidence, x0=100.0, y0=100.0):
@@ -179,7 +179,7 @@ def test_ocr_reread_of_live_text_over_a_photo_is_dropped():
     Kept, it is translated a second time and drawn over the first — the two
     Arabic renderings that landed on top of each other in the speech bubble.
     """
-    from babel.ingest.ocr import merge_ocr_lines
+    from pagebirdy.ingest.ocr import merge_ocr_lines
 
     base = [_pdf_line(t, b) for t, b in BUBBLE_ROWS]
     reread = _ocr_line("spoons . There are 2 brown spoons .",
@@ -194,7 +194,7 @@ def test_text_burned_into_artwork_beside_a_run_is_kept():
     It brushes the headline's box — the arrow is painted over the tail of it —
     but covers only a quarter of its own, which is what tells the two apart.
     """
-    from babel.ingest.ocr import merge_ocr_lines
+    from pagebirdy.ingest.ocr import merge_ocr_lines
 
     base = [_pdf_line("Math on the Go", (502.0, 78.3, 639.9, 101.1))]
     burned = _ocr_line("GO !", (624.9, 70.4, 664.4, 90.3))

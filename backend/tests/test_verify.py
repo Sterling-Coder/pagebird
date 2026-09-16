@@ -1,5 +1,5 @@
-from babel.models import Segment
-from babel.translate.verify import _parse, run_verification
+from pagebirdy.models import Segment
+from pagebirdy.translate.verify import _parse, run_verification
 
 
 class FakeVerifier:

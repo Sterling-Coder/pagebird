@@ -1,0 +1,187 @@
+"""Supabase auth: verifies the bearer token on protected endpoints and checks
+trial status. No JWT secret needed — we ask Supabase's own /auth/v1/user
+endpoint to validate the token, which also means a revoked/expired token is
+rejected immediately rather than trusting a locally-cached signing key.
+"""
+
+from __future__ import annotations
+
+import os
+import time
+
+import requests
+from fastapi import HTTPException, Request
+
+from pagebirdy.config import load_env
+
+load_env()
+
+_SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
+_SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "")
+_SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+
+# Short-lived per-token cache so a page that fires several requests in a row
+# doesn't round-trip to Supabase for every one of them.
+_TOKEN_CACHE_TTL = 30.0
+_token_cache: dict[str, tuple[float, dict]] = {}
+
+
+def _extract_token(request: Request) -> str | None:
+    # Header only — a session token in the query string would end up in
+    # server access logs, browser history, and Referer headers.
+    auth = request.headers.get("authorization", "")
+    if auth.lower().startswith("bearer "):
+        return auth[7:].strip()
+    return None
+
+
+def require_user(request: Request) -> dict:
+    """FastAPI dependency: returns {"id": ..., "email": ...} or raises 401."""
+    if not _SUPABASE_URL or not _SUPABASE_ANON_KEY:
+        raise HTTPException(status_code=500, detail="Supabase is not configured on the server")
+
+    token = _extract_token(request)
+    if not token:
+        raise HTTPException(status_code=401, detail="Missing bearer token")
+
+    cached = _token_cache.get(token)
+    if cached and cached[0] > time.monotonic():
+        return cached[1]
+
+    resp = requests.get(
+        f"{_SUPABASE_URL}/auth/v1/user",
+        headers={"Authorization": f"Bearer {token}", "apikey": _SUPABASE_ANON_KEY},
+        timeout=10,
+    )
+    if resp.status_code != 200:
+        raise HTTPException(status_code=401, detail="Invalid or expired session")
+
+    body = resp.json()
+    user = {"id": body["id"], "email": body.get("email")}
+    _token_cache[token] = (time.monotonic() + _TOKEN_CACHE_TTL, user)
+    return user
+
+
+def _create_profile(user: dict) -> str:
+    """Inserts a fresh 14-day-trial profile row for a user who doesn't have
+    one yet, and returns its trial_ends_at. Uses upsert so a concurrent
+    request creating the same row races safely instead of erroring."""
+    from datetime import datetime, timedelta, timezone
+
+    trial_ends_at = (datetime.now(timezone.utc) + timedelta(days=14)).isoformat()
+    resp = requests.post(
+        f"{_SUPABASE_URL}/rest/v1/profiles",
+        params={"on_conflict": "id"},
+        json={"id": user["id"], "email": user.get("email"), "trial_ends_at": trial_ends_at},
+        headers={
+            "apikey": _SUPABASE_SERVICE_ROLE_KEY,
+            "Authorization": f"Bearer {_SUPABASE_SERVICE_ROLE_KEY}",
+            "Prefer": "resolution=ignore-duplicates,return=representation",
+        },
+        timeout=10,
+    )
+    resp.raise_for_status()
+    rows = resp.json()
+    if rows:
+        return rows[0]["trial_ends_at"]
+    # Another request created it first (ignore-duplicates -> empty body) —
+    # re-fetch to get the row that actually won the race.
+    refetch = requests.get(
+        f"{_SUPABASE_URL}/rest/v1/profiles",
+        params={"id": f"eq.{user['id']}", "select": "trial_ends_at"},
+        headers={
+            "apikey": _SUPABASE_SERVICE_ROLE_KEY,
+            "Authorization": f"Bearer {_SUPABASE_SERVICE_ROLE_KEY}",
+        },
+        timeout=10,
+    )
+    refetch.raise_for_status()
+    refetched = refetch.json()
+    if not refetched:
+        raise HTTPException(status_code=500, detail="Failed to initialize trial")
+    return refetched[0]["trial_ends_at"]
+
+
+def _service_headers() -> dict:
+    return {
+        "apikey": _SUPABASE_SERVICE_ROLE_KEY,
+        "Authorization": f"Bearer {_SUPABASE_SERVICE_ROLE_KEY}",
+    }
+
+
+def get_or_create_profile(user: dict) -> dict:
+    """Returns the user's profile row (email, created_at, trial_ends_at),
+    self-healing a missing row the same way require_trial_active does."""
+    if not _SUPABASE_URL or not _SUPABASE_SERVICE_ROLE_KEY:
+        raise HTTPException(status_code=500, detail="Supabase is not configured on the server")
+
+    resp = requests.get(
+        f"{_SUPABASE_URL}/rest/v1/profiles",
+        params={"id": f"eq.{user['id']}", "select": "email,created_at,trial_ends_at,first_name,last_name,full_name"},
+        headers=_service_headers(),
+        timeout=10,
+    )
+    resp.raise_for_status()
+    rows = resp.json()
+    if rows and rows[0].get("trial_ends_at"):
+        return rows[0]
+    trial_ends_at = _create_profile(user)
+    return {"email": user.get("email"), "created_at": None, "trial_ends_at": trial_ends_at}
+
+
+def require_trial_active(user: dict) -> None:
+    """Raises 402 once the user's 14-day trial has passed. Call this from
+    endpoints that spend LLM/API budget (translate, rebuild) — not from
+    plain reads."""
+    profile = get_or_create_profile(user)
+    # Postgres returns e.g. "2026-09-22T10:00:00+00:00"
+    from datetime import datetime
+
+    ends = datetime.fromisoformat(profile["trial_ends_at"].replace("Z", "+00:00"))
+    if ends.timestamp() < time.time():
+        raise HTTPException(
+            status_code=402,
+            detail="Your 14-day trial has ended. Contact us to keep translating.",
+        )
+
+
+_owner_ids_cache: dict[str, tuple[float, list[str]]] = {}
+
+
+def invalidate_owner_ids_cache(user_id: str) -> None:
+    """Call after a team-membership change (accept/decline/remove) so the
+    affected user doesn't wait out the cache TTL to see the new project set."""
+    _owner_ids_cache.pop(user_id, None)
+
+
+def effective_owner_ids(user_id: str) -> list[str]:
+    """The set of user ids whose projects `user_id` may access: themselves,
+    plus anyone who invited them and whose invite they've accepted.
+
+    One-directional and consent-gated: accepting an invite lets you see the
+    *owner's* projects — it does not give the owner access to yours. A
+    pending (not yet accepted) invite grants nothing.
+
+    Cached per user for the same TTL as `require_user`'s token cache — this
+    was a live Supabase round trip on *every* call, including every 5-second
+    poll of the Files page and every job/project list/ownership check, which
+    is what made navigation feel slow to load."""
+    cached = _owner_ids_cache.get(user_id)
+    if cached and cached[0] > time.monotonic():
+        return cached[1]
+
+    if not _SUPABASE_URL or not _SUPABASE_SERVICE_ROLE_KEY:
+        raise HTTPException(status_code=500, detail="Supabase is not configured on the server")
+
+    resp = requests.get(
+        f"{_SUPABASE_URL}/rest/v1/team_members",
+        params={"member_id": f"eq.{user_id}", "status": "eq.accepted", "select": "owner_id"},
+        headers=_service_headers(),
+        timeout=10,
+    )
+    resp.raise_for_status()
+    ids = {row["owner_id"] for row in resp.json()}
+    ids.add(user_id)
+    result = list(ids)
+    _owner_ids_cache[user_id] = (time.monotonic() + _TOKEN_CACHE_TTL, result)
+    return result

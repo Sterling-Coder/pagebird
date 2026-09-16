@@ -9,7 +9,7 @@ from alembic import context
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from babel.config import load_env  # noqa: E402
+from pagebirdy.config import load_env  # noqa: E402
 
 load_env()
 

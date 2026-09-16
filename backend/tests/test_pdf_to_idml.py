@@ -9,12 +9,12 @@ from xml.etree import ElementTree as ET
 import fitz
 import pytest
 
-from babel.idml.build import build_idml, specs_from_lines
-from babel.idml.preview import render_idml
-from babel.ingest.ocr import detect_image_regions, detect_scanned_pages, ocr_pages, ocr_status
-from babel.ingest.pdf import extract_lines
-from babel.protect.equations import detect_regions, looks_like_math
-from babel.translate.integrity import line_count_ok
+from pagebirdy.idml.build import build_idml, specs_from_lines
+from pagebirdy.idml.preview import render_idml
+from pagebirdy.ingest.ocr import detect_image_regions, detect_scanned_pages, ocr_pages, ocr_status
+from pagebirdy.ingest.pdf import extract_lines
+from pagebirdy.protect.equations import detect_regions, looks_like_math
+from pagebirdy.translate.integrity import line_count_ok
 
 
 @pytest.fixture
@@ -184,7 +184,7 @@ def test_preview_compresses_page_backgrounds(sample_pdf, tmp_path):
 
 def test_ocr_falls_back_to_local_engine_without_credentials(monkeypatch):
     """No Google keys must not mean no OCR — the local engine takes over."""
-    from babel.ingest import ocr as ocr_mod
+    from pagebirdy.ingest import ocr as ocr_mod
 
     for var in ("DOCAI_PROJECT_ID", "DOCAI_PROCESSOR_ID",
                 "GOOGLE_APPLICATION_CREDENTIALS"):
@@ -202,7 +202,7 @@ def test_ocr_falls_back_to_local_engine_without_credentials(monkeypatch):
 
 
 def test_ocr_reports_reason_when_nothing_is_available(sample_pdf, monkeypatch):
-    from babel.ingest import ocr as ocr_mod
+    from pagebirdy.ingest import ocr as ocr_mod
 
     for var in ("DOCAI_PROJECT_ID", "DOCAI_PROCESSOR_ID",
                 "GOOGLE_APPLICATION_CREDENTIALS"):
@@ -216,7 +216,7 @@ def test_ocr_reports_reason_when_nothing_is_available(sample_pdf, monkeypatch):
 
 def test_ocr_prefers_vision_over_http_and_rapidocr_when_docai_absent(monkeypatch):
     """Vision slots in ahead of http/rapidocr once its own creds are present."""
-    from babel.ingest import ocr as ocr_mod
+    from pagebirdy.ingest import ocr as ocr_mod
 
     for var in ("DOCAI_PROJECT_ID", "DOCAI_PROCESSOR_ID"):
         monkeypatch.delenv(var, raising=False)
@@ -229,7 +229,7 @@ def test_ocr_prefers_vision_over_http_and_rapidocr_when_docai_absent(monkeypatch
 
 
 def test_ocr_falls_back_past_vision_without_credentials(monkeypatch):
-    from babel.ingest import ocr as ocr_mod
+    from pagebirdy.ingest import ocr as ocr_mod
 
     for var in ("DOCAI_PROJECT_ID", "DOCAI_PROCESSOR_ID", "GOOGLE_APPLICATION_CREDENTIALS"):
         monkeypatch.delenv(var, raising=False)
@@ -240,7 +240,7 @@ def test_ocr_falls_back_past_vision_without_credentials(monkeypatch):
 
 
 def test_parse_vision_response_converts_pixel_bbox_to_pdf_points():
-    from babel.ingest import ocr as ocr_mod
+    from pagebirdy.ingest import ocr as ocr_mod
 
     class _Vertex:
         def __init__(self, x, y):
@@ -331,7 +331,7 @@ def test_billing_retry_succeeds_after_transient_failures(monkeypatch):
     """Google's own billing-enabled check has a short propagation cache — a
     call can fail with BILLING_DISABLED for a few seconds after billing was
     actually turned on. Retry through that window instead of failing the job."""
-    from babel.ingest import ocr as ocr_mod
+    from pagebirdy.ingest import ocr as ocr_mod
     monkeypatch.setattr(ocr_mod.time, "sleep", lambda s: None)
 
     calls = {"n": 0}
@@ -347,7 +347,7 @@ def test_billing_retry_succeeds_after_transient_failures(monkeypatch):
 
 
 def test_billing_retry_gives_up_after_max_attempts(monkeypatch):
-    from babel.ingest import ocr as ocr_mod
+    from pagebirdy.ingest import ocr as ocr_mod
     monkeypatch.setattr(ocr_mod.time, "sleep", lambda s: None)
 
     def always_billing_disabled():
@@ -358,7 +358,7 @@ def test_billing_retry_gives_up_after_max_attempts(monkeypatch):
 
 
 def test_billing_retry_does_not_retry_unrelated_errors(monkeypatch):
-    from babel.ingest import ocr as ocr_mod
+    from pagebirdy.ingest import ocr as ocr_mod
 
     calls = {"n": 0}
 
@@ -375,7 +375,7 @@ def test_sample_foreground_color_finds_white_text_on_purple_banner():
     """OCR gives text + bbox only, no font/color metadata — the reassembly
     path needs *some* color, and hardcoded black is wrong on a colored banner
     (white-on-purple 'GO!' badge). Sample it from the source pixels instead."""
-    from babel.ingest.ocr import _sample_foreground_color
+    from pagebirdy.ingest.ocr import _sample_foreground_color
 
     doc = fitz.open()
     page = doc.new_page(width=100, height=100)
@@ -392,7 +392,7 @@ def test_sample_foreground_color_finds_white_text_on_purple_banner():
 def test_ocr_image_regions_colors_lines_from_the_source_pixels(tmp_path, monkeypatch):
     """The color sampled off the banner must actually reach the returned
     Line, not just exist as an unused helper function."""
-    from babel.ingest import ocr as ocr_mod
+    from pagebirdy.ingest import ocr as ocr_mod
 
     if not ocr_mod.rapidocr_available():
         pytest.skip("rapidocr not installed in this environment")
@@ -415,7 +415,7 @@ def test_ocr_image_regions_colors_lines_from_the_source_pixels(tmp_path, monkeyp
 
 
 def test_pad_bbox_grows_by_margin_of_height():
-    from babel.ingest.ocr import _pad_bbox
+    from pagebirdy.ingest.ocr import _pad_bbox
 
     bbox = (100.0, 50.0, 150.0, 70.0)  # height 20
     padded = _pad_bbox(bbox, fraction=0.2)  # 4pt margin
@@ -426,7 +426,7 @@ def test_ocr_image_regions_pads_bboxes_so_redaction_clears_the_full_glyph(tmp_pa
     """A tight OCR bbox that clips the top of an ascender or an exclamation
     mark's dot leaves a sliver of the original English visible under the
     translation — the exact overlap this test guards against."""
-    from babel.ingest import ocr as ocr_mod
+    from pagebirdy.ingest import ocr as ocr_mod
 
     if not ocr_mod.rapidocr_available():
         pytest.skip("rapidocr not installed in this environment")
@@ -484,8 +484,8 @@ def test_looks_like_math_discriminates(sample_pdf):
 def test_badge_spans_are_excluded_from_equation_crops(tmp_path):
     """Problem numbers are white knockout glyphs on a dark disc. Including them
     makes the recogniser emit \\oplus / \\stackrel noise for the badge."""
-    from babel.models import Line, Span
-    from babel.protect.equations import (content_bbox, content_text,
+    from pagebirdy.models import Line, Span
+    from pagebirdy.protect.equations import (content_bbox, content_text,
                                          is_badge_span)
 
     badge = Span(text="1", font="MyriadPro-Semibold", size=11.0,
@@ -504,14 +504,14 @@ def test_badge_spans_are_excluded_from_equation_crops(tmp_path):
 def test_pix2tex_renders_smaller_than_mathpix():
     """pix2tex degrades badly on large glyphs; Mathpix improves with detail.
     Measured: at 400dpi '6^4*6^4' comes back as \\textstyle\\bigcap\\cdots."""
-    from babel.protect.equations import MATHPIX_DPI, PIX2TEX_DPI
+    from pagebirdy.protect.equations import MATHPIX_DPI, PIX2TEX_DPI
 
     assert PIX2TEX_DPI < MATHPIX_DPI
 
 
 def test_structural_engine_leads_and_env_can_force(monkeypatch):
     """Reading the PDF's own layout is exact and free, so it goes first."""
-    from babel.protect import equations
+    from pagebirdy.protect import equations
 
     monkeypatch.delenv("BABEL_EQUATION_ENGINE", raising=False)
     monkeypatch.setenv("MATHPIX_APP_ID", "id")
@@ -523,7 +523,7 @@ def test_structural_engine_leads_and_env_can_force(monkeypatch):
 
 
 def test_fallback_prefers_mathpix_then_pix2tex(monkeypatch):
-    from babel.protect import equations
+    from pagebirdy.protect import equations
 
     monkeypatch.setenv("MATHPIX_APP_ID", "id")
     monkeypatch.setenv("MATHPIX_APP_KEY", "key")
@@ -540,8 +540,8 @@ def test_fallback_prefers_mathpix_then_pix2tex(monkeypatch):
 
 def test_structural_builder_reads_superscripts_and_operators():
     """The glyph tables and script detection, on synthetic spans."""
-    from babel.models import Line, Span
-    from babel.protect.latex_builder import build_latex
+    from pagebirdy.models import Line, Span
+    from pagebirdy.protect.latex_builder import build_latex
 
     # "6^4 x 10^1" as the PDF encodes it: MathematicalPiLTStd-1 '3' draws a
     # multiplication cross, and exponents are smaller spans sitting higher.

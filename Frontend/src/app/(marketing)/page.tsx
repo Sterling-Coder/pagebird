@@ -1,5 +1,10 @@
 import Link from "next/link";
-import { ScrollReveal } from "@/components/ScrollReveal";
+import { WatchDemoButton } from "@/components/WatchDemoButton";
+
+// Flip to true once there are real client logos to show — placeholder
+// names shouldn't render as if they were actual customers.
+const SHOW_CLIENT_LOGOS = false;
+const CLIENTS: string[] = [];
 
 const PROBLEMS = [
   {
@@ -23,7 +28,7 @@ const STEPS = [
   {
     n: "1",
     title: "Drop the file in",
-    body: "DOCX, PDF, PPTX, XLSX, IDML or HTML — Pagebirdy reads the layout tree, not a flattened text dump.",
+    body: "IDML, PDF, DOCX, PPTX, XLSX or HTML — Pagebirdy reads the layout tree, not a flattened text dump.",
     accent: false,
   },
   {
@@ -64,7 +69,7 @@ const FEATURES = [
   {
     n: "05",
     title: "Your files stay yours",
-    body: "Encrypted in transit and at rest, deleted on your schedule, never used to train models. [SOC 2 / GDPR status].",
+    body: "Encrypted in transit and at rest, deleted on your schedule, never used to train models.",
   },
   {
     n: "06",
@@ -73,7 +78,7 @@ const FEATURES = [
   },
 ];
 
-const FORMATS = [".docx", ".pdf", ".pptx", ".xlsx", ".idml", ".srt", ".html", ".xliff"];
+const FORMATS = [".idml", ".pdf", ".indd", ".docx", ".pptx", ".xlsx", ".srt", ".html", ".xliff"];
 
 const PLANS = [
   {
@@ -85,9 +90,10 @@ const PLANS = [
     href: "/login",
     variant: "light" as const,
     rotate: "-rotate-2",
+    comingSoon: true,
   },
   {
-    name: "TEAM — MOST CHOSEN",
+    name: "TEAM",
     price: "$400",
     tagline: "For teams shipping in several languages at once.",
     features: [
@@ -100,16 +106,18 @@ const PLANS = [
     href: "/login",
     variant: "dark" as const,
     rotate: "rotate-1.5 md:-translate-y-3.5",
+    comingSoon: true,
   },
   {
     name: "ENTERPRISE",
     price: "Talk to us",
     tagline: "For regulated teams with volume, audit and residency needs.",
-    features: ["Unlimited pages, pooled", "SSO, SCIM, audit log", "[EU / US] data residency"],
+    features: ["Unlimited pages, pooled", "SSO, SCIM, audit log", "EU / US data residency"],
     cta: "Book a call",
     href: "/contact",
     variant: "light" as const,
     rotate: "-rotate-1",
+    comingSoon: false,
   },
 ];
 
@@ -128,11 +136,9 @@ const FAQS = [
   },
   {
     q: "Are our documents used to train models?",
-    a: "No. Files are encrypted, deleted on your retention window, and never used as training data. [Add certification status here.]",
+    a: "No. Files are encrypted, deleted on your retention window, and never used as training data.",
   },
 ];
-
-const CLIENTS = ["[Client One]", "[Client Two]", "[Client Three]", "[Client Four]", "[Client Five]"];
 
 function DocMock({
   heading,
@@ -194,9 +200,9 @@ export default function Home() {
               <span className="text-pb-accent italic">language.</span>
             </h1>
             <p className="max-w-[460px] text-[17px] leading-relaxed text-pb-muted">
-              Pagebirdy translates DOCX, PDF, PPTX and InDesign files into 40+ languages
-              and hands them back with every column, table, footnote and page break
-              exactly where you left it.
+              Pagebirdy translates InDesign (IDML) files into 40+ languages and hands
+              them back with every font, column, table, footnote and page break
+              exactly where you left it — plus DOCX, PDF, PPTX and more.
             </p>
             <div className="mt-2 flex items-center">
               <Link
@@ -209,9 +215,7 @@ export default function Home() {
                   <path d="m13 6 6 6-6 6" />
                 </svg>
               </Link>
-              <button className="flex h-14 items-center border-[3px] border-l-0 border-pb-ink px-6.5 text-[15px] font-bold">
-                Watch demo
-              </button>
+              <WatchDemoButton />
             </div>
           </div>
 
@@ -246,17 +250,19 @@ export default function Home() {
         </div>
       </section>
 
-      {/* LOGO STRIP */}
-      <section className="flex items-center gap-0 border-b-[3px] border-pb-ink px-6 py-6 md:px-14">
-        <span className="font-pb-mono-brand pr-10 text-xs font-bold tracking-wide">TRUSTED BY</span>
-        <div className="flex flex-1 flex-wrap items-center justify-around gap-6">
-          {CLIENTS.map((c) => (
-            <span key={c} className="font-pb-display text-xl text-[#a9a492]">
-              {c}
-            </span>
-          ))}
-        </div>
-      </section>
+      {/* LOGO STRIP — hidden until there are real client logos; see SHOW_CLIENT_LOGOS */}
+      {SHOW_CLIENT_LOGOS ? (
+        <section className="flex items-center gap-0 border-b-[3px] border-pb-ink px-6 py-6 md:px-14">
+          <span className="font-pb-mono-brand pr-10 text-xs font-bold tracking-wide">TRUSTED BY</span>
+          <div className="flex flex-1 flex-wrap items-center justify-around gap-6">
+            {CLIENTS.map((c) => (
+              <span key={c} className="font-pb-display text-xl text-[#a9a492]">
+                {c}
+              </span>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {/* PROBLEM */}
       <section className="border-b-[3px] border-pb-ink bg-pb-ink text-pb-paper">
@@ -351,7 +357,7 @@ export default function Home() {
           </h2>
           <p className="max-w-80 text-sm leading-relaxed text-pb-muted">
             A page is a page whether you translate it into one language or six. Unused
-            pages roll over for [X] days.
+            pages roll over for 30 days.
           </p>
         </div>
 
@@ -373,8 +379,8 @@ export default function Home() {
                 {plan.name}
               </span>
               <span className="font-pb-display text-4xl">
-                {plan.price}
-                {plan.price.startsWith("$") && (
+                {plan.comingSoon ? "Coming soon" : plan.price}
+                {!plan.comingSoon && plan.price.startsWith("$") && (
                   <span className="font-sans text-sm font-medium">/mo</span>
                 )}
               </span>
@@ -391,40 +397,32 @@ export default function Home() {
                   <span key={f}>— {f}</span>
                 ))}
               </div>
-              <Link
-                href={plan.href}
-                className={`mt-2 flex h-11.5 items-center justify-center text-[13.5px] font-bold ${
-                  plan.variant === "dark"
-                    ? "bg-pb-accent text-pb-paper"
-                    : "border-[3px] border-pb-card-ink text-pb-card-ink"
-                }`}
-              >
-                {plan.cta}
-              </Link>
+              {plan.comingSoon ? (
+                <span
+                  aria-disabled="true"
+                  className={`mt-2 flex h-11.5 cursor-not-allowed items-center justify-center text-[13.5px] font-bold opacity-50 ${
+                    plan.variant === "dark"
+                      ? "bg-pb-accent text-pb-paper"
+                      : "border-[3px] border-pb-card-ink text-pb-card-ink"
+                  }`}
+                >
+                  Coming soon
+                </span>
+              ) : (
+                <Link
+                  href={plan.href}
+                  className={`mt-2 flex h-11.5 items-center justify-center text-[13.5px] font-bold ${
+                    plan.variant === "dark"
+                      ? "bg-pb-accent text-pb-paper"
+                      : "border-[3px] border-pb-card-ink text-pb-card-ink"
+                  }`}
+                >
+                  {plan.cta}
+                </Link>
+              )}
             </div>
           ))}
         </div>
-      </section>
-
-      {/* TESTIMONIAL */}
-      <section className="border-b-[3px] border-pb-ink bg-pb-ink px-6 py-18 text-pb-paper md:px-14">
-        <ScrollReveal className="flex items-start gap-10">
-          <span className="font-pb-display text-[80px] leading-[0.7] text-pb-accent md:text-[120px]">
-            &ldquo;
-          </span>
-          <div className="flex flex-col gap-5.5 pt-6">
-            <p className="font-pb-display max-w-3xl text-2xl font-semibold italic md:text-3xl">
-              Our Q3 investor deck used to take a full day to reformat by hand after
-              translation. Pagebirdy gave it back in nine minutes, tables and all.
-            </p>
-            <div className="flex items-center gap-3">
-              <span className="h-2 w-2 bg-pb-accent" />
-              <span className="font-pb-mono-brand text-[12.5px] font-bold">
-                Priya Nakamura — Head of Investor Relations, Northwind
-              </span>
-            </div>
-          </div>
-        </ScrollReveal>
       </section>
 
       {/* FAQ */}
@@ -436,7 +434,7 @@ export default function Home() {
             <Link href="/contact" className="underline">
               Ask us directly
             </Link>{" "}
-            — we answer within [X] business hours.
+            — we answer within 1 business day.
           </p>
         </div>
         <div className="flex flex-1 flex-col md:border-l-[3px] md:border-pb-ink md:pl-10">

@@ -8,7 +8,7 @@ Guarantees:
 
 import pytest
 
-from babel.protect.math_rtl_renderer import (
+from pagebirdy.protect.math_rtl_renderer import (
     MathRTLPolicy,
     RunClass,
     classify_text_runs,

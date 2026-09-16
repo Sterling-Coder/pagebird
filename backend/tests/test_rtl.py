@@ -11,8 +11,8 @@ the correct edge of its box.
 import fitz
 import pytest
 
-from babel.models import Segment
-from babel.reassemble.pdf import rebuild_pdf
+from pagebirdy.models import Segment
+from pagebirdy.reassemble.pdf import rebuild_pdf
 
 # "page 12 of 25" / "shalom olam 12"
 AR = "الصفحة 12 من 25"
@@ -196,7 +196,7 @@ def test_rtl_visual_order_keeps_math_run_internal_order():
     """`_rtl_visual_order` must reverse prose position but never a math run's
     own internal reading order — "1", "/", "2" stays "1/2", not "2/1", even
     though the run as a whole moves to the other side of the line."""
-    from babel.reassemble.pdf import _rtl_visual_order
+    from pagebirdy.reassemble.pdf import _rtl_visual_order
 
     word = lambda s, math=False: [(s, math)]
     line = [word("ابدأ"), word("1", True), word("/", True), word("2", True),

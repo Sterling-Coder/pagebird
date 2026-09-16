@@ -3,7 +3,7 @@ import subprocess
 
 import pytest
 
-from babel.idml.export import convert_to_idml, ConvertResult, export, ExportResult
+from pagebirdy.idml.export import convert_to_idml, ConvertResult, export, ExportResult
 
 
 def test_convert_to_idml_no_server_configured(monkeypatch, tmp_path):

@@ -102,18 +102,12 @@ export function LoginForm() {
     }
   }
 
-  async function handleGoogle() {
-    setError(null);
-    const supabase = createClient();
-    const { error: oauthError } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
-    });
-    if (oauthError) setError(oauthError.message);
+  function handleGoogle() {
+    setError("Google sign-in is coming soon — use email for now.");
   }
 
   function handleApple() {
-    setError("Apple sign-in is coming soon — use email or Google for now.");
+    setError("Apple sign-in is coming soon — use email for now.");
   }
 
   return (

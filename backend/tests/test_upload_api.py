@@ -4,8 +4,8 @@ import os
 import fitz  # PyMuPDF
 from fastapi.testclient import TestClient
 
-import babel.api as api
-from babel.review.store import ReviewStore
+import pagebirdy.api as api
+from pagebirdy.review.store import ReviewStore
 
 
 def _offline(monkeypatch):
@@ -59,8 +59,8 @@ def test_upload_indd_translates_and_downloads(monkeypatch, tmp_path):
     _make_idml(str(converted_idml))
     final_indd = tmp_path / "out" / "doc.es.indd"
 
-    from babel.idml.export import ConvertResult, ExportResult
-    import babel.api as api_mod
+    from pagebirdy.idml.export import ConvertResult, ExportResult
+    import pagebirdy.api as api_mod
 
     def fake_convert(indd_path, out_dir):
         return ConvertResult(ok=True, idml=str(converted_idml), message="ok")
@@ -71,8 +71,8 @@ def test_upload_indd_translates_and_downloads(monkeypatch, tmp_path):
             f.write(b"fake-indd-bytes")
         return ExportResult(ok=True, indd=str(final_indd), message="ok")
 
-    monkeypatch.setattr("babel.idml.export.convert_to_idml", fake_convert)
-    monkeypatch.setattr("babel.idml.export.export", fake_export)
+    monkeypatch.setattr("pagebirdy.idml.export.convert_to_idml", fake_convert)
+    monkeypatch.setattr("pagebirdy.idml.export.export", fake_export)
 
     client = TestClient(api_mod.app)
     r = client.post(
@@ -119,8 +119,8 @@ def test_upload_indd_export_failure_cleans_up_job(monkeypatch, tmp_path):
     converted_idml = tmp_path / "converted.idml"
     _make_idml(str(converted_idml))
 
-    from babel.idml.export import ConvertResult, ExportResult
-    import babel.api as api_mod
+    from pagebirdy.idml.export import ConvertResult, ExportResult
+    import pagebirdy.api as api_mod
 
     def fake_convert(indd_path, out_dir):
         return ConvertResult(ok=True, idml=str(converted_idml), message="ok")
@@ -128,8 +128,8 @@ def test_upload_indd_export_failure_cleans_up_job(monkeypatch, tmp_path):
     def fake_export(idml_path, out_dir):
         return ExportResult(ok=False, indd=None, message="InDesign Server error: boom")
 
-    monkeypatch.setattr("babel.idml.export.convert_to_idml", fake_convert)
-    monkeypatch.setattr("babel.idml.export.export", fake_export)
+    monkeypatch.setattr("pagebirdy.idml.export.convert_to_idml", fake_convert)
+    monkeypatch.setattr("pagebirdy.idml.export.export", fake_export)
 
     client = TestClient(api_mod.app)
     r = client.post(
@@ -285,7 +285,7 @@ def test_upload_idml_logs_progress(monkeypatch, tmp_path, caplog):
         )
 
     client = TestClient(api.app)
-    with caplog.at_level(logging.INFO, logger="babel.api"):
+    with caplog.at_level(logging.INFO, logger="pagebirdy.api"):
         r = client.post(
             "/api/translate",
             files={"file": ("doc.idml", idml_bytes.getvalue(), "application/octet-stream")},
@@ -340,7 +340,7 @@ def test_failed_translation_persists_job(monkeypatch, tmp_path):
 def test_output_404_for_idml_without_preview(monkeypatch, tmp_path):
     _wire(monkeypatch, tmp_path)
     # Save a job whose output is an .es.idml with no sibling preview PDF.
-    from babel.models import Segment
+    from pagebirdy.models import Segment
 
     store = ReviewStore(api._REVIEW_DB)
     jid = store.save_job(

@@ -1,6 +1,6 @@
-from babel.models import Segment
-from babel.translate.engine import Engine, IdentityEngine
-from babel.translate.translator import Translator
+from pagebirdy.models import Segment
+from pagebirdy.translate.engine import Engine, IdentityEngine
+from pagebirdy.translate.translator import Translator
 
 
 class MapEngine(Engine):
@@ -98,7 +98,7 @@ def test_primary_and_secondary_run_concurrently():
     import threading
     import time
 
-    from babel.translate.engine import Engine
+    from pagebirdy.translate.engine import Engine
 
     events = {"primary_started": None, "secondary_started": None}
 
@@ -129,7 +129,7 @@ def test_primary_and_secondary_run_concurrently():
 
 
 def test_secondary_failure_does_not_block_or_fail_primary():
-    from babel.translate.engine import Engine
+    from pagebirdy.translate.engine import Engine
 
     class BrokenSecondary(Engine):
         name = "broken"

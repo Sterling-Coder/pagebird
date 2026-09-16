@@ -7,9 +7,9 @@ See tests/test_rtl.py for the assertion that guards it.
 import fitz
 import pytest
 
-from babel import fonts, languages
-from babel.models import Segment
-from babel.reassemble.pdf import _font_for
+from pagebirdy import fonts, languages
+from pagebirdy.models import Segment
+from pagebirdy.reassemble.pdf import _font_for
 
 
 

@@ -1,5 +1,5 @@
-from babel.models import Segment
-from babel.review.store import ReviewStore
+from pagebirdy.models import Segment
+from pagebirdy.review.store import ReviewStore
 
 
 def _seg(sid, source, target, status="approved"):

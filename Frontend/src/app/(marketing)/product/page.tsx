@@ -24,7 +24,7 @@ const DEEP_DIVES = [
   },
 ];
 
-const FORMATS = [".docx", ".pdf", ".pptx", ".xlsx", ".idml", ".srt", ".html", ".xliff"];
+const FORMATS = [".idml", ".pdf", ".indd", ".docx", ".pptx", ".xlsx", ".srt", ".html", ".xliff"];
 
 export default function ProductPage() {
   return (

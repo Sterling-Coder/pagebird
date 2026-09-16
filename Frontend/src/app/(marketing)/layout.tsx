@@ -8,7 +8,7 @@ import { ParallaxCurves } from "@/components/ParallaxCurves";
 export const metadata: Metadata = {
   title: "Pagebirdy — Document translation that keeps the document",
   description:
-    "Pagebirdy translates DOCX, PDF, PPTX and InDesign files into 40+ languages and returns them with every column, table, footnote and page break exactly where it was.",
+    "Pagebirdy translates InDesign (IDML) files into 40+ languages and returns them with every font, column, table, footnote and page break exactly where it was — plus DOCX, PDF, PPTX and more.",
 };
 
 const fraunces = Fraunces({

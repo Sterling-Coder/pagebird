@@ -2,7 +2,7 @@ import logging
 
 from fastapi.testclient import TestClient
 
-import babel.api as api
+import pagebirdy.api as api
 
 
 def _client(tmp_path):
@@ -39,12 +39,12 @@ def test_get_job_404(tmp_path):
 
 def test_get_logs_returns_new_lines_since_cursor(tmp_path):
     # The client-facing panel only ever shows explicit `_activity()` calls —
-    # plain internal `logger.info` on babel.* loggers must NOT reach it (that
+    # plain internal `logger.info` on pagebirdy.* loggers must NOT reach it (that
     # used to leak stack traces/file paths/thread-pool internals to an
     # unauthenticated, client-visible endpoint). It's also scoped per caller:
     # a line logged for a different owner_id must not come back for this one.
     client = _client(tmp_path)
-    logging.getLogger("babel.api").info("internal-marker")
+    logging.getLogger("pagebirdy.api").info("internal-marker")
     api._activity("marker-one", owner_id="user-a")
     api._activity("someone-elses-activity", owner_id="user-b")
     res = client.get("/api/logs")
@@ -63,8 +63,8 @@ def test_get_logs_returns_new_lines_since_cursor(tmp_path):
 
 
 def test_delete_job(tmp_path):
-    from babel.models import Segment
-    from babel.review.store import ReviewStore
+    from pagebirdy.models import Segment
+    from pagebirdy.review.store import ReviewStore
 
     client = _client(tmp_path)
     seg = Segment(id="a", page=0, bbox=(0, 0, 1, 1), font="f", size=11, color=0,
@@ -108,8 +108,8 @@ def test_delete_project(tmp_path):
 
 
 def test_job_history_endpoint(tmp_path):
-    from babel.models import Segment
-    from babel.review.store import ReviewStore
+    from pagebirdy.models import Segment
+    from pagebirdy.review.store import ReviewStore
 
     client = _client(tmp_path)
     seg = Segment(id="a", page=0, bbox=(0, 0, 1, 1), font="f", size=11, color=0,
@@ -201,8 +201,8 @@ def test_delete_folder_404(tmp_path):
 
 
 def test_list_files_scoped_by_folder(tmp_path):
-    from babel.models import Segment
-    from babel.review.store import ReviewStore
+    from pagebirdy.models import Segment
+    from pagebirdy.review.store import ReviewStore
 
     client = _client(tmp_path)
     project_id = client.post("/api/projects", json={"name": "Testing"}).json()["id"]

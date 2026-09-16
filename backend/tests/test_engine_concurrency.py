@@ -1,6 +1,6 @@
 import time
 
-from babel.translate.engine import _ChunkedEngine, _CHUNK
+from pagebirdy.translate.engine import _ChunkedEngine, _CHUNK
 
 
 def test_translate_preserves_order_regardless_of_completion_order():
@@ -35,7 +35,7 @@ def test_translate_runs_chunks_concurrently():
 
 
 def test_translate_falls_back_to_source_on_chunk_failure_and_records_it(monkeypatch):
-    import babel.translate.engine as engine_mod
+    import pagebirdy.translate.engine as engine_mod
     monkeypatch.setattr(engine_mod, "_CHUNK_RETRY_DELAY", 0)
 
     class Engine(_ChunkedEngine):
@@ -90,7 +90,7 @@ def test_translate_chunk_splits_on_persistent_miscount(monkeypatch):
     # into one output line) — every retry of the SAME chunk fails identically
     # since it isn't a transient network/rate-limit blip. Splitting the chunk
     # isolates the one colliding pair instead of losing the whole batch.
-    import babel.translate.engine as engine_mod
+    import pagebirdy.translate.engine as engine_mod
     monkeypatch.setattr(engine_mod, "_CHUNK_RETRY_DELAY", 0)
 
     # "dup-a" and "dup-b" are the pair the fake model always conflates,
@@ -120,7 +120,7 @@ def test_translate_chunk_retries_and_succeeds_on_second_attempt(monkeypatch):
     # A single bad sample (malformed JSON, wrong item count) shouldn't
     # permanently sink a chunk — retrying the same chunk often succeeds
     # since LLM sampling is non-deterministic.
-    import babel.translate.engine as engine_mod
+    import pagebirdy.translate.engine as engine_mod
     monkeypatch.setattr(engine_mod, "_CHUNK_RETRY_DELAY", 0)
 
     calls = {"n": 0}
@@ -151,8 +151,8 @@ def test_translate_empty_input_returns_empty():
 def test_deepl_engine_chunks_large_input(monkeypatch):
     import deepl
 
-    from babel.translate.engine import DeepLEngine, _CHUNK
-    from babel import languages
+    from pagebirdy.translate.engine import DeepLEngine, _CHUNK
+    from pagebirdy import languages
 
     calls = []
 

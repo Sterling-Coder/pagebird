@@ -2,7 +2,7 @@ import zipfile
 
 import fitz
 
-from babel.idml.render import render_idml_to_pdf
+from pagebirdy.idml.render import render_idml_to_pdf
 
 AR_TEXT = "الصفحة 12 من 25"
 

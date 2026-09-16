@@ -1,6 +1,6 @@
 import pytest
 
-from babel.translate.engine import IdentityEngine, _parse_batch, build_engines
+from pagebirdy.translate.engine import IdentityEngine, _parse_batch, build_engines
 
 
 def test_defaults_to_identity_offline(monkeypatch):
@@ -18,10 +18,10 @@ def test_openai_preferred_when_both_keys_present(monkeypatch):
     monkeypatch.setenv("ANTHROPIC_API_KEY", "y")
     monkeypatch.delenv("BABEL_LLM_PROVIDER", raising=False)
     # A developer .env is loaded into os.environ by config.load_env() as soon as
-    # anything imports babel.cli, so this assertion about the *default* model
+    # anything imports pagebirdy.cli, so this assertion about the *default* model
     # only holds if the override is cleared first.
     monkeypatch.delenv("BABEL_LLM_MODEL", raising=False)
-    import babel.translate.engine as eng
+    import pagebirdy.translate.engine as eng
 
     called = {}
 

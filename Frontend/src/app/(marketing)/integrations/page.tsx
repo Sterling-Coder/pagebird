@@ -89,8 +89,8 @@ export default function IntegrationsPage() {
           Wherever the file lives, Pagebirdy can reach it.
         </h1>
         <p className="mt-5.5 max-w-xl text-[17px] leading-relaxed text-pb-muted">
-          Watch a folder, connect a repo, or call the API directly. New and updated
-          files come back translated without anyone opening Pagebirdy.
+          Watch a folder, connect a repo, or call the API directly — no one has to
+          open Pagebirdy for a file to come back translated. On the roadmap, coming soon.
         </p>
       </section>
 
@@ -98,31 +98,36 @@ export default function IntegrationsPage() {
         {INTEGRATIONS.map((item, i) => (
           <div
             key={item.title}
-            className={`flex flex-col gap-3 border-pb-card-ink/15 p-8 ${
+            className={`relative flex flex-col gap-3 border-pb-card-ink/15 p-8 ${
               i % 4 !== 3 ? "sm:border-r-[3px]" : ""
             } ${i < INTEGRATIONS.length - (INTEGRATIONS.length % 4 || 4) ? "border-b-[3px]" : "border-b-[3px] md:border-b-0"}`}
           >
-            <svg
-              width="26"
-              height="26"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              {item.icon}
-            </svg>
-            <h3 className="text-base font-bold">{item.title}</h3>
-            <p className="text-pb-card-muted text-[13px] leading-relaxed">{item.body}</p>
+            <div className="pointer-events-none flex flex-col gap-3 opacity-60 blur-[3px] select-none">
+              <svg
+                width="26"
+                height="26"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                {item.icon}
+              </svg>
+              <h3 className="text-base font-bold">{item.title}</h3>
+              <p className="text-pb-card-muted text-[13px] leading-relaxed">{item.body}</p>
+            </div>
+            <span className="font-pb-mono-brand absolute top-8 right-8 border border-pb-accent bg-pb-ink px-2 py-0.75 text-[9.5px] font-bold tracking-wide text-pb-accent uppercase">
+              Coming soon
+            </span>
           </div>
         ))}
       </section>
 
       <section className="flex flex-col items-start justify-between gap-6 bg-pb-ink px-6 py-14 text-pb-paper md:flex-row md:items-center md:px-14">
         <h2 className="font-pb-display max-w-lg text-2xl md:text-3xl">
-          Don&rsquo;t see yours? We ship new integrations monthly.
+          Don&rsquo;t see yours? We&rsquo;re shipping new integrations soon.
         </h2>
         <Link
           href="/contact"

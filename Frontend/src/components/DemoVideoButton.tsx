@@ -14,6 +14,16 @@ export function DemoVideoButton() {
     return () => document.removeEventListener("keydown", onKey);
   }, [open]);
 
+  // Lets other buttons on the page (e.g. the hero's "Watch demo") open this
+  // same modal instead of duplicating the video/state elsewhere.
+  useEffect(() => {
+    function onOpen() {
+      setOpen(true);
+    }
+    window.addEventListener("pb-open-demo-video", onOpen);
+    return () => window.removeEventListener("pb-open-demo-video", onOpen);
+  }, []);
+
   return (
     <>
       <button

@@ -3,7 +3,7 @@
 import fitz
 import pytest
 
-from babel.reassemble.pdf import mirror_bbox, mirror_page
+from pagebirdy.reassemble.pdf import mirror_bbox, mirror_page
 
 
 def _ink_x_range(page, dpi=72):

@@ -1,6 +1,6 @@
 """The language catalogue the UI builds its picker from."""
 
-from babel import languages
+from pagebirdy import languages
 
 
 def test_listing_exposes_direction_for_each_language():
