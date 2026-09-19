@@ -4,11 +4,41 @@ import { Resend } from "resend";
 const CONTACT_TO_EMAIL = process.env.CONTACT_TO_EMAIL ?? "founder@thepagebirdy.com";
 const CONTACT_FROM_EMAIL = process.env.CONTACT_FROM_EMAIL ?? "onboarding@resend.dev";
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const NAME_MAX = 200;
+const COMPANY_MAX = 200;
+const MESSAGE_MAX = 5000;
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX = 3;
+
+// Best-effort only: resets per serverless instance, but still blocks casual
+// abuse of this route as a free email relay to arbitrary addresses.
+const submissionsByIp = new Map<string, number[]>();
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const timestamps = (submissionsByIp.get(ip) ?? []).filter(
+    (t) => now - t < RATE_LIMIT_WINDOW_MS
+  );
+  if (timestamps.length >= RATE_LIMIT_MAX) {
+    submissionsByIp.set(ip, timestamps);
+    return true;
+  }
+  timestamps.push(now);
+  submissionsByIp.set(ip, timestamps);
+  return false;
+}
+
 export async function POST(request: Request) {
   const resendApiKey = process.env.RESEND_API_KEY;
   if (!resendApiKey) {
     console.error("RESEND_API_KEY is not configured");
     return NextResponse.json({ error: "Contact form is not configured." }, { status: 500 });
+  }
+
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  if (isRateLimited(ip)) {
+    return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429 });
   }
 
   let body: { name?: string; email?: string; company?: string; message?: string };
@@ -18,13 +48,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
 
-  const name = body.name?.trim();
+  const name = body.name?.trim().slice(0, NAME_MAX);
   const email = body.email?.trim();
-  const company = body.company?.trim() ?? "";
-  const message = body.message?.trim() ?? "";
+  const company = body.company?.trim().slice(0, COMPANY_MAX) ?? "";
+  const message = body.message?.trim().slice(0, MESSAGE_MAX) ?? "";
 
-  if (!name || !email) {
-    return NextResponse.json({ error: "Name and email are required." }, { status: 400 });
+  if (!name || !email || !EMAIL_RE.test(email)) {
+    return NextResponse.json({ error: "A valid name and email are required." }, { status: 400 });
   }
 
   const resend = new Resend(resendApiKey);

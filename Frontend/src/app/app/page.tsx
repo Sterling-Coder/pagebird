@@ -109,7 +109,6 @@ export default function AppWorkspacePage() {
                     />
                   </th>
                   <th className="py-2">Name</th>
-                  <th className="py-2">Progress</th>
                   <th className="py-2">Status</th>
                   <th className="py-2">Source</th>
                   <th className="py-2">Client</th>
@@ -145,18 +144,6 @@ export default function AppWorkspacePage() {
                         </svg>
                         {p.name}
                       </span>
-                    </td>
-                    <td className="py-2">
-                      <div className="h-4 w-24 overflow-hidden border border-rule">
-                        <div
-                          className={`h-full ${p.status === "failed" ? "bg-red/40" : "bg-red"}`}
-                          style={{
-                            width: p.file_count > 0
-                              ? `${Math.round(((p.status_counts.complete ?? 0) / p.file_count) * 100)}%`
-                              : "0%",
-                          }}
-                        />
-                      </div>
                     </td>
                     <td className="py-2 text-red">{p.status}</td>
                     <td className="py-2 text-ink-soft">
