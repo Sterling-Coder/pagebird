@@ -72,6 +72,19 @@ export async function getProject(projectId: string): Promise<Project> {
   return res.json();
 }
 
+export async function updateProject(
+  projectId: string,
+  fields: { client?: string; vendor?: string; deadline?: number }
+): Promise<Project> {
+  const res = await fetch(`${API_BASE_URL}/api/projects/${projectId}`, {
+    method: "PATCH",
+    headers: { ...(await authHeaders()), "Content-Type": "application/json" },
+    body: JSON.stringify(fields),
+  });
+  if (!res.ok) throw new Error(`Failed to update project (${res.status})`);
+  return res.json();
+}
+
 export async function deleteProject(projectId: string): Promise<void> {
   const res = await fetch(`${API_BASE_URL}/api/projects/${projectId}`, {
     method: "DELETE",

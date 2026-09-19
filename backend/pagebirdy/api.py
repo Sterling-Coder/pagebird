@@ -472,6 +472,12 @@ class ProjectCreate(BaseModel):
     deadline: float | None = None
 
 
+class ProjectUpdate(BaseModel):
+    client: str | None = None
+    vendor: str | None = None
+    deadline: float | None = None
+
+
 class FolderCreate(BaseModel):
     name: str
     parent_folder_id: str | None = None
@@ -526,6 +532,21 @@ def get_project(project_id: str, user: dict = Depends(require_user)) -> dict:
     s = _store()
     try:
         return _assert_owns_project(s, project_id, user)
+    finally:
+        s.close()
+
+
+@app.patch("/api/projects/{project_id}")
+def update_project(project_id: str, body: ProjectUpdate, user: dict = Depends(require_user)) -> dict:
+    """Edits a project's own free-text fields — client, vendor, deadline.
+    Any field left out of the request body is left untouched (see
+    `ReviewStore.update_project`)."""
+    s = _store()
+    try:
+        _assert_owns_project(s, project_id, user)
+        s.update_project(project_id, client=body.client, vendor=body.vendor,
+                         deadline=body.deadline)
+        return s.get_project(project_id)
     finally:
         s.close()
 

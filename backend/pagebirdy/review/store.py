@@ -403,6 +403,27 @@ class ReviewStore:
         self.conn.commit()
         return project_id
 
+    def update_project(
+        self, project_id: str, *,
+        client: str | None = None, vendor: str | None = None,
+        deadline: float | None = None,
+    ) -> None:
+        """Patches a project's own free-text/admin fields. Only the fields the
+        caller actually passed are touched — `None` here means "leave it
+        alone", not "clear it" (an editable-in-place UI field saves one
+        value at a time, and a save of `client` must not wipe `vendor`)."""
+        sets, params = [], []
+        for column, value in (("client", client), ("vendor", vendor), ("deadline", deadline)):
+            if value is not None:
+                sets.append(f"{column} = %s")
+                params.append(value)
+        if not sets:
+            return
+        params.append(project_id)
+        with self.conn.cursor() as cur:
+            cur.execute(f"UPDATE review_projects SET {', '.join(sets)} WHERE id = %s", params)
+        self.conn.commit()
+
     def set_project_target_lang_if_unset(self, project_id: str, target_lang: str) -> None:
         """Backfill a project's target language from its first translated file,
         so projects created before a language was chosen still show a real

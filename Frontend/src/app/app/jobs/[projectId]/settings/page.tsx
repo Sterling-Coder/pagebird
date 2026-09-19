@@ -2,10 +2,72 @@
 
 import { Fragment, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { getProject, listAllProjectFiles, type Project, type JobSummary } from "@/lib/projects";
+import { getProject, updateProject, listAllProjectFiles, type Project, type JobSummary } from "@/lib/projects";
 import { getJobEval, evalDownloadUrl, type EvalReport } from "@/lib/translate";
 import { downloadAuthed } from "@/lib/supabase/authFetch";
 import { QaDetail } from "@/components/app/QaDetail";
+
+/** A dd value that turns into a text input on click, saves on blur/Enter,
+ * reverts on Escape. Lets "Client"/"Vendor" hold whatever free text the
+ * user wants instead of being permanently stuck at "—" — there was no way
+ * to set either after a project's creation until this existed. */
+function EditableField({
+  value,
+  placeholder,
+  onSave,
+}: {
+  value: string | null;
+  placeholder: string;
+  onSave: (next: string) => Promise<void>;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(value ?? "");
+  const [saving, setSaving] = useState(false);
+
+  if (!editing) {
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          setDraft(value ?? "");
+          setEditing(true);
+        }}
+        className="text-left text-ink hover:underline"
+      >
+        {value || <span className="text-muted">{placeholder}</span>}
+      </button>
+    );
+  }
+
+  async function commit() {
+    setSaving(true);
+    try {
+      if (draft !== (value ?? "")) await onSave(draft);
+    } finally {
+      setSaving(false);
+      setEditing(false);
+    }
+  }
+
+  return (
+    <input
+      autoFocus
+      value={draft}
+      disabled={saving}
+      placeholder={placeholder}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+        if (e.key === "Escape") {
+          setDraft(value ?? "");
+          setEditing(false);
+        }
+      }}
+      className="w-full border border-rule bg-paper px-1.5 py-0.5 text-ink outline-none focus:border-ink disabled:opacity-50"
+    />
+  );
+}
 
 export default function ProjectSettingsPage() {
   const params = useParams<{ projectId: string }>();
@@ -103,9 +165,27 @@ export default function ProjectSettingsPage() {
         <dt className="text-muted">Status</dt>
         <dd className="text-red">{project?.status ?? "—"}</dd>
         <dt className="text-muted">Client</dt>
-        <dd>{project?.client ?? "—"}</dd>
+        <dd>
+          <EditableField
+            value={project?.client ?? null}
+            placeholder="Add client"
+            onSave={async (next) => {
+              const updated = await updateProject(params.projectId, { client: next });
+              setProject(updated);
+            }}
+          />
+        </dd>
         <dt className="text-muted">Vendor</dt>
-        <dd>{project?.vendor ?? "—"}</dd>
+        <dd>
+          <EditableField
+            value={project?.vendor ?? null}
+            placeholder="Add vendor"
+            onSave={async (next) => {
+              const updated = await updateProject(params.projectId, { vendor: next });
+              setProject(updated);
+            }}
+          />
+        </dd>
       </dl>
 
       {Object.keys(results).length > 0 ? (
