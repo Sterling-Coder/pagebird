@@ -15,6 +15,8 @@ whether the text still fits once InDesign reflows it.
     This is the IDML equivalent of the PDF path's `skipped_math`.
   * `asset_preservation` — every non-Stories ZIP entry (Spreads, Resources,
     links) must be byte-identical. A changed spread means geometry moved.
+    (The auto-size attributes `_auto_size_frames` writes on a translated
+    story's frames are the one deliberate exception — see `_same_asset`.)
   * `overset_frames` — the real fit metric, and the one thing only InDesign can
     answer. See `overset_from_export` for how to source it.
 
@@ -30,7 +32,9 @@ import zipfile
 
 from lxml import etree
 
-from pagebirdy.idml.package import _font_of, _iter_content, _localname, is_math_font
+from pagebirdy.idml.package import (
+    _XML_PARSER, IdmlPackage, _content_text, _iter_content, _localname, is_math_font,
+)
 
 
 def _stories(path: str) -> tuple[dict[str, etree._Element], dict[str, bytes]]:
@@ -41,10 +45,39 @@ def _stories(path: str) -> tuple[dict[str, etree._Element], dict[str, bytes]]:
         for name in z.namelist():
             data = z.read(name)
             if name.startswith("Stories/") and name.endswith(".xml"):
-                stories[name] = etree.fromstring(data)
+                stories[name] = etree.fromstring(data, parser=_XML_PARSER)
             else:
                 others[name] = data
     return stories, others
+
+
+# The attributes `IdmlPackage._auto_size_frames` writes on a translated
+# story's frames. Growing a frame downward is deliberate, not moved geometry,
+# so a Spread/MasterSpread that differs ONLY in these still counts as
+# preserved. Anything else — ItemTransform, path geometry, other prefs — is
+# still a change.
+_AUTO_SIZE_ATTRS = ("AutoSizingType", "AutoSizingReferencePoint",
+                    "UseMinimumHeightForAutoSizing", "MinimumHeightForAutoSizing")
+
+
+def _strip_auto_size(data: bytes) -> bytes:
+    tree = etree.fromstring(data, parser=_XML_PARSER)
+    for el in tree.iter():
+        if _localname(el) == "TextFramePreference":
+            for attr in _AUTO_SIZE_ATTRS:
+                el.attrib.pop(attr, None)
+    return etree.tostring(tree)
+
+
+def _same_asset(name: str, src: bytes, out: bytes) -> bool:
+    if src == out:
+        return True
+    if not (name.startswith("Spreads/") or name.startswith("MasterSpreads/")):
+        return False
+    try:
+        return _strip_auto_size(src) == _strip_auto_size(out)
+    except etree.XMLSyntaxError:
+        return False
 
 
 def _ancestor(el, localname: str):
@@ -77,6 +110,12 @@ def evaluate(src_idml: str, out_idml: str, export_json: str | None = None) -> di
     """Every axis-C IDML metric, comparing source and translated packages."""
     src_stories, src_others = _stories(src_idml)
     out_stories, out_others = _stories(out_idml)
+    # Font resolution must match the package's own (inline AppliedFont, else
+    # the CharacterStyle/ParagraphStyle BasedOn chain): real files declare
+    # the math face on a named character style, not on the run, and an
+    # inline-only read would score a corrupted glyph run as translated prose.
+    src_font = IdmlPackage(src_idml)._effective_font
+    out_font = IdmlPackage(out_idml)._effective_font
     src_runs, out_runs = _runs(src_stories), _runs(out_stories)
 
     src_total = sum(len(v) for v in src_runs.values())
@@ -94,11 +133,11 @@ def evaluate(src_idml: str, out_idml: str, export_json: str | None = None) -> di
             })
             continue
         for i, (s, o) in enumerate(zip(s_nodes, o_nodes)):
-            s_text, o_text = s.text or "", o.text or ""
+            s_text, o_text = _content_text(s)[0], _content_text(o)[0]
             if not s_text.strip():
                 continue
             comparable += 1
-            s_font, o_font = _font_of(s), _font_of(o)
+            s_font, o_font = src_font(s), out_font(o)
             if s_font != o_font:
                 font_overrides += 1
             if _style_key(s) != _style_key(o):
@@ -113,14 +152,14 @@ def evaluate(src_idml: str, out_idml: str, export_json: str | None = None) -> di
 
     math_runs = sum(
         1 for name, nodes in src_runs.items() for n in nodes
-        if (n.text or "").strip() and is_math_font(_font_of(n))
+        if _content_text(n)[0].strip() and is_math_font(src_font(n))
     )
     prose_runs = comparable - math_runs
 
     # --- non-Stories entries must be byte-identical ----------------------
     changed_assets = sorted(
         name for name in src_others
-        if name in out_others and src_others[name] != out_others[name]
+        if name in out_others and not _same_asset(name, src_others[name], out_others[name])
     )
     missing_assets = sorted(set(src_others) - set(out_others))
 

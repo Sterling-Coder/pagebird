@@ -69,50 +69,68 @@ INTEGRITY_ROWS = [
     ("language_id", "Detected language correct"),
 ]
 
-_CSS = """
-* { font-family: body; }
-h1 { font-size: 16px; margin: 0 0 3px 0; }
-h2 { font-size: 11px; color: #1F4E79; margin: 22px 0 8px 0; }
-p { font-size: 8.5px; margin: 0 0 5px 0; }
-p.meta { color: #6b7280; font-size: 8px; margin: 0 0 2px 0; }
-p.note { color: #6b7280; font-size: 8px; margin: 4px 0 10px 0; }
-p.verdict-pass { color: #15803d; font-size: 12px; font-weight: bold; margin: 14px 0 4px 0; }
-p.verdict-fail { color: #dc2626; font-size: 12px; font-weight: bold; margin: 14px 0 4px 0; }
-p.overall { font-size: 18px; margin: 18px 0 3px 0; }
-p.lead { font-size: 9.5px; margin: 10px 0 9px 0; }
-ul.lead { font-size: 9.5px; margin: 0 0 10px 0; }
-li { font-size: 9.5px; margin: 0 0 4px 0; }
+# pagebirdy's own palette (see Frontend/src/app/globals.css --color-* tokens) —
+# a report that looks like a foreign tool exported it undercuts the "this is a
+# real, considered product" impression the report itself is trying to build.
+_INK = "#15130f"
+_INK_SOFT = "#4a463d"
+_MUTED = "#6e6a61"
+_RULE = "#dad4c7"
+_RED = "#e08a6f"  # the app's single accent color — used for both brand and "fail"
+_BRAND_BG = "#153a2e"  # the sidebar's dark green
+_BRAND_FG = "#f2ede0"  # the sidebar's cream wordmark color
+
+_CSS = f"""
+* {{ font-family: body; color: {_INK}; }}
+/* The wordmark banner: same two colors as the app's own sidebar logo
+   (page<span class="brand-accent">birdy</span>), just reproduced in a base-14
+   italic serif since Fraunces has no font file to embed here — the shape of
+   the brand (cream-on-dark-green, coral second half) reads the same either way. */
+p.brand {{ background-color: {_BRAND_BG}; color: {_BRAND_FG}; font-size: 15px;
+           font-style: italic; padding: 9px 12px; margin: 0 0 16px 0; }}
+span.brand-accent {{ color: {_RED}; font-style: italic; }}
+h1 {{ font-size: 16px; margin: 0 0 3px 0; color: {_INK}; }}
+h2 {{ font-size: 11px; color: {_INK_SOFT}; margin: 22px 0 8px 0; }}
+p {{ font-size: 8.5px; margin: 0 0 5px 0; }}
+p.meta {{ color: {_MUTED}; font-size: 8px; margin: 0 0 2px 0; }}
+p.note {{ color: {_MUTED}; font-size: 8px; margin: 4px 0 10px 0; }}
+p.verdict-pass {{ color: {_INK}; font-size: 12px; font-weight: bold; margin: 14px 0 4px 0; }}
+p.verdict-fail {{ color: {_RED}; font-size: 12px; font-weight: bold; margin: 14px 0 4px 0; }}
+p.overall {{ font-size: 18px; margin: 18px 0 3px 0; }}
+p.lead {{ font-size: 9.5px; margin: 10px 0 9px 0; }}
+ul.lead {{ font-size: 9.5px; margin: 0 0 10px 0; }}
+li {{ font-size: 9.5px; margin: 0 0 4px 0; }}
 
 /* Ruled tables: every figure sits in its own cell with a visible boundary, so a
    long reason in the last column cannot be misread as belonging to the row
    above or below. `border-collapse` is required — without it Story draws a
    separate box per cell and the rules double up. */
-table { width: 100%; margin: 6px 0 14px 0; border-collapse: collapse; }
+table {{ width: 100%; margin: 6px 0 14px 0; border-collapse: collapse; }}
 /* No background fill on the header: Story leaks table-cell shading onto later
    pages as stray grey bars. Weight and rule colour carry the header instead. */
-th { font-size: 7.5px; color: #4b5563; text-align: left; font-weight: bold;
-     border: 1px solid #c8d0da; padding: 4px 6px; }
-td { font-size: 8.5px; border: 1px solid #d9e0e8; padding: 4px 6px; }
-td.num { text-align: right; }
-td.pass { color: #15803d; font-weight: bold; }
-td.fail { color: #dc2626; font-weight: bold; }
-td.skip { color: #9ca3af; }
-tr.skip td { color: #9ca3af; }
-td.why { color: #6b7280; font-size: 8px; }
+th {{ font-size: 7.5px; color: {_MUTED}; text-align: left; font-weight: bold;
+     border: 1px solid {_RULE}; padding: 4px 6px; }}
+td {{ font-size: 8.5px; border: 1px solid {_RULE}; padding: 4px 6px; color: {_INK}; }}
+td.num {{ text-align: right; }}
+td.pass {{ color: {_INK}; font-weight: bold; }}
+td.fail {{ color: {_RED}; font-weight: bold; }}
+td.skip {{ color: {_MUTED}; }}
+tr.skip td {{ color: {_MUTED}; }}
+td.why {{ color: {_MUTED}; font-size: 8px; }}
 
 /* The glossary at the end is read top to bottom, so each entry is a stanza:
    the metric name in bold, its explanation in normal weight, the formula
    indented beneath, then a rule before the next one. The rule is what stops the
    definitions reading as one continuous wall of text. */
-p.def { font-size: 8.5px; font-weight: normal;
+p.def {{ font-size: 8.5px; font-weight: normal;
         margin: 0 0 4px 0; padding: 11px 0 0 0;
-        border-top: 1px solid #e3e8ee; }
-p.def b { font-weight: bold; }
+        border-top: 1px solid {_RULE}; }}
+p.def b {{ font-weight: bold; }}
 /* The rule sits above the term, not below the formula, so an entry whose
    explanation carries several formula lines stays one block instead of being
    sliced between them. */
-p.defformula { font-family: mono; font-size: 7.5px; color: #1F4E79;
-               margin: 0 0 5px 14px; }
+p.defformula {{ font-family: mono; font-size: 7.5px; color: {_INK_SOFT};
+               margin: 0 0 5px 14px; }}
 """
 
 
@@ -550,13 +568,18 @@ def _font_css(lang: str | None) -> tuple[str, fitz.Archive | None]:
         # Base-14 fallback. Latin-only, but better than failing the download.
         return "* { font-family: sans-serif; }\n", None
 
-    css = f"@font-face {{ font-family: body; src: url({os.path.basename(regular)}); }}\n"
+    # Quoted: an unquoted `url(...)` is only valid CSS when the filename has no
+    # spaces, and a real installed face routinely does ("Arial Bold.ttf" on
+    # macOS) — that silently aborted the CSS parser mid-stylesheet, taking
+    # every rule after it down with it (font, colors, the lot), not just the
+    # bold face.
+    css = f'@font-face {{ font-family: body; src: url("{os.path.basename(regular)}"); }}\n'
     bold = first("bold")
     # Only useful when it is a genuinely different file — the CJK registry maps
     # some scripts to one face for every weight.
     if bold and bold != regular:
-        css += (f"@font-face {{ font-family: body; font-weight: bold; "
-                f"src: url({os.path.basename(bold)}); }}\n")
+        css += (f'@font-face {{ font-family: body; font-weight: bold; '
+                f'src: url("{os.path.basename(bold)}"); }}\n')
     archive = fitz.Archive(os.path.dirname(regular))
     if bold and os.path.dirname(bold) != os.path.dirname(regular):
         archive.add(os.path.dirname(bold))
@@ -844,6 +867,14 @@ def _glossary(gates: dict, layout: dict, integrity: dict, quality: dict,
 
 def build_html(result: dict) -> str:
     """The report as Story-compatible HTML."""
+    if result.get("not_applicable"):
+        title = result.get("original_filename") or result.get("job_id") or "document"
+        return (
+            "<p class='brand'>page<span class='brand-accent'>birdy</span></p>"
+            f"<h1>Accuracy report — {_esc(title)}</h1>"
+            f"<p class='note'>QA not applicable: {_esc(result.get('reason', 'nothing to score'))}</p>"
+        )
+
     gates = result.get("gates", {}) or {}
     integrity = result.get("integrity", {}) or {}
     layout = result.get("layout", {}) or {}
@@ -866,10 +897,16 @@ def build_html(result: dict) -> str:
     fmt_name = {"pdf": "PDF", "idml": "InDesign (IDML)",
                 "indd": "InDesign (INDD)"}.get(fmt, fmt.upper() or "unknown")
 
-    # No filename / format / count strip under the title: the opening sentence
-    # already names the languages, and a row of counts is the first thing that
-    # makes this look like a technical printout rather than a summary.
-    parts = [f"<h1>Accuracy report</h1>"]
+    segments = (result.get("integrity") or {}).get("segments")
+
+    parts = [
+        "<p class='brand'>page<span class='brand-accent'>birdy</span></p>",
+        f"<h1>Accuracy report — {_esc(title)}</h1>",
+        f"<p class='meta'>{_esc(fmt_name)} &#8226; target language {_esc(target_name)}"
+        + (f" &#8226; {segments} segment{'s' if segments != 1 else ''}"
+           if isinstance(segments, int) else "")
+        + "</p>",
+    ]
 
     overall = result.get("overall") or {}
     passed = bool(gates.get("passed"))

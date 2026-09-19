@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { getProject, listAllProjectFiles, type Project, type JobSummary } from "@/lib/projects";
 import { getJobEval, evalDownloadUrl, type EvalReport } from "@/lib/translate";
 import { downloadAuthed } from "@/lib/supabase/authFetch";
+import { QaDetail } from "@/components/app/QaDetail";
 
 export default function ProjectSettingsPage() {
   const params = useParams<{ projectId: string }>();
@@ -13,6 +14,7 @@ export default function ProjectSettingsPage() {
   const [checking, setChecking] = useState(false);
   const [results, setResults] = useState<Record<string, EvalReport | { error: string }>>({});
   const [downloading, setDownloading] = useState(false);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     getProject(params.projectId).then(setProject).catch(() => setProject(null));
@@ -25,7 +27,7 @@ export default function ProjectSettingsPage() {
     await Promise.all(
       files.map(async (f) => {
         try {
-          next[f.id] = await getJobEval(f.id, true);
+          next[f.id] = await getJobEval(f.id, { refresh: true });
         } catch (err) {
           next[f.id] = { error: err instanceof Error ? err.message : "Failed" };
         }
@@ -47,6 +49,26 @@ export default function ProjectSettingsPage() {
       setDownloading(false);
     }
   }
+
+  function toggleExpanded(id: string) {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  const summaryCounts = (() => {
+    let passed = 0, failed = 0, na = 0;
+    for (const r of Object.values(results)) {
+      if ("error" in r) continue;
+      if (r.not_applicable) na += 1;
+      else if (r.overall?.gates_passed) passed += 1;
+      else failed += 1;
+    }
+    return { passed, failed, na };
+  })();
 
   return (
     <div className="p-6 text-sm text-ink-soft">
@@ -88,10 +110,14 @@ export default function ProjectSettingsPage() {
 
       {Object.keys(results).length > 0 ? (
         <div className="mt-6">
-          <p className="mb-2 font-mono text-[11px] uppercase tracking-widest text-muted">
-            QA results
-          </p>
-          <table className="w-full max-w-2xl border-collapse text-sm">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="font-mono text-[11px] uppercase tracking-widest text-muted">QA results</p>
+            <p className="font-mono text-[10px] uppercase tracking-widest text-muted">
+              {summaryCounts.passed} passed · {summaryCounts.failed} failed
+              {summaryCounts.na > 0 ? ` · ${summaryCounts.na} not applicable` : ""}
+            </p>
+          </div>
+          <table className="w-full max-w-4xl border-collapse text-sm">
             <thead>
               <tr className="border-b border-rule text-left font-mono text-[11px] uppercase tracking-widest text-muted">
                 <th className="py-2">File</th>
@@ -113,18 +139,47 @@ export default function ProjectSettingsPage() {
                     </tr>
                   );
                 }
+                const notApplicable = r.not_applicable;
                 const score = r.overall?.score;
                 const passed = r.overall?.gates_passed;
+                const isOpen = expanded.has(f.id);
                 return (
-                  <tr key={f.id} className="border-b border-rule">
-                    <td className="py-2 text-ink">{f.original_filename ?? f.id}</td>
-                    <td className="py-2 text-ink-soft">
-                      {typeof score === "number" ? `${Math.round(score * 100)}%` : "—"}
-                    </td>
-                    <td className={passed ? "py-2 text-ink" : "py-2 text-red"}>
-                      {passed === undefined ? "—" : passed ? "Passed" : "Failed"}
-                    </td>
-                  </tr>
+                  <Fragment key={f.id}>
+                    <tr
+                      onClick={() => toggleExpanded(f.id)}
+                      className="cursor-pointer border-b border-rule hover:bg-paper-dim"
+                    >
+                      <td className="py-2 text-ink">
+                        <span className="mr-2 inline-block w-3 text-muted">{isOpen ? "▾" : "▸"}</span>
+                        {f.original_filename ?? f.id}
+                      </td>
+                      <td className="py-2 text-ink-soft">
+                        {notApplicable
+                          ? "—"
+                          : typeof score === "number"
+                            ? `${Math.round(score * 100)}%`
+                            : "—"}
+                      </td>
+                      <td
+                        className={
+                          notApplicable
+                            ? "py-2 text-muted"
+                            : passed
+                              ? "py-2 text-ink"
+                              : "py-2 text-red"
+                        }
+                      >
+                        {notApplicable ? "Not applicable" : passed === undefined ? "—" : passed ? "Passed" : "Failed"}
+                      </td>
+                    </tr>
+                    {isOpen ? (
+                      <tr>
+                        <td colSpan={3} className="border-t border-rule bg-paper-dim p-0">
+                          <QaDetail report={r} />
+                        </td>
+                      </tr>
+                    ) : null}
+                  </Fragment>
                 );
               })}
             </tbody>

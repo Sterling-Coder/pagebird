@@ -955,6 +955,34 @@ def _border_average_color(page, rect: "fitz.Rect", dpi: int = 150) -> int:
     return (r << 16) | (g << 8) | b
 
 
+def _strip_ai_private_data(doc) -> None:
+    """Drop each page's `/PieceInfo /Illustrator /Private` stream.
+
+    A `.ai` file is a plain PDF page plus an opaque per-page "page-piece
+    dictionary" (PDF spec, private application data) where Illustrator stows
+    its own native artwork+layers. Illustrator prefers that native copy over
+    the PDF content stream whenever both exist, so a translation drawn only
+    into the content stream (the redact/redraw above never touches this
+    stream — fitz has no model of it, just an opaque xref) is invisible on
+    open: Acrobat/Preview/Quick Look read the PDF stream and show the
+    translation, Illustrator reads its stale native stream and shows the
+    original.
+
+    Deleting `/PieceInfo` removes the *reference* to that stream; `garbage=4`
+    on save then drops the now-unreferenced object entirely. With no native
+    data to prefer, Illustrator falls back to the PDF content stream itself —
+    the translated one — and rebuilds its layer panel from that page (from
+    real PDF Optional Content Groups if the source PDF has any, one default
+    layer otherwise). Any actual PDF/OCG layers in the content stream are
+    untouched by this — only Illustrator's separate proprietary shadow copy
+    is removed.
+    """
+    for pno in range(doc.page_count):
+        xref = doc[pno].xref
+        if doc.xref_get_key(xref, "PieceInfo")[0] != "null":
+            doc.xref_set_key(xref, "PieceInfo", "null")
+
+
 def rebuild_pdf(src_pdf: str, segments: list[Segment], out_path: str,
                 target_lang: str | None = None) -> list[LineOutcome]:
     lang = languages.get(target_lang)
@@ -1110,6 +1138,7 @@ def rebuild_pdf(src_pdf: str, segments: list[Segment], out_path: str,
                     outcomes.append(LineOutcome(s.id, pno, "skipped_untranslated",
                                                 "; ".join(s.notes)))
 
+        _strip_ai_private_data(doc)
         os.makedirs(os.path.dirname(os.path.abspath(out_path)), exist_ok=True)
         doc.save(out_path, garbage=4, deflate=True)
     finally:

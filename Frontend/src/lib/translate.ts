@@ -55,23 +55,56 @@ export async function getJobHistory(jobId: string): Promise<SegmentEvent[]> {
   return res.json();
 }
 
+export type GateCheck = {
+  gate: string;
+  status: "pass" | "fail" | "skip";
+  value: number | string | null;
+  why: string;
+  reason?: string;
+};
+
+export type EvalExplanation = { term: string; text: string; formula?: string };
+
 export type EvalReport = {
+  not_applicable?: boolean;
+  reason?: string;
+  job_id?: string;
+  format?: string;
+  target_lang?: string;
   overall?: {
     score: number | null;
     gates_passed: boolean;
     gates_failed: string[];
+    halves?: Record<string, { value: number; weight: number; metrics: string[] }>;
   };
   gates?: {
     passed: boolean;
     failed: string[];
     skipped: string[];
+    checks: GateCheck[];
   };
+  integrity?: { segments?: number };
+  layout_score?: {
+    score: number | null;
+    structural_only?: boolean;
+    reason?: string;
+    formula?: string;
+    missing?: string[];
+  };
+  explanations?: EvalExplanation[];
   needs_human_count?: number;
+  /** `cache_only=true` and nothing has been computed yet — never a computed
+   * result, just "nobody has run QA check on this job". */
+  not_computed?: boolean;
 };
 
-export async function getJobEval(jobId: string, refresh = false): Promise<EvalReport> {
+export async function getJobEval(
+  jobId: string,
+  opts: { refresh?: boolean; cacheOnly?: boolean } = {}
+): Promise<EvalReport> {
   const url = new URL(`${API_BASE_URL}/api/jobs/${jobId}/eval`);
-  if (refresh) url.searchParams.set("refresh", "true");
+  if (opts.refresh) url.searchParams.set("refresh", "true");
+  if (opts.cacheOnly) url.searchParams.set("cache_only", "true");
   const res = await fetch(url, { headers: await authHeaders() });
   if (!res.ok) throw new Error(`Failed to load eval (${res.status})`);
   return res.json();

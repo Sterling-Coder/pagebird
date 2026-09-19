@@ -38,9 +38,9 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from pydantic import BaseModel, UUID4
 
 from pagebirdy import languages, storage
-from pagebirdy.auth import (effective_owner_ids, get_or_create_profile, invalidate_owner_ids_cache,
-                        require_trial_active, require_user)
-from pagebirdy.pipeline import (rebuild_from_edits, regenerate_idml_from_review, translate_idml,
+from pagebirdy.auth import (effective_owner_ids, get_or_create_profile, get_profile_names,
+                        invalidate_owner_ids_cache, require_trial_active, require_user)
+from pagebirdy.pipeline import (rebuild_from_edits, translate_idml,
                             translate_links_folder, translate_pdf)
 from pagebirdy.review.store import ReviewStore
 
@@ -196,9 +196,8 @@ def _find_owned_job(job_id: str, user: dict) -> dict:
 
 def _materialize_job_files(job: dict) -> tuple[str, str]:
     """Downloads a job's current source/output from Storage into a fresh
-    local temp dir. Pipeline functions (rebuild_from_edits,
-    regenerate_idml_from_review) predate Storage and want real files on
-    disk; this lets them run unmodified via their source_path/output_path
+    local temp dir. `rebuild_from_edits` predates Storage and wants real
+    files on disk; this lets it run unmodified via its source_path/output_path
     overrides. Returns (local_source, local_output) — local_output may not
     exist yet (it's a write target, not necessarily downloaded)."""
     import tempfile
@@ -598,12 +597,15 @@ def list_project_files(project_id: str, folder_id: str | None = None,
         jobs = s.list_jobs(created_by=effective_owner_ids(user["id"]))
     finally:
         s.close()
-    if all:
-        return [j for j in jobs if j.get("project_id") == project_id]
-    return [
-        j for j in jobs
-        if j.get("project_id") == project_id and j.get("folder_id") == folder_id
-    ]
+    scoped = ([j for j in jobs if j.get("project_id") == project_id] if all else
+              [j for j in jobs
+               if j.get("project_id") == project_id and j.get("folder_id") == folder_id])
+    # Resolve each job's raw created_by id to a display name in one batch
+    # call rather than the Files table showing the id or an empty dash.
+    names = get_profile_names([j.get("created_by") for j in scoped])
+    for j in scoped:
+        j["created_by_name"] = names.get(j.get("created_by"))
+    return scoped
 
 
 @app.get("/api/jobs/{job_id}")
@@ -678,26 +680,27 @@ def get_segment_history(job_id: str, seg_id: str, user: dict = Depends(require_u
 
 @app.post("/api/jobs/{job_id}/rebuild")
 async def rebuild_job(job_id: str, user: dict = Depends(require_user)) -> dict:
-    """Redraw a job's output file from the review store's current
+    """Redraw a PDF job's output file from the review store's current
     target/status per segment — call after editing/approving a segment so
-    the preview/download reflect it. PDF jobs re-extract and reassemble;
-    IDML jobs re-apply onto a fresh copy of the source .idml."""
+    the preview/download reflect it.
+
+    IDML jobs never reach here: there is no in-browser editor for `.idml`
+    (see the frontend file viewer, which skips straight to a download link
+    for it), so nothing ever calls this for one — the review/approve/rebuild
+    loop only exists for the PDF path."""
     job = _find_owned_job(job_id, user)
     require_trial_active(user)
 
-    is_idml = str(job.get("output", "")).lower().endswith(".idml")
+    if str(job.get("output", "")).lower().endswith(".idml"):
+        raise HTTPException(status_code=400, detail="rebuild is not supported for IDML jobs")
+
     output_key = str(job["output"])
 
     def _run() -> str:
         local_source, local_output = _materialize_job_files(job)
-        if is_idml:
-            regenerate_idml_from_review(
-                job, review_db=_REVIEW_DB, source_path=local_source, output_path=local_output
-            )
-        else:
-            rebuild_from_edits(
-                job_id, review_db=_REVIEW_DB, source_path=local_source, output_path=local_output
-            )
+        rebuild_from_edits(
+            job_id, review_db=_REVIEW_DB, source_path=local_source, output_path=local_output
+        )
         storage.upload_file(local_output, output_key)
         return output_key
 
@@ -731,8 +734,9 @@ async def _eval_report(job_id: str, user: dict, refresh: bool = False) -> dict:
     integrity rates move as segments change.
     """
     import json
+    import shutil
 
-    _find_owned_job(job_id, user)
+    job = _find_owned_job(job_id, user)
 
     cache = _eval_cache_path(job_id)
     if not refresh and os.path.exists(cache):
@@ -744,8 +748,23 @@ async def _eval_report(job_id: str, user: dict, refresh: bool = False) -> dict:
 
     from pagebirdy.eval import runner
 
+    # `job["source"]`/`job["output"]` are Storage KEYS, not local paths — the
+    # layout metrics (everything but a links batch's own early return) need
+    # real files to open. Without this, every one of them silently read as
+    # "not measured" once local scratch space was gone, which on a job whose
+    # files were never in this process's own temp dir (i.e. any job, once
+    # requested from a fresh page load) was effectively always. A links job
+    # has no single file to fetch, so skip straight past it.
+    tmp_dir: str | None = None
+
     def _run() -> dict:
-        return runner.evaluate_job(job_id, review_db=_REVIEW_DB)
+        nonlocal tmp_dir
+        if job.get("job_type") == "links":
+            return runner.evaluate_job(job_id, review_db=_REVIEW_DB)
+        local_source, local_output = _materialize_job_files(job)
+        tmp_dir = os.path.dirname(local_source)
+        return runner.evaluate_job(job_id, review_db=_REVIEW_DB,
+                                   source_path=local_source, output_path=local_output)
 
     try:
         report = await run_in_threadpool(_run)
@@ -754,6 +773,9 @@ async def _eval_report(job_id: str, user: dict, refresh: bool = False) -> dict:
     except Exception as e:
         logger.info("eval failed for job %s: %s", job_id, e)
         raise HTTPException(status_code=500, detail=f"evaluation failed: {e}")
+    finally:
+        if tmp_dir:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
 
     os.makedirs(os.path.dirname(cache), exist_ok=True)
     with open(cache, "w", encoding="utf-8") as f:
@@ -762,8 +784,32 @@ async def _eval_report(job_id: str, user: dict, refresh: bool = False) -> dict:
 
 
 @app.get("/api/jobs/{job_id}/eval")
-async def get_eval(job_id: str, refresh: bool = False, user: dict = Depends(require_user)) -> dict:
-    """Accuracy scorecard for one job: gates, layout fidelity, content integrity."""
+async def get_eval(job_id: str, refresh: bool = False, cache_only: bool = False,
+                    user: dict = Depends(require_user)) -> dict:
+    """Accuracy scorecard for one job: gates, layout fidelity, content integrity.
+
+    `cache_only=true` never runs a fresh evaluation (layout scoring re-renders
+    every page — real CPU work) — it just reads whatever `_eval_cache_path`
+    already holds, or reports `{"not_computed": true}`. That's what the Files
+    list's QA column uses: showing a real score once someone has run "QA
+    check" on the project, but never silently kicking off N evaluations just
+    because the list happened to render."""
+    if cache_only:
+        import json
+
+        _find_owned_job(job_id, user)
+        cache = _eval_cache_path(job_id)
+        if not os.path.exists(cache):
+            return JSONResponse({"not_computed": True},
+                                headers={"Cache-Control": "no-store, no-cache, must-revalidate"})
+        try:
+            with open(cache, encoding="utf-8") as f:
+                return JSONResponse(json.load(f),
+                                    headers={"Cache-Control": "no-store, no-cache, must-revalidate"})
+        except (OSError, json.JSONDecodeError):
+            return JSONResponse({"not_computed": True},
+                                headers={"Cache-Control": "no-store, no-cache, must-revalidate"})
+
     return JSONResponse(
         await _eval_report(job_id, user, refresh=refresh),
         headers={"Cache-Control": "no-store, no-cache, must-revalidate"},
@@ -1171,16 +1217,27 @@ async def translate_links_upload(
             len(files), len(saved_paths))
 
     started = time.time()
-    display_name = f"{len(saved_paths)} linked graphic{'s' if len(saved_paths) != 1 else ''}"
+    # A batch of one has no batch to speak of, and "1 linked graphic" tells
+    # the user nothing they didn't already know — show the real filename
+    # instead, same as any other job type's Document column does.
+    display_name = (os.path.basename(saved_paths[0]) if len(saved_paths) == 1
+                     else f"{len(saved_paths)} linked graphics")
     logger.info("upload received (links): %d file(s), %.1f MB, target_lang=%s",
                 len(saved_paths), total_size / (1 << 20), lang.code)
     _activity(f"Uploaded {display_name} — translating to {lang.name}", owner_id=user["id"])
+
+    # Distinct extensions across the batch (".ai", ".psd", ...), so the
+    # frontend's Type column has something to show for a "links" job — its
+    # own `original_filename` is a display label ("3 linked graphics"),
+    # not a real filename with an extension to read.
+    extensions = sorted({os.path.splitext(p)[1].lower().lstrip(".") for p in saved_paths if os.path.splitext(p)[1]})
 
     store = _store()
     try:
         job_id = store.create_pending_job(
             "links", original_filename=display_name, file_size=total_size,
-            meta={"target_lang": lang.code, "job_type": "links", "total_files": len(saved_paths)},
+            meta={"target_lang": lang.code, "job_type": "links", "total_files": len(saved_paths),
+                  "extensions": extensions},
             project_id=project_id or None, folder_id=folder_id or None, created_by=user["id"],
             job_type="links",
         )
@@ -1348,8 +1405,25 @@ def download_output(job_id: str, format: str | None = None, type: str | None = N
 
     if job.get("job_type") == "links":
         # An independent linked-graphics batch has no single .idml/source to
-        # speak of — its whole "output" is the Links bundle.
+        # speak of — its whole "output" is the Links bundle. A batch of ONE
+        # file has no batch to speak of either: zipping it just makes the
+        # user unzip a single file to get the thing they actually asked
+        # for, so serve it directly instead (same bytes `links/file/{name}`
+        # would give, just under the job's own /download route).
         meta = job.get("meta") or {}
+        file_map = _link_file_map(job_id, meta.get("target_lang"))
+        if not file_map:
+            raise HTTPException(status_code=404, detail="no translated files for this job")
+        if len(file_map) == 1:
+            name, (key, _translated) = next(iter(file_map.items()))
+            data = storage.read_bytes(key)
+            if data is None:
+                raise HTTPException(status_code=404, detail="no translated files for this job")
+            media = _LINK_MEDIA_TYPES.get(os.path.splitext(name)[1].lower(), "application/octet-stream")
+            return Response(
+                content=data, media_type=media,
+                headers={"Content-Disposition": f'attachment; filename="{name}"'},
+            )
         stem = os.path.splitext(os.path.basename(str(job.get("original_filename") or job_id)))[0]
         zipped = _links_zip_response(job_id, meta.get("target_lang"), stem, pair_by_stem=False)
         if zipped is None:
@@ -1386,31 +1460,9 @@ def download_output(job_id: str, format: str | None = None, type: str | None = N
         raise HTTPException(status_code=404, detail="Source file not found")
 
     if fmt == "pdf":
-        meta = job.get("meta") or {}
-        store = _store()
-        try:
-            job_has_edits = store.has_edits(job_id)
-        finally:
-            store.close()
-        if job_has_edits and meta.get("format") == "idml" and source.lower().endswith(".idml"):
-            # Bring the draft PDF up to date with any post-export review edits
-            # (regenerate re-renders the PDF alongside the .idml) before serving it.
-            # Skipped entirely when the job has never been edited — re-downloading
-            # the source, re-applying segments, and re-uploading is real work that
-            # only ever changes anything once a review edit exists, and doing it
-            # unconditionally on every single download click was the actual cause
-            # of "it takes a long time to download, every time" for an unedited job.
-            try:
-                local_source, local_output = _materialize_job_files(job)
-                regenerate_idml_from_review(
-                    job, review_db=_REVIEW_DB, source_path=local_source, output_path=local_output
-                )
-                storage.upload_file(local_output, out)
-                local_draft_pdf = os.path.splitext(local_output)[0] + ".pdf"
-                if os.path.exists(local_draft_pdf):
-                    storage.upload_file(local_draft_pdf, _output_pdf_path(out))
-            except Exception:
-                logger.exception("download: failed to refresh draft pdf for job %s", job_id)
+        # No review/edit loop exists for IDML jobs (see rebuild_job's
+        # docstring) — the draft PDF preview alongside a translated .idml is
+        # served exactly as MT produced it, never regenerated on download.
         pdf_key = _output_pdf_path(out)
         if storage.read_bytes(pdf_key) is not None:
             return _serve(pdf_key, "application/pdf")
@@ -1421,35 +1473,9 @@ def download_output(job_id: str, format: str | None = None, type: str | None = N
         raise HTTPException(status_code=404, detail="PDF format not found for this job")
 
     if fmt == "idml":
+        # No review/edit loop exists for IDML jobs (see rebuild_job's
+        # docstring) — the .idml is served exactly as MT produced it.
         meta = job.get("meta") or {}
-        store = _store()
-        try:
-            job_has_edits = store.has_edits(job_id)
-        finally:
-            store.close()
-        if job_has_edits and meta.get("format") == "idml" and source.lower().endswith(".idml"):
-            # Review-store approvals/edits made after the initial MT export
-            # never get written back to the saved .idml on their own — bring
-            # the file up to date before serving it (see
-            # pipeline.regenerate_idml_from_review). Skipped when nobody has
-            # ever edited a segment: re-downloading the source, re-applying
-            # every segment, and re-uploading the result on every single
-            # download click — even the 2nd/3rd click on an untouched job —
-            # is exactly what made downloads feel slow every time.
-            try:
-                local_source, local_output = _materialize_job_files(job)
-                regenerate_idml_from_review(
-                    job, review_db=_REVIEW_DB, source_path=local_source, output_path=local_output
-                )
-                storage.upload_file(local_output, out)
-                # regenerate_idml_from_review also re-renders the draft-PDF
-                # preview sibling (best-effort) — keep the stored copy in step
-                # with it so download?format=pdf doesn't serve a stale preview.
-                local_draft_pdf = os.path.splitext(local_output)[0] + ".pdf"
-                if os.path.exists(local_draft_pdf):
-                    storage.upload_file(local_draft_pdf, _output_pdf_path(out))
-            except Exception:
-                logger.exception("download: failed to regenerate idml for job %s", job_id)
         lang_code = meta.get("target_lang")
         if out.lower().endswith(".idml"):
             zipped = _idml_zip_response(out, job_id, lang_code)

@@ -7,6 +7,7 @@ import { AppTopBar } from "@/components/app/AppTopBar";
 import { CreateJobModal } from "@/components/app/CreateJobModal";
 import { ConfirmDialog } from "@/components/app/ConfirmDialog";
 import { listProjects, deleteProject, type Project } from "@/lib/projects";
+import { languageName } from "@/lib/languageNames";
 
 export default function AppWorkspacePage() {
   const [navOpen, setNavOpen] = useState(true);
@@ -146,11 +147,20 @@ export default function AppWorkspacePage() {
                       </span>
                     </td>
                     <td className="py-2">
-                      <div className="h-4 w-24 border border-rule" />
+                      <div className="h-4 w-24 overflow-hidden border border-rule">
+                        <div
+                          className={`h-full ${p.status === "failed" ? "bg-red/40" : "bg-red"}`}
+                          style={{
+                            width: p.file_count > 0
+                              ? `${Math.round(((p.status_counts.complete ?? 0) / p.file_count) * 100)}%`
+                              : "0%",
+                          }}
+                        />
+                      </div>
                     </td>
                     <td className="py-2 text-red">{p.status}</td>
                     <td className="py-2 text-ink-soft">
-                      {p.source_lang ?? "—"} → {p.target_lang ?? "—"}
+                      {languageName(p.source_lang) ?? "—"} → {languageName(p.target_lang) ?? "—"}
                     </td>
                     <td className="py-2 text-ink-soft">{p.client ?? "—"}</td>
                     <td className="py-2 text-ink-soft">{p.vendor ?? "—"}</td>

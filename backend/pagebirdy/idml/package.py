@@ -75,6 +75,13 @@ class IdmlPackage:
         self._spreads: dict[str, etree._Element] = {}
         self._master_spreads: dict[str, etree._Element] = {}
         self._node_index: dict[str, etree._Element] = {}
+        # Segment id -> the run's embedded marker children (`<?ACE 7?>` etc.)
+        # with the text each one followed; see `_content_text`/`_write_content`.
+        self._markers: dict[str, list[tuple[object, str]]] = {}
+        # Segment id -> the `<Story Self>` it lives in, so `apply()` knows
+        # which stories were rewritten and `_auto_size_frames` can grow
+        # exactly those stories' frames.
+        self._segment_story: dict[str, str] = {}
 
         with zipfile.ZipFile(path) as z:
             self._names = z.namelist()
@@ -90,6 +97,7 @@ class IdmlPackage:
 
         self._style_size_cache: dict[str, float | None] = {}
         self._style_justification_cache: dict[str, str | None] = {}
+        self._style_font_cache: dict[str, str | None] = {}
         self._style_defs = _parse_style_defs(self._entries.get("Resources/Styles.xml"))
         # A single CharacterStyleRange can hold several Content runs (split by
         # a <Br/> or special character), each becoming its own Segment — so
@@ -112,6 +120,12 @@ class IdmlPackage:
         # unlike a size shrink, flipping justification is not idempotent:
         # a second flip on a re-visit would flip it straight back.
         self._flipped_paragraphs: dict[int, object] = {}
+        # Equation assemblies (see `_is_assembly`) are scaled once per
+        # PARAGRAPH, not per run — same node-identity pinning, same reason
+        # as `_shrunk_ranges`: the review loop re-applies the whole
+        # document after an approved edit and must not compound the scale.
+        self._assembly_cache: dict[int, tuple[object, bool]] = {}
+        self._scaled_assemblies: dict[int, object] = {}
 
     # ---- style resolution ------------------------------------------------
 
@@ -186,6 +200,54 @@ class IdmlPackage:
         default = self._style_defs.get(_DEFAULT_PARAGRAPH_STYLE, {}).get("Justification")
         return default if default is not None else "LeftAlign"
 
+    def _resolve_style_font(self, self_id: str | None) -> str | None:
+        """Same BasedOn walk as `_resolve_style_size`, for AppliedFont."""
+        if self_id is None:
+            return None
+        if self_id in self._style_font_cache:
+            return self._style_font_cache[self_id]
+        seen: set[str] = set()
+        cur = self_id
+        result = None
+        while cur and cur not in seen:
+            seen.add(cur)
+            entry = self._style_defs.get(cur, {})
+            if entry.get("AppliedFont") is not None:
+                result = entry["AppliedFont"]
+                break
+            cur = entry.get("BasedOn")
+        self._style_font_cache[self_id] = result
+        return result
+
+    def _effective_font(self, content) -> str:
+        """The font a run actually renders in: its own inline AppliedFont,
+        else its CharacterStyle's BasedOn chain, else its paragraph's
+        ParagraphStyle chain, else the document default paragraph style.
+
+        Real client files set their math face on a NAMED character style
+        (`CharacterStyle/MathPi 1`), not on the run — reading only the run
+        saw no font, decided the run was prose, and sent a bare `5` (which
+        draws as `=` in that face) to the engine as a number. Measured on
+        one such file: 217 -> 739 protected runs once the chain is walked."""
+        inline = _font_of(content)
+        if inline:
+            return inline
+        run = content.getparent()
+        while run is not None and _localname(run) != "CharacterStyleRange":
+            run = run.getparent()
+        if run is None:
+            return ""
+        font = self._resolve_style_font(run.get("AppliedCharacterStyle"))
+        if font is not None:
+            return font
+        para = run.getparent()
+        if para is not None and _localname(para) == "ParagraphStyleRange":
+            font = self._resolve_style_font(para.get("AppliedParagraphStyle"))
+            if font is not None:
+                return font
+        default = self._style_defs.get(_DEFAULT_PARAGRAPH_STYLE, {}).get("AppliedFont")
+        return default or ""
+
     # ---- extract -------------------------------------------------------------
 
     def segments(self) -> list[Segment]:
@@ -193,11 +255,12 @@ class IdmlPackage:
         counter = 0
         for name, tree in self._stories.items():
             short = name.split("/")[-1].rsplit(".", 1)[0]
+            story_self = _story_self(tree)
             for content in _iter_content(tree):
-                text = content.text or ""
+                text, markers = _content_text(content)
                 if not text.strip():
                     continue
-                font = _font_of(content)
+                font = self._effective_font(content)
                 alloc = Allocator()
                 if is_math_font(font):
                     source = alloc.take_math(text)
@@ -212,6 +275,10 @@ class IdmlPackage:
                     has_math_font=alloc.has_math_font,
                 )
                 self._node_index[sid] = content
+                if story_self:
+                    self._segment_story[sid] = story_self
+                if markers:
+                    self._markers[sid] = markers
                 segs.append(seg)
         return segs
 
@@ -303,6 +370,7 @@ class IdmlPackage:
         content was already using.
         """
         applied = 0
+        rewritten: set[str] = set()
         for s in segments:
             if s.has_math_font or s.target is None:
                 continue
@@ -310,11 +378,18 @@ class IdmlPackage:
                 continue
             node = self._node_index.get(s.id)
             if node is not None:
-                node.text = s.restored_target()
+                _write_content(node, s.restored_target(), self._markers.get(s.id, ()))
+                story = self._segment_story.get(s.id)
+                if story:
+                    rewritten.add(story)
                 if idml_font:
                     _set_applied_font(node, idml_font)
                 if size_delta:
-                    self._shrink_point_size(node, size_delta)
+                    para = _paragraph_of(node)
+                    if para is not None and self._is_assembly(para):
+                        self._scale_assembly(para, size_delta)
+                    else:
+                        self._shrink_point_size(node, size_delta)
                 if direction == "rtl":
                     self._flip_justification(node)
                 applied += 1
@@ -334,7 +409,46 @@ class IdmlPackage:
             # already using after both moved independently.
             for tree in self._spreads.values():
                 _mirror_spread(tree)
+        if rewritten:
+            self._auto_size_frames(rewritten)
         return applied
+
+    def _auto_size_frames(self, story_ids: set[str]) -> int:
+        """Let every text frame holding a rewritten story grow DOWNWARD.
+
+        Translated text usually needs more vertical room than the English
+        the frame was drawn for. InDesign marks such a frame overset and
+        renders the surplus as nothing — an empty box with no error. Setting
+        `AutoSizingType="HeightOnly"` from `TopLeftPoint` has the same
+        effect as a person dragging the bottom edge down until it fits.
+
+        `MinimumHeightForAutoSizing` is pinned to the frame's existing drawn
+        height, so the frame can only grow, never shrink: without it a
+        shorter translation would close up whitespace the designer left
+        deliberately.
+
+        Scoped to `story_ids` only — a frame holding untouched English keeps
+        the size the designer drew. A frame the designer already set to
+        auto-size (any type other than Off) is left exactly alone. Covers
+        placed frames on Spreads and MasterSpreads, and anchored frames
+        inside stories (`<TextFrame>` nested in a CharacterStyleRange —
+        matched by its OWN `ParentStory`, not the story it sits in).
+
+        Height-only by design: width is never changed (that would move the
+        frame's right edge into whatever sits beside it), and position is
+        never moved. Idempotent — a second pass sees HeightOnly and skips.
+        Returns the number of frames changed."""
+        changed = 0
+        for trees in (self._spreads, self._master_spreads, self._stories):
+            for tree in trees.values():
+                for tf in tree.iter():
+                    if _localname(tf) != "TextFrame":
+                        continue
+                    if tf.get("ParentStory") not in story_ids:
+                        continue
+                    if _set_height_only_auto_size(tf):
+                        changed += 1
+        return changed
 
     def _flip_justification(self, content) -> None:
         p = content.getparent()
@@ -391,6 +505,119 @@ class IdmlPackage:
             self._shrunk_ranges[key] = (p, target)
         p.set("PointSize", f"{target:.2f}")
 
+    # ---- equation assemblies ------------------------------------------------
+
+    def _is_assembly(self, para) -> bool:
+        """Does this paragraph contain a hand-built equation?
+
+        InDesign has no equation editor: an inline fraction is a pen-plotter
+        program of ordinary runs — numerator lifted with BaselineShift, a
+        blank spacer with `Tracking="-1000"` backing the pen up, a math-face
+        `.....` rule drawn underneath, another spacer, the denominator.
+        Every distance in that program is relative to the runs' shared size,
+        so the parts must be resized together or the alignment breaks.
+
+        The signal is the pen-backup spacer: Tracking at or below
+        `_ASSEMBLY_TRACKING` (1/1000 em). Optical tightening lives within
+        ±50; the assembly idiom sits near -1000. NOT the presence of a math
+        font — a lone inline ½ is just a character with no coupling to its
+        neighbours, and using the font as the signal would sweep up ~11% of
+        paragraphs instead of the ~3% that actually hold an assembly. Across
+        82 real packages every one of 588 hand-built fraction rules sat in a
+        paragraph that also carried a spacer.
+
+        Cached per paragraph — several runs in one paragraph each ask."""
+        key = id(para)
+        cached = self._assembly_cache.get(key)
+        if cached is not None and cached[0] is para:
+            return cached[1]
+        found = False
+        for run in para:
+            if _localname(run) != "CharacterStyleRange":
+                continue
+            try:
+                if float(run.get("Tracking", "0")) <= _ASSEMBLY_TRACKING:
+                    found = True
+                    break
+            except ValueError:
+                continue
+        self._assembly_cache[key] = (para, found)
+        return found
+
+    def _scale_assembly(self, para, delta: float, floor: float = 4.0) -> None:
+        """Resize an equation paragraph as one rigid body — the way a person
+        would select the whole thing and shrink it in one go.
+
+        One ratio for the paragraph: `delta` is taken off the LARGEST run's
+        effective size (the body size the reduction is meant to act on, and
+        the size the program was written for) and `target / base` is then
+        applied to EVERY run — prose digits, the math-face glyphs and rule,
+        the blank spacers. A flat per-run reduction would give a 12pt run
+        73% of itself and a 10pt run 68%, and two runs built to line up
+        would drift apart. A single shared ratio makes the operation a
+        similarity transform, so every alignment survives exactly.
+
+        Per run: PointSize = own effective size × ratio (a genuine
+        superscript stays proportionally smaller rather than being flattened
+        to one value); every absolute-point attribute present
+        (`_ABSOLUTE_POINT_ATTRS`) × ratio; a numeric `Properties/Leading`
+        × ratio (`Auto` left alone). Em-relative (Tracking, KerningValue)
+        and percentage (HorizontalScale, VerticalScale) attributes already
+        follow the size and are NOT touched — scaling them too would
+        double-scale.
+
+        The math-run exemption (`apply` never rewrites a math segment, and
+        `_shrink_point_size` is never reached for one) still holds outside
+        an assembly. Inside one, the math run is a component of the program
+        and keeping it at the old size is precisely what broke the program.
+
+        Floor: the ratio is raised, if needed, so the SMALLEST run lands at
+        `floor` — still one ratio, still a similarity transform.
+        Idempotent by paragraph identity."""
+        key = id(para)
+        cached = self._scaled_assemblies.get(key)
+        if cached is not None and cached is para:
+            return
+        self._scaled_assemblies[key] = para
+
+        runs = [r for r in para if _localname(r) == "CharacterStyleRange"]
+        if not runs:
+            return
+        sizes = [self._effective_size(r) for r in runs]
+        base = max(sizes)
+        if base <= 0:
+            return
+        ratio = max(floor, base - delta) / base
+        smallest = min(sizes)
+        if smallest > 0:
+            ratio = max(ratio, floor / smallest)
+        if ratio >= 1.0:
+            return
+
+        for run, size in zip(runs, sizes):
+            run.set("PointSize", f"{size * ratio:.2f}")
+            # `_shrink_point_size` must never revisit this run on a later
+            # pass (a second Content in the same range, say).
+            self._shrunk_ranges[id(run)] = (run, size * ratio)
+            for attr in _ABSOLUTE_POINT_ATTRS:
+                val = run.get(attr)
+                if val is None:
+                    continue
+                try:
+                    run.set(attr, _fmt_pt(float(val) * ratio))
+                except ValueError:
+                    continue  # an enum value (Position="Superscript") — leave it
+            for props in run:
+                if _localname(props) != "Properties":
+                    continue
+                for child in props:
+                    if _localname(child) != "Leading":
+                        continue
+                    try:
+                        child.text = _fmt_pt(float(child.text or "") * ratio)
+                    except ValueError:
+                        pass  # `Auto` (type="enumeration")
+
     def save(self, out_path: str) -> None:
         import os
 
@@ -426,7 +653,10 @@ class IdmlPackage:
 
 def _parse_style_defs(styles_xml: bytes | None) -> dict[str, dict]:
     """`Resources/Styles.xml` -> {style Self id: {"PointSize", "BasedOn",
-    "Justification"}}.
+    "Justification", "AppliedFont"}}.
+
+    `AppliedFont` is not an attribute but a `Properties/AppliedFont` child
+    element (same shape as on a CharacterStyleRange).
 
     Most CharacterStyle/ParagraphStyle definitions declare none of these — a
     style only records an attribute when someone explicitly set it in
@@ -450,15 +680,58 @@ def _parse_style_defs(styles_xml: bytes | None) -> dict[str, dict]:
         if not self_id:
             continue
         size = el.get("PointSize")
+        font = None
+        for props in el:
+            if _localname(props) != "Properties":
+                continue
+            for child in props:
+                if _localname(child) == "AppliedFont" and child.text:
+                    font = child.text
         defs[self_id] = {
             "PointSize": float(size) if size else None,
             "BasedOn": el.get("BasedOn") or None,
             "Justification": el.get("Justification") or None,
+            "AppliedFont": font,
         }
     return defs
 
 
 _DEFAULT_PARAGRAPH_STYLE = "ParagraphStyle/$ID/[No paragraph style]"
+
+# A CharacterStyleRange with Tracking at or below this (1/1000 em) is the
+# pen-backup spacer of a hand-built equation — see `IdmlPackage._is_assembly`.
+_ASSEMBLY_TRACKING = -100.0
+
+# Run attributes measured in absolute points, which do NOT follow PointSize
+# on their own and so must be scaled alongside it inside an assembly. The
+# underline/strike-through ones matter because the lower grades draw their
+# fraction rule with Underline rather than a math-face `.....` run.
+# `Position` is normally an enum (Superscript/Subscript) and is skipped when
+# it doesn't parse as a number.
+_ABSOLUTE_POINT_ATTRS = (
+    "BaselineShift", "Position",
+    "UnderlineOffset", "UnderlineWeight",
+    "StrikeThroughOffset", "StrikeThroughWeight",
+)
+
+
+def _fmt_pt(v: float) -> str:
+    """Point values as real IDML writes them: bare integers where whole,
+    otherwise up to 4 decimals with trailing zeros dropped."""
+    return f"{v:.4f}".rstrip("0").rstrip(".")
+
+
+def _paragraph_of(content):
+    """The ParagraphStyleRange enclosing a Content node, or None."""
+    p = content.getparent()
+    while p is not None and _localname(p) != "CharacterStyleRange":
+        p = p.getparent()
+    if p is None:
+        return None
+    para = p.getparent()
+    if para is None or _localname(para) != "ParagraphStyleRange":
+        return None
+    return para
 
 # Mirrors the PDF path's own LTR<->RTL align flip (`reassemble/pdf.py`'s
 # `_place`: `{"left": "right", "right": "left"}`). Centre, full justification,
@@ -478,6 +751,80 @@ def _iter_content(tree):
     for el in tree.iter():
         if _localname(el) == "Content":
             yield el
+
+
+def _content_text(content) -> tuple[str, list[tuple[object, str]]]:
+    """A Content node's FULL text, plus its embedded marker children.
+
+    InDesign writes special characters as processing instructions inside
+    the run — `<?ACE 7?>` is Indent To Here, `<?ACE 8?>` Right Indent Tab,
+    and so on — so `<Content>1.\t<?ACE 7?>Count the dots.</Content>` is one
+    run whose text is split around a child. lxml's `.text` only reads up to
+    the first child; reading just that stripped a run to its prefix (or to
+    nothing, and it was skipped entirely) and the rest of the sentence never
+    reached the engine — 36 segments stayed English in one real file.
+
+    Returns `(text, markers)` where `markers` is each child node paired with
+    the text it followed — from the previous marker (or the run's start) up
+    to itself. That prefix is how `_write_content` puts the marker back.
+    """
+    text = content.text or ""
+    markers: list[tuple[object, str]] = []
+    prefix = text
+    for child in content:
+        markers.append((child, prefix))
+        prefix = child.tail or ""
+        text += prefix
+    return text, markers
+
+
+def _write_content(content, text: str, markers) -> None:
+    """Write `text` into a Content node, re-embedding each marker after the
+    same prefix it originally followed.
+
+    `<?ACE 7?>` pins every wrapped line of the paragraph to the x-position
+    it sits at, so WHERE it lands matters: a bullet whose marker sat at the
+    start (continuation lines flush to the margin) must not have it stranded
+    at the end of the translated sentence (continuation lines pushed to
+    wherever the sentence reached — a staircase against the right edge).
+    In every observed case the prefix is whitespace or a list number
+    (`""`, `"1.\t"`), both of which survive translation verbatim, so
+    matching it is exact. When the prefix genuinely does not survive, the
+    marker goes to its proportional position in the new text rather than
+    the end — never the end, which is the failure this exists to prevent.
+    """
+    if not markers:
+        content.text = text
+        return
+    # Original positions, for the proportional fallback.
+    orig_len = sum(len(pfx) for _, pfx in markers) + len(markers[-1][0].tail or "")
+    orig_pos, acc = [], 0
+    for _, pfx in markers:
+        acc += len(pfx)
+        orig_pos.append(acc)
+
+    for child in list(content):
+        content.remove(child)
+
+    cursor = 0  # where the next prefix search begins in `text`
+    cuts: list[int] = []
+    for i, (child, pfx) in enumerate(markers):
+        rest = text[cursor:]
+        if rest.startswith(pfx):
+            pos = cursor + len(pfx)
+        elif pfx and (found := rest.find(pfx)) != -1:
+            pos = cursor + found + len(pfx)
+        else:
+            pos = round(orig_pos[i] / orig_len * len(text)) if orig_len else 0
+            pos = max(cursor, min(pos, len(text)))
+        cuts.append(pos)
+        cursor = pos
+
+    content.text = text[:cuts[0]]
+    for i, (child, _) in enumerate(markers):
+        end = cuts[i + 1] if i + 1 < len(cuts) else len(text)
+        child.tail = text[cuts[i]:end]
+        content.append(child)
 
 
 def _reflect_transform(transform: str, center_x: float, item_center_x: float) -> str:
@@ -701,6 +1048,48 @@ def _mirror_spread(spread_tree) -> bool:
             continue  # doesn't resolve to any single page — leave it be
         page_center_x = (page[0] + page[1]) / 2
         el.set("ItemTransform", _reflect_transform(transform, page_center_x, item_center_x))
+    return True
+
+
+def _story_self(tree) -> str:
+    """The inner `<Story Self="...">` id of a parsed Stories/*.xml — what a
+    TextFrame's `ParentStory` refers to."""
+    for el in tree.iter():
+        if _localname(el) == "Story" and el.get("Self"):
+            return el.get("Self")
+    return ""
+
+
+def _frame_height(tf) -> float | None:
+    """A text frame's drawn height in its OWN local coordinates — the extent
+    of its `<PathPointType Anchor>` outline along y. Local, not spread
+    space, because that is the axis HeightOnly auto-sizing grows along
+    (a 90°-rotated frame still grows along its own height). `None` when
+    the frame carries no geometry of its own."""
+    anchors = _item_own_anchors(tf)
+    if not anchors:
+        return None
+    ys = [y for _x, y in anchors]
+    return max(ys) - min(ys)
+
+
+def _set_height_only_auto_size(tf) -> bool:
+    """Set HeightOnly auto-sizing (from the top-left, floor = current height)
+    on one TextFrame. Creates `<TextFramePreference>` when the frame has
+    none. Leaves a frame already auto-sizing in any way untouched. Returns
+    whether the frame was changed."""
+    height = _frame_height(tf)
+    if height is None:
+        return False
+    tfp = next((c for c in tf if _localname(c) == "TextFramePreference"), None)
+    if tfp is None:
+        tfp = etree.SubElement(tf, "TextFramePreference")
+    elif (tfp.get("AutoSizingType") or "Off") != "Off":
+        return False
+    tfp.set("AutoSizingType", "HeightOnly")
+    tfp.set("AutoSizingReferencePoint", "TopLeftPoint")
+    tfp.set("UseMinimumHeightForAutoSizing", "true")
+    tfp.set("MinimumHeightForAutoSizing", _fmt_pt(height))
     return True
 
 

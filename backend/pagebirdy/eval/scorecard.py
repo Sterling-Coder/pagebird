@@ -328,8 +328,12 @@ def render_markdown(result: dict) -> str:
     evaluation date, and — where a metric could not be measured — the reason,
     so nobody reads a blank as a zero.
     """
-    gates = result.get("gates", {})
     title = result.get("original_filename") or result.get("source") or result.get("job_id")
+    if result.get("not_applicable"):
+        return (f"# Accuracy report — {title}\n\n"
+                f"QA not applicable: {result.get('reason', 'nothing to score')}\n")
+
+    gates = result.get("gates", {})
     out: list[str] = [
         f"# Accuracy report — {title}",
         "",

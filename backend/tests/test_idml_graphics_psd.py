@@ -1,9 +1,9 @@
 """Linked .psd support in the IDML graphics-translation path.
 
-PyMuPDF can't open .psd directly, so `_psd_to_pdf` composites it to a flat
-image and wraps that in a synthetic one-page PDF first — everything
-downstream (extract_lines, ocr_image_regions, rebuild_pdf) then sees an
-ordinary PDF, same as any other linked graphic.
+PyMuPDF can't open .psd directly, so `_psd_to_pdf` renders each top-level PSD
+layer onto its own PDF Optional Content Group in a synthetic one-page PDF
+first — everything downstream (extract_lines, ocr_image_regions, rebuild_pdf)
+then sees an ordinary (now layered) PDF, same as any other linked graphic.
 """
 
 import os
@@ -48,22 +48,53 @@ def test_output_filename_same_content_same_name_different_path():
             == graphics._output_filename("/job2/Links/SAY.ai", "deadbeef"))
 
 
-def test_psd_to_pdf_composites_and_wraps_in_one_page_pdf(tmp_path, monkeypatch):
-    # Stand in for a real .psd: psd-tools' PSDImage.open().composite() is the
-    # only interface `_psd_to_pdf` uses, so stubbing that call is enough to
-    # test the conversion without needing a real binary .psd fixture.
-    image = Image.new("RGB", (200, 100), color="white")
+class FakeLayer:
+    def __init__(self, name, bbox, visible=True, image=None):
+        self.name = name
+        self.bbox = bbox
+        self.visible = visible
+        self.width = bbox[2] - bbox[0]
+        self.height = bbox[3] - bbox[1]
+        self._image = image or Image.new(
+            "RGBA", (self.width, self.height), (255, 255, 255, 255))
 
-    class FakePSDImage:
-        @staticmethod
-        def open(path):
-            assert path == "fake.psd"
-            return FakePSDImage()
+    def has_pixels(self):
+        return True
 
-        def composite(self):
-            return image
+    def is_group(self):
+        return False
 
-    monkeypatch.setattr("psd_tools.PSDImage", FakePSDImage)
+    def composite(self, viewport=None, force=False, color=1.0, alpha=0.0,
+                  layer_filter=None, apply_icc=True):
+        return self._image
+
+
+class FakePSDImage:
+    """Stands in for a real .psd: `_psd_to_pdf` only uses `.width`,
+    `.height`, and iterating layers, so stubbing that surface is enough to
+    test the conversion without needing a real binary .psd fixture."""
+
+    def __init__(self, width, height, layers):
+        self.width = width
+        self.height = height
+        self._layers = layers
+
+    def __iter__(self):
+        return iter(self._layers)
+
+    @staticmethod
+    def open(path):
+        raise NotImplementedError  # each test overrides via a bound factory
+
+
+def test_psd_to_pdf_makes_one_ocg_per_layer(tmp_path, monkeypatch):
+    layers = [
+        FakeLayer("Background", (0, 0, 200, 100)),
+        FakeLayer("Callout Text", (10, 10, 150, 40), visible=False),
+    ]
+    fake = FakePSDImage(200, 100, layers)
+    monkeypatch.setattr("psd_tools.PSDImage",
+                         type("F", (), {"open": staticmethod(lambda path: fake)}))
 
     out_pdf = graphics._psd_to_pdf("fake.psd")
     try:
@@ -71,23 +102,21 @@ def test_psd_to_pdf_composites_and_wraps_in_one_page_pdf(tmp_path, monkeypatch):
         assert doc.page_count == 1
         assert doc[0].rect.width == pytest.approx(200, abs=1)
         assert doc[0].rect.height == pytest.approx(100, abs=1)
+        ocgs = doc.get_ocgs()
+        names = {v["name"] for v in ocgs.values()}
+        assert names == {"Background", "Callout Text"}
+        hidden = {v["name"]: v["on"] for v in ocgs.values()}
+        assert hidden["Background"] is True
+        assert hidden["Callout Text"] is False
         doc.close()
     finally:
         os.remove(out_pdf)
 
 
 def test_translate_graphic_handles_psd_end_to_end(tmp_path, monkeypatch):
-    image = Image.new("RGB", (300, 100), color="white")
-
-    class FakePSDImage:
-        @staticmethod
-        def open(path):
-            return FakePSDImage()
-
-        def composite(self):
-            return image
-
-    monkeypatch.setattr("psd_tools.PSDImage", FakePSDImage)
+    fake = FakePSDImage(300, 100, [FakeLayer("Background", (0, 0, 300, 100))])
+    monkeypatch.setattr("psd_tools.PSDImage",
+                         type("F", (), {"open": staticmethod(lambda path: fake)}))
 
     # A PSD never has live text objects (extract_lines on the synthetic PDF
     # finds nothing) — OCR is the only source, so stub it with a canned Line,

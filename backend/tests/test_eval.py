@@ -492,6 +492,77 @@ def test_idml_font_override_is_reported_separately_from_style_loss(tmp_path):
     assert result["style_preservation"]["font_overrides"] == 1
 
 
+_STYLED_MATH_STORY = """<Story Self="u1">
+  <ParagraphStyleRange AppliedParagraphStyle="ps/Body">
+    <CharacterStyleRange AppliedCharacterStyle="cs/None">
+      <Properties><AppliedFont type="string">Minion Pro</AppliedFont></Properties>
+      <Content>{text}</Content>
+    </CharacterStyleRange>
+    <CharacterStyleRange AppliedCharacterStyle="CharacterStyle/MathPi 1">
+      <Content>{math}</Content>
+    </CharacterStyleRange>
+  </ParagraphStyleRange>
+</Story>"""
+
+_STYLES_MATHPI = b"""<idPkg:Styles xmlns:idPkg="http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging">
+  <RootCharacterStyleGroup Self="u7f">
+    <CharacterStyle Self="CharacterStyle/MathPi base" Name="MathPi base">
+      <Properties><AppliedFont type="string">Mathematical Pi LT Std</AppliedFont></Properties>
+    </CharacterStyle>
+    <CharacterStyle Self="CharacterStyle/MathPi 1" Name="MathPi 1" BasedOn="CharacterStyle/MathPi base"/>
+  </RootCharacterStyleGroup>
+</idPkg:Styles>"""
+
+
+def _make_styled_idml(path, text: str, math: str) -> None:
+    with zipfile.ZipFile(path, "w") as z:
+        z.writestr("mimetype", "application/vnd.adobe.indesign-idml-package")
+        z.writestr("Resources/Styles.xml", _STYLES_MATHPI)
+        z.writestr("Stories/Story_u1.xml", _STYLED_MATH_STORY.format(text=text, math=math))
+
+
+def test_idml_math_run_set_via_named_character_style_is_counted_as_math(tmp_path):
+    """The math face is declared on `CharacterStyle/MathPi 1` (via BasedOn),
+    not on the run — the eval must resolve the style chain the same way the
+    package does, or a corrupted `5` (which draws as `=`) is scored as an
+    ordinary translated prose run."""
+    src, out = tmp_path / "s.idml", tmp_path / "o.idml"
+    _make_styled_idml(src, "Solve", math="5")
+    _make_styled_idml(out, "Resuelve", math="cinco")
+    result = layout_idml.evaluate(str(src), str(out))
+    assert result["math_run_preservation"]["applicable"] == 1
+    assert result["math_run_preservation"]["rate"] == 0.0
+    assert result["run_translation"]["translated"] == 1
+
+
+def test_idml_run_translation_reads_text_across_embedded_marker(tmp_path):
+    src, out = tmp_path / "s.idml", tmp_path / "o.idml"
+    _make_idml(src, "<?ACE 7?>Count the dots")
+    _make_idml(out, "<?ACE 7?>Cuenta los puntos")
+    result = layout_idml.evaluate(str(src), str(out))
+    assert result["run_translation"]["translated"] == 1
+
+
+def test_idml_asset_preservation_ignores_auto_size_growth_on_spreads(tmp_path):
+    """`IdmlPackage._auto_size_frames` deliberately rewrites the frames of
+    every translated story; that is not moved geometry."""
+    src, out = tmp_path / "s.idml", tmp_path / "o.idml"
+    before = (b"<Spread Self='s1'><TextFrame Self='f1' ParentStory='u1' ItemTransform='1 0 0 1 0 0'>"
+              b"<TextFramePreference TextColumnCount='1' AutoSizingType='Off' "
+              b"AutoSizingReferencePoint='CenterPoint' UseMinimumHeightForAutoSizing='false' "
+              b"MinimumHeightForAutoSizing='0'/></TextFrame></Spread>")
+    after = (b"<Spread Self='s1'><TextFrame Self='f1' ParentStory='u1' ItemTransform='1 0 0 1 0 0'>"
+             b"<TextFramePreference TextColumnCount='1' AutoSizingType='HeightOnly' "
+             b"AutoSizingReferencePoint='TopLeftPoint' UseMinimumHeightForAutoSizing='true' "
+             b"MinimumHeightForAutoSizing='60'/></TextFrame></Spread>")
+    moved = after.replace(b"ItemTransform='1 0 0 1 0 0'", b"ItemTransform='1 0 0 1 9 0'")
+    _make_idml(src, "Write the missing number", spread=before)
+    _make_idml(out, "Escribe el numero", spread=after)
+    assert layout_idml.evaluate(str(src), str(out))["asset_preservation"]["rate"] == 1.0
+    _make_idml(out, "Escribe el numero", spread=moved)
+    assert layout_idml.evaluate(str(src), str(out))["asset_preservation"]["rate"] < 1.0
+
+
 def test_idml_overset_read_from_export_json(tmp_path):
     export = tmp_path / "export.json"
     export.write_text(json.dumps({"overset_frames": 3}), encoding="utf-8")

@@ -281,14 +281,14 @@ class ReviewStore:
                     "SELECT id, source, output, created_at, meta_json, original_filename, "
                     "file_hash, file_size, duration_sec, status, error, project_id, job_type, "
                     "folder_id, created_by FROM review_jobs WHERE created_by = ANY(%s) "
-                    "ORDER BY created_at DESC",
+                    "ORDER BY created_at DESC, id DESC",
                     (list(created_by),),
                 )
             else:
                 cur.execute(
                     "SELECT id, source, output, created_at, meta_json, original_filename, "
                     "file_hash, file_size, duration_sec, status, error, project_id, job_type, "
-                    "folder_id, created_by FROM review_jobs ORDER BY created_at DESC"
+                    "folder_id, created_by FROM review_jobs ORDER BY created_at DESC, id DESC"
                 )
             rows = cur.fetchall()
         self._reap_stale_processing(rows)
@@ -331,14 +331,14 @@ class ReviewStore:
             if all:
                 cur.execute(
                     "SELECT id, project_id, name, parent_folder_id, created_at "
-                    "FROM review_folders WHERE project_id = %s ORDER BY created_at DESC",
+                    "FROM review_folders WHERE project_id = %s ORDER BY created_at DESC, id DESC",
                     (project_id,),
                 )
             else:
                 cur.execute(
                     "SELECT id, project_id, name, parent_folder_id, created_at FROM review_folders "
                     "WHERE project_id = %s AND parent_folder_id IS NOT DISTINCT FROM %s "
-                    "ORDER BY created_at DESC",
+                    "ORDER BY created_at DESC, id DESC",
                     (project_id, parent_folder_id),
                 )
             return cur.fetchall()
@@ -443,11 +443,11 @@ class ReviewStore:
             if created_by is not None:
                 cur.execute(
                     "SELECT * FROM review_projects WHERE created_by = ANY(%s) "
-                    "ORDER BY created_at DESC",
+                    "ORDER BY created_at DESC, id DESC",
                     (list(created_by),),
                 )
             else:
-                cur.execute("SELECT * FROM review_projects ORDER BY created_at DESC")
+                cur.execute("SELECT * FROM review_projects ORDER BY created_at DESC, id DESC")
             rows = cur.fetchall()
         if not rows:
             return []

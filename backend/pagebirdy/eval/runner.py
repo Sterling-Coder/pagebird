@@ -79,6 +79,8 @@ def evaluate_job(
     baseline_pdf: str | None = None,
     gpus: int = 0,
     max_segments: int = 2000,
+    source_path: str | None = None,
+    output_path: str | None = None,
 ) -> dict:
     """Full scorecard for one job.
 
@@ -87,6 +89,15 @@ def evaluate_job(
     judge. `baseline_pdf` is the same document run through the identity engine —
     supplying it splits layout loss into reconstruction vs text growth (see
     `scorecard.baseline_delta`).
+
+    `source_path`/`output_path` are the actual files to open on disk when they
+    differ from the review store's own `source`/`output` — which are Storage
+    KEYS (`jobs/<id>/foo.idml`), not local paths, once uploads move off the
+    ephemeral container disk (see `pagebirdy.storage`). Without these, every
+    layout metric that needs to read the files (all of them but `overset_frames`
+    on the IDML path) silently reports "not measured", which reads as an IDML
+    document having no structural checks at all rather than what actually
+    happened: nobody downloaded it before trying to open it.
     """
     store = ReviewStore(review_db)
     try:
@@ -95,7 +106,25 @@ def evaluate_job(
     finally:
         store.close()
 
+    if job.get("job_type") == "links":
+        # A links batch has no single source/output document and no stored
+        # segments (see `pipeline.translate_links_folder`, which finalizes
+        # with `[]`) — every gate below would simply find nothing to check
+        # and skip, and zero failures reads as `gates_passed: True`. That is
+        # not "this batch passed QA", it is "QA never ran on it" — reporting
+        # it as a plain pass would be a lie the UI has no way to catch.
+        return {
+            "job_id": job_id,
+            "format": "links",
+            "target_lang": job.get("meta", {}).get("target_lang"),
+            "not_applicable": True,
+            "reason": "a linked-graphics batch has no single document to score — "
+                      "each file translates independently and isn't tracked as "
+                      "reviewable segments the way a PDF/IDML job is",
+        }
+
     source, output = job.get("source"), job.get("output")
+    local_source, local_output = source_path or source, output_path or output
     fmt = _infer_format(job)
     lang = lang or _infer_lang(output, source)
 
@@ -115,7 +144,7 @@ def evaluate_job(
         "integrity": eval_integrity.evaluate(segments, lang),
     }
 
-    missing = [p for p in (source, output) if not p or not os.path.exists(p)]
+    missing = [p for p in (local_source, local_output) if not p or not os.path.exists(p)]
     if missing:
         result["layout"] = {
             "available": False,
@@ -123,7 +152,7 @@ def evaluate_job(
                       f"both files; integrity metrics above are unaffected.",
         }
     elif fmt == "idml":
-        result["layout"] = layout_idml.evaluate(source, output, export_json=export_json)
+        result["layout"] = layout_idml.evaluate(local_source, local_output, export_json=export_json)
         result["layout"]["note"] = (
             "IDML is XML, not a rendered page — raster fidelity for this path is "
             "measured by running the PDF evaluator on (source PDF, "
@@ -142,7 +171,7 @@ def evaluate_job(
         }
     else:
         result["layout"] = layout_pdf.evaluate(
-            source, output, segments=segments, lang=lang, dpi=dpi, pages=pages,
+            local_source, local_output, segments=segments, lang=lang, dpi=dpi, pages=pages,
             report=_load_report(report_json),
         )
 
@@ -155,8 +184,8 @@ def evaluate_job(
         result["mqm"] = mqm.evaluate(segments, lang)
 
     result["layout_score"] = scorecard.layout_score(result["layout"], fmt=fmt)
-    if baseline_pdf and source and os.path.exists(baseline_pdf):
-        base_layout = layout_pdf.evaluate(source, baseline_pdf, lang=lang, dpi=dpi,
+    if baseline_pdf and local_source and os.path.exists(baseline_pdf):
+        base_layout = layout_pdf.evaluate(local_source, baseline_pdf, lang=lang, dpi=dpi,
                                           pages=pages)
         result["baseline"] = {"pdf": baseline_pdf,
                               "layout_score": scorecard.layout_score(base_layout)}

@@ -26,6 +26,7 @@ scanned image, so it's run on every linked graphic and merged in — the same
 from __future__ import annotations
 
 import hashlib
+import io
 import logging
 import os
 import re
@@ -61,9 +62,31 @@ _LINKED_PREFIXES = ("Spreads/", "MasterSpreads/", "Stories/")
 # back into the same tiny stacked-vertical layout, corrupting the artwork.
 _MIN_LIVE_TEXT_SIZE = 10.0
 
+# A real word-art badge's artboard is cropped tight to the word itself — the
+# "SAY"/"GO!" examples above run roughly 60x24pt. A genuine multi-page
+# document (a worksheet, a full-page diagram) is page-sized: at minimum a
+# few hundred points on a side (612x792 for US Letter, 595x842 for A4). This
+# sits comfortably between the two, so the badge-only assumptions below
+# (`_MIN_LIVE_TEXT_SIZE` floor, page-0-only OCR, tight-canvas growth) only
+# fire for something that actually could be a tiny badge — never for a real
+# page of prose, which `/api/translate-links` accepts standalone same as any
+# small linked callout, with no way to otherwise tell the two apart.
+_BADGE_CANVAS_MAX = 200.0
 
-def _worth_translating(line) -> bool:
+
+def _worth_translating(line, apply_size_floor: bool = True) -> bool:
+    if not apply_size_floor:
+        return True
     return all(s.size >= _MIN_LIVE_TEXT_SIZE for s in line.spans)
+
+
+def _is_badge_canvas(path: str) -> bool:
+    doc = fitz.open(path)
+    try:
+        rect = doc[0].rect
+        return rect.width <= _BADGE_CANVAS_MAX and rect.height <= _BADGE_CANVAS_MAX
+    finally:
+        doc.close()
 
 
 def _grow_canvas_for_translation(path: str, segments: "list", lang) -> tuple[str, "list"]:
@@ -198,25 +221,61 @@ def find_linked_graphics(entries: dict[str, bytes]) -> dict[str, str]:
 
 
 def _psd_to_pdf(path: str) -> str:
-    """Composite a linked `.psd` to a flat image and wrap it in a one-page
-    PDF, written to a temp file whose path is returned.
+    """Convert a linked `.psd` to a one-page PDF, one Optional Content Group
+    per top-level PSD layer, written to a temp file whose path is returned.
 
     PyMuPDF — and everything downstream that opens a linked graphic
     (`extract_lines`, `ocr_image_regions`, `rebuild_pdf`) — only understands
-    PDF-compatible input, which a PSD isn't. Any text baked into the PSD's
-    pixels is still recoverable by OCR once it's sitting on a PDF page; a
-    PSD text LAYER (if the asset has one) is not preserved as live text
-    here — it's flattened into the composite along with every other layer,
-    same as any other raster source. The caller is responsible for deleting
-    the temp file."""
+    PDF-compatible input, which a PSD isn't. Flattening to a single composite
+    (the earlier approach) threw the PSD's own layer structure away: every
+    art layer became one indistinguishable raster, and whatever opened the
+    result afterward had no layers to show or toggle.
+
+    Each top-level layer is instead rendered on its own (`composite()`, not
+    `topil()`, so its own effects — drop shadow, stroke — are baked in same
+    as Photoshop would show them) and drawn into a same-named OCG, visible
+    or hidden to match the layer's own state. A PDF's Optional Content Groups
+    are exactly what Acrobat/Illustrator's Layers panel is built from, so the
+    output opens with the original layer list intact — editable per layer
+    (move, hide, delete) even though no *single* layer's content is
+    live/vector Photoshop text anymore (see `translate_graphic`, which draws
+    the translation as real PDF text on top, same as the `.ai` path).
+
+    A layer nested inside a group is folded into that top-level group's own
+    composite rather than getting its own OCG — one layer of nesting is
+    preserved, not arbitrary depth (the common case for these small linked
+    callout assets; deeper structure is a known gap, not attempted here).
+
+    Any text baked into the PSD's pixels is recoverable by OCR once it's
+    sitting on a PDF page; a PSD text LAYER's content is read as pixels too
+    (via `composite()`), not lifted as live text — same limitation as the
+    old flattened path, just no longer flattening every OTHER layer with it.
+    The caller is responsible for deleting the temp file."""
     from psd_tools import PSDImage
 
-    image = PSDImage.open(path).composite()
-    if image.mode != "RGB":
-        image = image.convert("RGB")
+    psd = PSDImage.open(path)
+    doc = fitz.open()
+    page = doc.new_page(width=psd.width, height=psd.height)
+
+    for i, layer in enumerate(psd):  # bottom-to-top, painter's order
+        if not layer.has_pixels() and not layer.is_group():
+            continue
+        image = layer.composite(viewport=layer.bbox, force=True,
+                                 alpha=0.0, layer_filter=lambda _l: True)
+        if image is None or layer.width <= 0 or layer.height <= 0:
+            continue
+        if image.mode != "RGBA":
+            image = image.convert("RGBA")
+        buf = io.BytesIO()
+        image.save(buf, "PNG")
+        rect = fitz.Rect(*layer.bbox)
+        ocg = doc.add_ocg(layer.name or f"Layer {i + 1}", on=int(layer.visible))
+        page.insert_image(rect, stream=buf.getvalue(), oc=ocg, overlay=True)
+
     fd, tmp_path = tempfile.mkstemp(suffix=".pdf")
     os.close(fd)
-    image.save(tmp_path, "PDF")
+    doc.save(tmp_path)
+    doc.close()
     return tmp_path
 
 
@@ -235,18 +294,24 @@ def translate_graphic(path: str, out_path: str, lang, primary, secondary,
     is_psd = path.lower().endswith(_PSD_EXTS)
     work_path = _psd_to_pdf(path) if is_psd else path
     try:
-        lines = [ln for ln in extract_lines(work_path) if _worth_translating(ln)]
+        is_badge = _is_badge_canvas(work_path)
+        lines = [ln for ln in extract_lines(work_path)
+                 if _worth_translating(ln, apply_size_floor=is_badge)]
         if with_ocr:
             try:
                 doc = fitz.open(work_path)
-                page_rect = tuple(doc[0].rect)
+                # Every page, not just the first — a small linked badge is
+                # always one page so this used to only ever need page 0, but
+                # a standalone multi-page upload has real content on every
+                # page.
+                regions = {pno: [tuple(doc[pno].rect)] for pno in range(doc.page_count)}
                 doc.close()
                 # An explicit region (the whole page) rather than
                 # detect_image_regions: that only finds RASTER images, but the
                 # text this is meant to catch is typically vector outlines with
                 # no raster backing at all — OCR still reads it fine off the
                 # rendered pixels, it just needs to be told where to look.
-                ocr_lines, note = ocr_image_regions(work_path, regions={0: [page_rect]})
+                ocr_lines, note = ocr_image_regions(work_path, regions=regions)
                 if ocr_lines:
                     logger.info("linked graphic OCR: %s -> %s", path, note)
                 lines = merge_ocr_lines(lines, ocr_lines)
@@ -260,7 +325,13 @@ def translate_graphic(path: str, out_path: str, lang, primary, secondary,
             return False
         Translator(primary, secondary, target_lang=lang.code).run(segments)
         os.makedirs(os.path.dirname(out_path), exist_ok=True)
-        render_path, segments = _grow_canvas_for_translation(work_path, segments, lang)
+        # The tight-canvas growth below is specifically for a badge cropped to
+        # its own word's ink with zero margin — meaningless (and wrong) for a
+        # normal page, which has real margins to wrap into instead.
+        if is_badge:
+            render_path, segments = _grow_canvas_for_translation(work_path, segments, lang)
+        else:
+            render_path = work_path
         try:
             rebuild_pdf(render_path, segments, out_path, target_lang=lang.code)
         finally:
@@ -295,9 +366,10 @@ def _output_filename(path: str, content_hash: str) -> str:
     translated once, not once per job.
 
     A `.psd` source keeps its `.ext` swapped to `.pdf`: `translate_graphic`
-    never reconstructs real PSD layers, it writes PDF-format bytes (same as
-    every other linked graphic) — naming the output `foo.psd` would be a
-    lie InDesign takes at face value and fails to open."""
+    writes PDF-format bytes (layers preserved as PDF Optional Content
+    Groups, see `_psd_to_pdf`), not a real `.psd` file — naming the output
+    `foo.psd` would be a lie InDesign takes at face value and fails to
+    open."""
     base, ext = os.path.splitext(os.path.basename(path))
     if ext.lower() in _PSD_EXTS:
         ext = ".pdf"

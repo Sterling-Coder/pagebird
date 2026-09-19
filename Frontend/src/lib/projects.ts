@@ -25,7 +25,9 @@ export type JobSummary = {
   project_id?: string | null;
   job_type?: string;
   folder_id?: string | null;
-  meta?: { progress?: number; stage?: string } | null;
+  created_by?: string | null;
+  created_by_name?: string | null;
+  meta?: { progress?: number; stage?: string; extensions?: string[] } | null;
 };
 
 export type Folder = {

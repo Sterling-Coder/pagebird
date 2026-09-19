@@ -12,9 +12,14 @@ import {
   type JobSummary,
   type Folder,
 } from "@/lib/projects";
-import { listLanguages, translateDocument, translateLinks, deleteJob, API_BASE_URL, type Language } from "@/lib/translate";
+import {
+  listLanguages, translateDocument, translateLinks, deleteJob, getJobEval,
+  API_BASE_URL, type Language, type EvalReport,
+} from "@/lib/translate";
 import { downloadAuthed } from "@/lib/supabase/authFetch";
+import { languageName } from "@/lib/languageNames";
 import { ConfirmDialog } from "@/components/app/ConfirmDialog";
+import { QaDetail } from "@/components/app/QaDetail";
 
 const TRANSLATE_STAGES = ["Uploading", "Extracting text", "Translating", "Rebuilding document"];
 const STAGE_DURATION_MS = 4000;
@@ -27,6 +32,10 @@ export default function ProjectFilesPage() {
   const inputRef = useRef<HTMLInputElement>(null);
   const linksInputRef = useRef<HTMLInputElement>(null);
   const linksFolderInputRef = useRef<HTMLInputElement>(null);
+  const [uploadMenuOpen, setUploadMenuOpen] = useState(false);
+  const uploadMenuRef = useRef<HTMLDivElement>(null);
+  const uploadButtonRef = useRef<HTMLButtonElement>(null);
+  const uploadMenuItemRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const [files, setFiles] = useState<JobSummary[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [allFolders, setAllFolders] = useState<Folder[]>([]);
@@ -54,6 +63,8 @@ export default function ProjectFilesPage() {
     { id: string; name: string; startedAt: number | null }[]
   >([]);
   const [, setTick] = useState(0);
+  const [qaScores, setQaScores] = useState<Record<string, EvalReport>>({});
+  const [qaModalId, setQaModalId] = useState<string | null>(null);
 
   function refresh() {
     listProjectFiles(params.projectId, folderId)
@@ -66,6 +77,22 @@ export default function ProjectFilesPage() {
         // doesn't render twice.
         const known = new Set(fetched.map((f) => f.original_filename));
         setInFlight((prev) => prev.filter((f) => !known.has(f.name)));
+
+        // Never computes anything here — `cache_only` just reads whatever a
+        // prior "QA check" (on the project's Settings page) already wrote to
+        // disk, or reports "not computed". Layout scoring re-renders every
+        // page of the document, so triggering it for every row just because
+        // the list loaded would make opening this page expensive for no
+        // reason nobody asked for yet.
+        const done = fetched.filter((f) => f.status === "complete");
+        Promise.all(
+          done.map((f) =>
+            getJobEval(f.id, { cacheOnly: true }).then(
+              (r) => [f.id, r] as const,
+              () => [f.id, { not_computed: true } as EvalReport] as const
+            )
+          )
+        ).then((pairs) => setQaScores(Object.fromEntries(pairs)));
       })
       .catch(() => setFiles([]));
     listFolders(params.projectId, folderId).then(setFolders).catch(() => setFolders([]));
@@ -82,6 +109,31 @@ export default function ProjectFilesPage() {
     setSelectedFiles(new Set());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.projectId, folderId]);
+
+  // Closes the Upload menu on an outside click or Escape — a menu that only
+  // closes by picking an item traps anyone who opened it by mistake.
+  useEffect(() => {
+    if (!uploadMenuOpen) return;
+    function handlePointerDown(e: MouseEvent) {
+      const target = e.target as Node;
+      if (uploadMenuRef.current?.contains(target) || uploadButtonRef.current?.contains(target)) {
+        return;
+      }
+      setUploadMenuOpen(false);
+    }
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setUploadMenuOpen(false);
+        uploadButtonRef.current?.focus();
+      }
+    }
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [uploadMenuOpen]);
 
   useEffect(() => {
     if (!folderId) {
@@ -197,10 +249,18 @@ export default function ProjectFilesPage() {
     setPendingLinkFiles([]);
     setError(null);
 
+    // Matches the backend's own display-name choice (translate_links_upload)
+    // so this placeholder's name lines up with the real job row `refresh()`
+    // replaces it with — a batch of one shows its real filename, not a
+    // "1 linked graphic" label with nothing left to disambiguate.
+    const linksDisplayName =
+      filesToTranslate.length === 1
+        ? filesToTranslate[0].name
+        : `${filesToTranslate.length} linked graphics`;
     const tempId = `pending-links-${Date.now()}`;
     setInFlight((prev) => [
       ...prev,
-      { id: tempId, name: `${filesToTranslate.length} linked graphic${filesToTranslate.length !== 1 ? "s" : ""}`, startedAt: Date.now() },
+      { id: tempId, name: linksDisplayName, startedAt: Date.now() },
     ]);
 
     try {
@@ -342,20 +402,6 @@ export default function ProjectFilesPage() {
           className="hidden"
           onChange={(e) => handleFilePicked(e.target.files)}
         />
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          className="bg-red px-4 py-2 font-mono text-[11px] uppercase tracking-widest text-paper hover:opacity-90"
-        >
-          Upload
-        </button>
-        <button
-          type="button"
-          onClick={() => setCreatingFolder(true)}
-          className="border border-rule px-4 py-2 font-mono text-[11px] uppercase tracking-widest text-ink-soft hover:text-ink"
-        >
-          Create folder
-        </button>
         <input
           ref={linksInputRef}
           type="file"
@@ -380,13 +426,90 @@ export default function ProjectFilesPage() {
             e.target.value = "";
           }}
         />
+
+        <div className="relative">
+          <button
+            ref={uploadButtonRef}
+            type="button"
+            aria-haspopup="menu"
+            aria-expanded={uploadMenuOpen}
+            onClick={() => setUploadMenuOpen((v) => !v)}
+            onKeyDown={(e) => {
+              if (e.key === "ArrowDown") {
+                e.preventDefault();
+                setUploadMenuOpen(true);
+                requestAnimationFrame(() => uploadMenuItemRefs.current[0]?.focus());
+              }
+            }}
+            className="flex items-center gap-2 bg-red px-4 py-2 font-mono text-[11px] uppercase tracking-widest text-paper hover:opacity-90"
+          >
+            Upload
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`h-3 w-3 transition-transform ${uploadMenuOpen ? "rotate-180" : ""}`}>
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
+          {uploadMenuOpen ? (
+            <div
+              ref={uploadMenuRef}
+              role="menu"
+              aria-label="Upload"
+              className="absolute left-0 top-full z-40 mt-1 w-72 border border-ink bg-paper py-1 shadow-lg"
+            >
+              {[
+                {
+                  label: "Document(s)",
+                  hint: ".pdf, .indd, .idml — single or multiple",
+                  onSelect: () => inputRef.current?.click(),
+                },
+                {
+                  label: "Linked graphic(s)",
+                  hint: ".ai, .eps, .pdf, .psd — single or multiple",
+                  onSelect: () => linksInputRef.current?.click(),
+                },
+                {
+                  label: "Linked graphics folder",
+                  hint: ".ai, .eps, .pdf, .psd — whole Links folder at once",
+                  onSelect: () => linksFolderInputRef.current?.click(),
+                },
+              ].map((item, i, arr) => (
+                <button
+                  key={item.label}
+                  ref={(el) => {
+                    uploadMenuItemRefs.current[i] = el;
+                  }}
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    setUploadMenuOpen(false);
+                    item.onSelect();
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "ArrowDown") {
+                      e.preventDefault();
+                      uploadMenuItemRefs.current[(i + 1) % arr.length]?.focus();
+                    } else if (e.key === "ArrowUp") {
+                      e.preventDefault();
+                      uploadMenuItemRefs.current[(i - 1 + arr.length) % arr.length]?.focus();
+                    }
+                  }}
+                  className="block w-full px-4 py-2 text-left hover:bg-paper-dim"
+                >
+                  <span className="block font-mono text-[11px] uppercase tracking-widest text-ink">
+                    {item.label}
+                  </span>
+                  <span className="block text-xs text-muted">{item.hint}</span>
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
+
         <button
           type="button"
-          onClick={() => linksFolderInputRef.current?.click()}
-          title="Translate a batch of linked graphics (.ai/.eps/.pdf/.psd) on their own, independent of any document"
+          onClick={() => setCreatingFolder(true)}
           className="border border-rule px-4 py-2 font-mono text-[11px] uppercase tracking-widest text-ink-soft hover:text-ink"
         >
-          Upload links
+          Create folder
         </button>
         {selectedFolders.size + selectedFiles.size > 0 ? (
           <button
@@ -485,7 +608,15 @@ export default function ProjectFilesPage() {
           })}
           {files.map((f) => {
             const name = f.original_filename ?? f.id;
-            const ext = name.includes(".") ? name.split(".").pop() : "—";
+            // A "links" job's own filename is a display label ("3 linked
+            // graphics"), not a real name with an extension — its actual
+            // file type(s) come from the batch's own extensions instead.
+            const linkExtensions = Array.isArray(f.meta?.extensions) ? f.meta.extensions : null;
+            const ext = linkExtensions?.length
+              ? linkExtensions.join(", ").toUpperCase()
+              : name.includes(".")
+                ? name.split(".").pop()
+                : "—";
             const processing = f.status === "processing";
             return (
               <tr
@@ -540,12 +671,39 @@ export default function ProjectFilesPage() {
                     </div>
                   )}
                 </td>
-                <td className="py-2 text-ink-soft">{projectTargetLang ?? "—"}</td>
-                <td className="py-2 text-ink-soft">—</td>
+                <td className="py-2 text-ink-soft">{languageName(projectTargetLang) ?? "—"}</td>
+                <td className="py-2 text-ink-soft">{f.created_by_name ?? "—"}</td>
                 <td className="py-2 text-ink-soft">
                   {new Date(f.created_at * 1000).toLocaleDateString()}
                 </td>
-                <td className="py-2 text-ink-soft">{processing ? "—" : 0}</td>
+                {(() => {
+                  const qa = qaScores[f.id];
+                  if (!qa || qa.not_computed) {
+                    return (
+                      <td className="py-2 text-muted" title="Run QA check on the project's Settings page">
+                        —
+                      </td>
+                    );
+                  }
+                  if (qa.not_applicable) {
+                    return <td className="py-2 text-muted">N/A</td>;
+                  }
+                  const score = qa.overall?.score;
+                  const passed = qa.overall?.gates_passed;
+                  return (
+                    <td className="py-2" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        onClick={() => setQaModalId(f.id)}
+                        className={`underline decoration-dotted underline-offset-2 hover:no-underline ${
+                          passed ? "text-ink" : "text-red"
+                        }`}
+                      >
+                        {typeof score === "number" ? `${Math.round(score * 100)}%` : "—"}
+                      </button>
+                    </td>
+                  );
+                })()}
                 <td className="py-2" onClick={(e) => e.stopPropagation()}>
                   {f.status === "complete" ? (
                     <button
@@ -774,6 +932,33 @@ export default function ProjectFilesPage() {
         onConfirm={handleConfirmDeleteSelected}
         onCancel={() => setConfirmDeleteOpen(false)}
       />
+
+      {qaModalId && qaScores[qaModalId] ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40"
+          onClick={() => setQaModalId(null)}
+        >
+          <div
+            className="max-h-[80vh] w-full max-w-2xl overflow-auto border border-ink bg-paper"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-rule px-4 py-3">
+              <p className="font-mono text-[11px] uppercase tracking-widest text-ink-soft">
+                QA detail — {files.find((f) => f.id === qaModalId)?.original_filename ?? qaModalId}
+              </p>
+              <button
+                type="button"
+                onClick={() => setQaModalId(null)}
+                aria-label="Close"
+                className="text-ink-soft hover:text-ink"
+              >
+                ×
+              </button>
+            </div>
+            <QaDetail report={qaScores[qaModalId]} />
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -129,6 +129,24 @@ def get_or_create_profile(user: dict) -> dict:
     return {"email": user.get("email"), "created_at": None, "trial_ends_at": trial_ends_at}
 
 
+def get_profile_names(user_ids: list[str]) -> dict[str, str]:
+    """id -> a display name (full_name, else email, else the id itself) for
+    each of `user_ids` — batch, one request, for rendering "created by" on a
+    list of jobs without a round trip per row. Missing/unresolvable ids are
+    simply absent from the result; the caller decides the fallback."""
+    ids = sorted({i for i in user_ids if i})
+    if not ids or not _SUPABASE_URL or not _SUPABASE_SERVICE_ROLE_KEY:
+        return {}
+    resp = requests.get(
+        f"{_SUPABASE_URL}/rest/v1/profiles",
+        params={"id": f"in.({','.join(ids)})", "select": "id,email,full_name"},
+        headers=_service_headers(),
+        timeout=10,
+    )
+    resp.raise_for_status()
+    return {row["id"]: row.get("full_name") or row.get("email") or row["id"] for row in resp.json()}
+
+
 def require_trial_active(user: dict) -> None:
     """Raises 402 once the user's 14-day trial has passed. Call this from
     endpoints that spend LLM/API budget (translate, rebuild) — not from

@@ -504,66 +504,6 @@ def translate_idml(
     return report
 
 
-def regenerate_idml_from_review(job: dict, review_db: str = "babel_review.db",
-                                 source_path: str | None = None, output_path: str | None = None,
-                                 with_draft_pdf: bool = False) -> str:
-    """Re-apply a job's current review-store state (including post-export human
-    approvals/edits) onto a fresh copy of the original .idml and overwrite the
-    saved output.
-
-    `translate_idml` writes the output .idml once, right after MT — any segment
-    that came back `needs_human` (integrity fail, disagreement, low OCR
-    confidence) is left untouched (English) at that point, by design, so a
-    person can fix it in the review UI. But `ReviewStore.update_segment` only
-    updates its own DB row; nothing re-applies that fix to the .idml on disk.
-    Call this before serving a download so an approved/edited segment actually
-    reaches the file instead of silently staying English forever.
-    """
-    from pagebirdy.idml.package import IdmlPackage
-    from pagebirdy.review.store import ReviewStore
-
-    src_idml = source_path or str(job["source"])
-    out_idml = output_path or str(job["output"])
-    meta = job.get("meta") or {}
-    lang = languages.get(meta.get("target_lang"))
-
-    pkg = IdmlPackage(src_idml)
-    by_id = {s.id: s for s in pkg.segments()}
-
-    store = ReviewStore(review_db)
-    try:
-        rows = store.get_segments(job["id"])
-    finally:
-        store.close()
-
-    segments = []
-    for r in rows:
-        seg = by_id.get(r["seg_id"])
-        if seg is None:
-            continue
-        seg.target = r["target"]
-        seg.status = r["status"]
-        segments.append(seg)
-
-    pkg.apply(segments, idml_font=lang.idml_font, size_delta=lang.size_delta,
-                       direction=lang.direction)
-    pkg.save(out_idml)
-
-    # Keep the draft-PDF preview in step with the approved edits — off by
-    # default, same reasoning as translate_idml's with_draft_pdf: nothing
-    # currently downloads/shows it, and re-rendering it on every download
-    # added real time for no payoff.
-    if with_draft_pdf:
-        try:
-            from pagebirdy.idml.render import render_idml_to_pdf
-            render_idml_to_pdf(out_idml, os.path.splitext(out_idml)[0] + ".pdf",
-                               target_lang=lang.code)
-        except Exception:
-            logger.exception("regenerate_idml_from_review: draft PDF re-render failed")
-
-    return out_idml
-
-
 def rebuild_from_edits(job_id: str, out_dir: str = "out",
                         review_db: str = "babel_review.db",
                         source_path: str | None = None, output_path: str | None = None) -> str:
@@ -828,6 +768,13 @@ def translate_links_folder(
                 "target_lang": lang.code,
                 "total_files": len(paths),
                 "translated_count": len(translated_files),
+                # `finalize_job` REPLACES the pending job's meta_json wholesale
+                # (not a merge) — the extensions set at upload time (see
+                # api.py's translate_links_upload) would otherwise vanish the
+                # moment the job completes, right when the Files table Type
+                # column actually reads it.
+                "extensions": sorted({os.path.splitext(p)[1].lower().lstrip(".")
+                                       for p in paths if os.path.splitext(p)[1]}),
             }
             if job_id:
                 store.finalize_job(job_id, translated_dir, [], meta,
