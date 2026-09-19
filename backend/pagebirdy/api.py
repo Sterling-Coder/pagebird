@@ -582,9 +582,11 @@ def delete_folder(folder_id: str, user: dict = Depends(require_user)) -> dict:
     s = _store()
     try:
         _assert_owns_folder(s, folder_id, user)
-        s.delete_folder(folder_id)
+        job_ids = s.delete_folder(folder_id)
     finally:
         s.close()
+    for jid in job_ids:
+        storage.delete_prefix(f"jobs/{jid}/")
     return {"ok": True}
 
 

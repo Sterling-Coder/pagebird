@@ -352,9 +352,11 @@ class ReviewStore:
             )
             return cur.fetchone()
 
-    def delete_folder(self, folder_id: str) -> None:
+    def delete_folder(self, folder_id: str) -> list[str]:
         """Remove a folder, every file (job) filed under it, and every
-        subfolder (recursively) beneath it."""
+        subfolder (recursively) beneath it. Returns the deleted job ids so the
+        caller can also clear their Storage blobs (`storage.delete_prefix`) —
+        this only ever touches the database rows, never Storage itself."""
         with self.conn.cursor() as cur:
             stack = [folder_id]
             all_folder_ids: list[str] = []
@@ -366,10 +368,12 @@ class ReviewStore:
                 )
                 stack.extend(c["id"] for c in cur.fetchall())
 
+            deleted_job_ids: list[str] = []
             for fid in all_folder_ids:
                 cur.execute("SELECT id FROM review_jobs WHERE folder_id = %s", (fid,))
                 job_rows = cur.fetchall()
                 for jr in job_rows:
+                    deleted_job_ids.append(jr["id"])
                     cur.execute(
                         "DELETE FROM review_segment_events WHERE job_id = %s", (jr["id"],)
                     )
@@ -377,6 +381,7 @@ class ReviewStore:
                 cur.execute("DELETE FROM review_jobs WHERE folder_id = %s", (fid,))
                 cur.execute("DELETE FROM review_folders WHERE id = %s", (fid,))
         self.conn.commit()
+        return deleted_job_ids
 
     # ---- projects ------------------------------------------------------------
 
