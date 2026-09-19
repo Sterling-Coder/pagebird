@@ -36,11 +36,7 @@ export default function ContactPage() {
           <div className="flex flex-col gap-2.5 border-t-2 border-pb-line pt-6">
             <span className="font-pb-mono-brand text-[11px] font-bold text-pb-faint">OFFICE</span>
             <p className="text-sm leading-relaxed text-pb-muted">
-              [Street address]
-              <br />
-              [City, postal code]
-              <br />
-              [Country]
+              Bangalore, India
             </p>
           </div>
         </div>

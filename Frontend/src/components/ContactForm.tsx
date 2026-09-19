@@ -4,6 +4,8 @@ import { useState } from "react";
 
 export default function ContactForm() {
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   if (submitted) {
     return (
@@ -19,9 +21,37 @@ export default function ContactForm() {
   return (
     <form
       className="flex flex-col gap-7"
-      onSubmit={(e) => {
+      onSubmit={async (e) => {
         e.preventDefault();
-        setSubmitted(true);
+        setError(null);
+        setSubmitting(true);
+
+        const form = e.currentTarget;
+        const data = new FormData(form);
+
+        try {
+          const res = await fetch("/api/contact", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: data.get("name"),
+              email: data.get("email"),
+              company: data.get("company"),
+              message: data.get("message"),
+            }),
+          });
+
+          if (!res.ok) {
+            const body = await res.json().catch(() => null);
+            throw new Error(body?.error ?? "Failed to send message.");
+          }
+
+          setSubmitted(true);
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "Failed to send message.");
+        } finally {
+          setSubmitting(false);
+        }
       }}
     >
       <div className="flex flex-col gap-2.5 border-b-2 border-pb-ink pb-4.5">
@@ -74,11 +104,13 @@ export default function ContactForm() {
           className="w-full resize-none bg-transparent py-1.5 text-[17px] leading-relaxed text-pb-ink outline-none placeholder:text-pb-faint"
         />
       </div>
+      {error && <p className="text-sm font-bold text-pb-accent">{error}</p>}
       <button
         type="submit"
-        className="mt-2 flex h-14 items-center justify-center bg-pb-ink text-[15px] font-bold text-pb-paper"
+        disabled={submitting}
+        className="mt-2 flex h-14 items-center justify-center bg-pb-ink text-[15px] font-bold text-pb-paper disabled:opacity-60"
       >
-        Send message →
+        {submitting ? "Sending…" : "Send message →"}
       </button>
     </form>
   );
