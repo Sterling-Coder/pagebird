@@ -8,24 +8,37 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const NAME_MAX = 200;
 const COMPANY_MAX = 200;
 const MESSAGE_MAX = 5000;
+const MAX_BODY_BYTES = 20_000;
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX = 3;
+const RATE_LIMIT_MAX_TRACKED_KEYS = 5000;
 
 // Best-effort only: resets per serverless instance, but still blocks casual
-// abuse of this route as a free email relay to arbitrary addresses.
-const submissionsByIp = new Map<string, number[]>();
+// abuse of this route (as an email relay or to spam one recipient across
+// rotating IPs). Keyed by both IP and target email so bypassing one axis
+// alone doesn't defeat the limit, and pruned on every write so the map
+// can't grow unbounded.
+const submissionsByKey = new Map<string, number[]>();
 
-function isRateLimited(ip: string): boolean {
+function isRateLimited(key: string): boolean {
   const now = Date.now();
-  const timestamps = (submissionsByIp.get(ip) ?? []).filter(
+  const timestamps = (submissionsByKey.get(key) ?? []).filter(
     (t) => now - t < RATE_LIMIT_WINDOW_MS
   );
+
   if (timestamps.length >= RATE_LIMIT_MAX) {
-    submissionsByIp.set(ip, timestamps);
+    submissionsByKey.set(key, timestamps);
     return true;
   }
+
   timestamps.push(now);
-  submissionsByIp.set(ip, timestamps);
+  submissionsByKey.set(key, timestamps);
+
+  if (submissionsByKey.size > RATE_LIMIT_MAX_TRACKED_KEYS) {
+    const oldestKey = submissionsByKey.keys().next().value;
+    if (oldestKey !== undefined) submissionsByKey.delete(oldestKey);
+  }
+
   return false;
 }
 
@@ -37,13 +50,22 @@ export async function POST(request: Request) {
   }
 
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-  if (isRateLimited(ip)) {
+  if (isRateLimited(`ip:${ip}`)) {
     return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429 });
+  }
+
+  const contentLength = Number(request.headers.get("content-length") ?? "0");
+  if (contentLength > MAX_BODY_BYTES) {
+    return NextResponse.json({ error: "Request body too large." }, { status: 413 });
   }
 
   let body: { name?: string; email?: string; company?: string; message?: string };
   try {
-    body = await request.json();
+    const raw = await request.text();
+    if (raw.length > MAX_BODY_BYTES) {
+      return NextResponse.json({ error: "Request body too large." }, { status: 413 });
+    }
+    body = JSON.parse(raw);
   } catch {
     return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
   }
@@ -55,6 +77,10 @@ export async function POST(request: Request) {
 
   if (!name || !email || !EMAIL_RE.test(email)) {
     return NextResponse.json({ error: "A valid name and email are required." }, { status: 400 });
+  }
+
+  if (isRateLimited(`email:${email.toLowerCase()}`)) {
+    return NextResponse.json({ error: "Too many requests. Please try again later." }, { status: 429 });
   }
 
   const resend = new Resend(resendApiKey);
