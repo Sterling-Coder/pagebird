@@ -12,7 +12,7 @@ export default function ContactForm() {
       <div className="flex h-full min-h-64 flex-col items-center justify-center gap-3 border-[3px] border-pb-ink p-10 text-center">
         <span className="font-pb-display text-2xl">Message sent.</span>
         <p className="text-sm text-pb-muted">
-          We&rsquo;ll get back to you within [X] business hours.
+          We&rsquo;ll get back to you within 48 business hours.
         </p>
       </div>
     );

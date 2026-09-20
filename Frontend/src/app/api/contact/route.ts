@@ -5,6 +5,60 @@ const CONTACT_TO_EMAIL = process.env.CONTACT_TO_EMAIL ?? "founder@thepagebirdy.c
 const CONTACT_FROM_EMAIL = process.env.CONTACT_FROM_EMAIL ?? "onboarding@resend.dev";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function escapeHtml(input: string): string {
+  return input
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function confirmationEmailHtml(name: string): string {
+  const safeName = escapeHtml(name);
+  return `<!doctype html>
+<html>
+  <body style="margin:0;padding:0;background:#f6f3ea;font-family:Georgia,'Times New Roman',serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f3ea;padding:32px 16px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="max-width:480px;width:100%;background:#fdfcf7;border:3px solid #15130f;">
+            <tr>
+              <td style="background:#153a2e;padding:22px 28px;">
+                <span style="font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:24px;color:#f2ede0;">
+                  page<span style="color:#e08a6f;">birdy</span>
+                </span>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:32px 28px;">
+                <p style="margin:0 0 16px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#15130f;">
+                  Hi ${safeName},
+                </p>
+                <p style="margin:0 0 16px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#15130f;">
+                  Thanks for reaching out to Pagebirdy. We received your message and will get back to you within <strong>48 business hours</strong>.
+                </p>
+                <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:#6e6a61;">
+                  — Pagebirdy
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:16px 28px;border-top:3px solid #dad4c7;">
+                <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#8fa090;">
+                  Pagebirdy · K-8 curriculum translation
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+}
+
 const NAME_MAX = 200;
 const COMPANY_MAX = 200;
 const MESSAGE_MAX = 5000;
@@ -113,10 +167,11 @@ export async function POST(request: Request) {
       text: [
         `Hi ${name},`,
         "",
-        "Thanks for reaching out to Pagebirdy. We received your message and will get back to you within [X] business hours.",
+        "Thanks for reaching out to Pagebirdy. We received your message and will get back to you within 48 business hours.",
         "",
         "— Pagebirdy",
       ].join("\n"),
+      html: confirmationEmailHtml(name),
     });
 
     if (confirmationError) {
