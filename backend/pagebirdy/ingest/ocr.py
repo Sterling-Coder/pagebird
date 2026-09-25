@@ -438,6 +438,41 @@ class _VisionClient:
         return cls._client
 
 
+# Vision's DetectedBreak types that end a visual line: EOL_SURE_SPACE,
+# HYPHEN (line-wrapping hyphen), LINE_BREAK.
+_VISION_LINE_END_BREAKS = frozenset({3, 4, 5})
+
+
+def _vision_rows(paragraph) -> list[tuple[str, list]]:
+    """Split a Vision paragraph into its visual lines as (text, vertices).
+
+    A line ends at a word whose last symbol carries a line-ending
+    DetectedBreak. Falls back to the whole paragraph as one line when words
+    carry no boxes to measure a row by.
+    """
+    whole = " ".join(
+        "".join(sym.text for sym in word.symbols) for word in paragraph.words
+    ).strip()
+    if not all(getattr(w, "bounding_box", None) for w in paragraph.words):
+        return [(whole, list(paragraph.bounding_box.vertices))]
+
+    rows: list[tuple[str, list]] = []
+    words: list[str] = []
+    verts: list = []
+    for word in paragraph.words:
+        words.append("".join(sym.text for sym in word.symbols))
+        verts.extend(word.bounding_box.vertices)
+        last = word.symbols[-1] if word.symbols else None
+        brk = getattr(getattr(getattr(last, "property", None), "detected_break", None),
+                      "type_", 0)
+        if int(brk or 0) in _VISION_LINE_END_BREAKS:
+            rows.append((" ".join(words).strip(), verts))
+            words, verts = [], []
+    if words:
+        rows.append((" ".join(words).strip(), verts))
+    return [r for r in rows if r[0]] or [(whole, list(paragraph.bounding_box.vertices))]
+
+
 def _parse_vision_response(response, page: int, clip: "fitz.Rect", dpi: int) -> list[Line]:
     """Vision `DOCUMENT_TEXT_DETECTION` response -> Lines, pixel verts -> PDF points.
 
@@ -469,21 +504,27 @@ def _parse_vision_response(response, page: int, clip: "fitz.Rect", dpi: int) -> 
                 if not text:
                     empty += 1
                     continue
-                verts = paragraph.bounding_box.vertices
-                xs = [v.x * scale + clip.x0 for v in verts]
-                ys = [v.y * scale + clip.y0 for v in verts]
-                bbox = (min(xs), min(ys), max(xs), max(ys))
-                size = max(6.0, min(OCR_SIZE_CAP, (bbox[3] - bbox[1]) * 0.8))
-                lines.append(
-                    Line(
-                        page=page,
-                        bbox=bbox,
-                        spans=[Span(text=text, font="OCR", size=size, color=0, bbox=bbox)],
-                        block=9000,
-                        from_ocr=True,
-                        ocr_confidence=confidence,
+                # One Line per VISUAL line, all sharing this paragraph's block
+                # so segmentation joins them back into one segment. Reassembly
+                # keeps the source's line count, so a 3-line paragraph handed
+                # over as a single Line got its whole translation squeezed
+                # onto one row — down to the 5pt floor.
+                block_id = 9000 + seen
+                for row_text, row_verts in _vision_rows(paragraph):
+                    xs = [v.x * scale + clip.x0 for v in row_verts]
+                    ys = [v.y * scale + clip.y0 for v in row_verts]
+                    bbox = (min(xs), min(ys), max(xs), max(ys))
+                    size = max(6.0, min(OCR_SIZE_CAP, (bbox[3] - bbox[1]) * 0.8))
+                    lines.append(
+                        Line(
+                            page=page,
+                            bbox=bbox,
+                            spans=[Span(text=row_text, font="OCR", size=size, color=0, bbox=bbox)],
+                            block=block_id,
+                            from_ocr=True,
+                            ocr_confidence=confidence,
+                        )
                     )
-                )
     logger.info(
         "vision p%d: %d paragraph(s) -> %d line(s) kept, %d below confidence %.2f, "
         "%d empty",

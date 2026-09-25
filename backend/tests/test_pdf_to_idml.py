@@ -591,3 +591,40 @@ def test_line_count_failure_explains_why():
     ok, why = line_count_ok("a\nb", "x\ny\nz")
     assert not ok
     assert "2 -> 3" in why
+
+
+def test_parse_vision_response_splits_paragraph_into_visual_lines():
+    """A 2-line OCR'd paragraph must come back as 2 Lines, not 1. Reassembly
+    keeps the source's line count, so reporting the paragraph as a single
+    line squeezed the whole translation onto one row and drove it to the
+    5pt floor."""
+    from types import SimpleNamespace as NS
+
+    from pagebirdy.ingest import ocr as ocr_mod
+    from pagebirdy.protect.mathguard import build_segments
+
+    def box(x0, y0, x1, y1):
+        return NS(vertices=[NS(x=x0, y=y0), NS(x=x1, y=y0), NS(x=x1, y=y1), NS(x=x0, y=y1)])
+
+    def word(text, x0, y0, x1, y1, brk=1):  # 1 = SPACE, 5 = LINE_BREAK
+        syms = [NS(text=c, property=NS(detected_break=NS(type_=0))) for c in text]
+        syms[-1].property.detected_break.type_ = brk
+        return NS(symbols=syms, bounding_box=box(x0, y0, x1, y1))
+
+    # 72 dpi so pixels == points; two rows 20pt tall, 10pt apart
+    words = [
+        word("In", 0, 0, 20, 20), word("maths,", 25, 0, 80, 20),
+        word("a", 85, 0, 95, 20, brk=5),
+        word("fraction", 0, 30, 70, 50), word("is", 75, 30, 90, 50, brk=5),
+    ]
+    para = NS(words=words, bounding_box=box(0, 0, 95, 50), confidence=0.95)
+    resp = NS(full_text_annotation=NS(pages=[NS(blocks=[NS(paragraphs=[para])])]))
+
+    lines = ocr_mod._parse_vision_response(resp, page=0, clip=fitz.Rect(0, 0, 200, 200), dpi=72)
+
+    assert [ln.spans[0].text for ln in lines] == ["In maths, a", "fraction is"]
+    assert lines[0].bbox == pytest.approx((0, 0, 95, 20))
+    assert lines[1].bbox == pytest.approx((0, 30, 90, 50))
+    assert lines[0].spans[0].size == pytest.approx(16.0)  # line height, not paragraph
+    segs = build_segments(lines)
+    assert len(segs) == 1 and segs[0].source_line_count == 2
