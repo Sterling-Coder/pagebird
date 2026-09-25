@@ -1042,6 +1042,12 @@ def merge_ocr_lines(base: list[Line], ocr: list[Line], overlap: float = 0.5) -> 
     """
     if not ocr:
         return base
+    # Live text in a font with no usable Unicode mapping extracts as blanks
+    # (a Roboto "What is a fraction?" came back as ' '). Such a line exposes
+    # nothing, so it must not count as coverage — and it's dropped, since the
+    # OCR read replaces it and a blank beside it would only get merged into
+    # the same segment.
+    base = [b for b in base if b.raw_text.strip()]
     kept: list[Line] = []
     for ln in ocr:
         rect = fitz.Rect(ln.bbox)

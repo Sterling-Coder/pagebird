@@ -83,7 +83,8 @@ def translate_pdf(
             logger.info("image-OCR line: page=%s bbox=%s text=%r",
                        ln.page, ln.bbox, ln.raw_text.strip())
         merged = merge_ocr_lines(lines, img_lines)
-        logger.info("image-OCR: %d/%d lines kept after dedup", len(merged) - len(lines), len(img_lines))
+        logger.info("image-OCR: %d/%d lines kept after dedup",
+                    sum(1 for ln in merged if ln.from_ocr), len(img_lines))
         lines = merged
 
     segments = build_segments(lines)

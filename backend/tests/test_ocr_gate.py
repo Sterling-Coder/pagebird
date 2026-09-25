@@ -200,3 +200,18 @@ def test_text_burned_into_artwork_beside_a_run_is_kept():
     burned = _ocr_line("GO !", (624.9, 70.4, 664.4, 90.3))
 
     assert merge_ocr_lines(base, [burned]) == base + [burned]
+
+
+def test_ocr_kept_where_live_text_extracts_as_blanks():
+    """Live text whose font has no usable Unicode mapping extracts as spaces
+    ("What is a fraction?" in Roboto came back as ' '). Those blank lines must
+    not count as the PDF already exposing the text — otherwise OCR's correct
+    read is dropped as a duplicate and the English ships untranslated."""
+    from pagebirdy.ingest.ocr import merge_ocr_lines
+
+    box = (100.0, 200.0, 300.0, 222.0)
+    blank = _pdf_line(" ", box)
+    real = _pdf_line("Fractions", (100.0, 50.0, 250.0, 90.0))
+    read = _ocr_line("What is a fraction?", box)
+
+    assert merge_ocr_lines([real, blank], [read]) == [real, read]
