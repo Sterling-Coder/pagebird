@@ -931,8 +931,14 @@ async def translate_upload(
 
     name = file.filename or ""
     ext = os.path.splitext(name)[1].lower()
-    if ext not in (".pdf", ".indd", ".idml"):
-        raise HTTPException(status_code=400, detail="upload a .pdf, .indd or .idml file")
+    if ext == ".indd":
+        raise HTTPException(
+            status_code=400,
+            detail=".indd files aren't supported — in InDesign use File → Export → "
+                   "InDesign Markup (IDML) and upload the .idml instead",
+        )
+    if ext not in (".pdf", ".idml"):
+        raise HTTPException(status_code=400, detail="upload a .pdf or .idml file")
     try:
         lang = languages.get(target_lang or None)
     except ValueError as e:

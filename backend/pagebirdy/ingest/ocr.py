@@ -30,6 +30,7 @@ import io
 import logging
 import os
 import re
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
@@ -497,6 +498,26 @@ def _parse_vision_response(response, page: int, clip: "fitz.Rect", dpi: int) -> 
 _BILLING_RETRY_ATTEMPTS = 3
 _BILLING_RETRY_DELAY = 5.0
 
+# A large placed image rendered at 300 dpi can run to 100+ MB of raw pixmap
+# per crop, and links/graphics/OCR each fan out 6-wide — enough to OOM-kill
+# the 1 GB container mid-job, and the resulting PNGs overflow Vision's 40 MB
+# request limit. Lower the dpi for any crop that would exceed this many
+# pixels; 25 MP still leaves text legible for OCR.
+_MAX_RENDER_PIXELS = 25_000_000
+_VISION_MAX_PAYLOAD_BYTES = 38 * 1024 * 1024  # hard API limit is 40 MB
+# Links and graphics translate concurrently and each can reach OCR, so cap
+# how many raw pixmaps are alive at once across the whole process.
+_RENDER_SLOTS = threading.BoundedSemaphore(2)
+
+
+def _capped_dpi(rect: "fitz.Rect", dpi: int) -> int:
+    """`dpi`, lowered if rendering `rect` at it would exceed _MAX_RENDER_PIXELS."""
+    area_pt = rect.width * rect.height
+    if area_pt <= 0:
+        return dpi
+    max_dpi = int(72.0 * (_MAX_RENDER_PIXELS / area_pt) ** 0.5)
+    return max(1, min(dpi, max_dpi))
+
 
 def _call_with_billing_retry(fn, attempts: int = _BILLING_RETRY_ATTEMPTS,
                              delay: float = _BILLING_RETRY_DELAY):
@@ -521,6 +542,11 @@ def _call_with_billing_retry(fn, attempts: int = _BILLING_RETRY_ATTEMPTS,
 
 def _vision_lines(png_bytes: bytes, page: int, clip: "fitz.Rect", dpi: int) -> list[Line]:
     from google.cloud import vision  # type: ignore[import-not-found]
+
+    if len(png_bytes) > _VISION_MAX_PAYLOAD_BYTES:
+        logger.warning("vision: p%d skipped, %d KB exceeds the Vision request limit",
+                       page + 1, len(png_bytes) // 1024)
+        return []
 
     client = _VisionClient.get()
     logger.info("vision: p%d requesting document_text_detection, %d KB @ %d dpi, "
@@ -666,8 +692,10 @@ def ocr_pages(pdf_path: str, pages: list[int] | None = None,
                 # running these concurrently, so this stays a plain loop.
                 for pno in pages:
                     page = doc.load_page(pno)
-                    png = page.get_pixmap(dpi=dpi).tobytes("png")
-                    lines.extend(_rapidocr_lines(png, pno, page.rect, dpi))
+                    pdpi = _capped_dpi(page.rect, dpi)
+                    with _RENDER_SLOTS:
+                        png = page.get_pixmap(dpi=pdpi).tobytes("png")
+                    lines.extend(_rapidocr_lines(png, pno, page.rect, pdpi))
                 return lines, f"OCR ({engine}): {len(lines)} lines from {len(pages)} page(s)"
 
             # Vision/http are one network round trip per page — rendering the
@@ -679,14 +707,17 @@ def ocr_pages(pdf_path: str, pages: list[int] | None = None,
             items = []
             for pno in pages:
                 page = doc.load_page(pno)
-                items.append((pno, page.get_pixmap(dpi=dpi).tobytes("png"), page.rect))
+                pdpi = _capped_dpi(page.rect, dpi)
+                with _RENDER_SLOTS:
+                    png = page.get_pixmap(dpi=pdpi).tobytes("png")
+                items.append((pno, png, page.rect, pdpi))
         finally:
             doc.close()
 
-        def _ocr_one(item: tuple[int, bytes, "fitz.Rect"]) -> list[Line]:
-            pno, png, rect = item
+        def _ocr_one(item: tuple[int, bytes, "fitz.Rect", int]) -> list[Line]:
+            pno, png, rect, pdpi = item
             if engine == "vision":
-                return _vision_lines(png, pno, rect, dpi)
+                return _vision_lines(png, pno, rect, pdpi)
             text = _ocr_http_call(png, f"page_{pno + 1}.png", "image/png")
             return _http_lines(text, pno, rect)
 
@@ -837,14 +868,16 @@ def ocr_image_regions(pdf_path: str, regions: dict[int, list[tuple]] | None = No
     # than one thread at once, so all rendering happens on the one `doc`
     # here before any concurrency starts.
     doc = fitz.open(pdf_path)
-    crops: list[tuple[int, "fitz.Rect", bytes]] = []
+    crops: list[tuple[int, "fitz.Rect", bytes, int]] = []
     try:
         for pno, boxes in sorted(regions.items()):
             page = doc.load_page(pno)
             for box in boxes:
                 rect = fitz.Rect(box)
-                png = page.get_pixmap(clip=rect, dpi=dpi).tobytes("png")
-                crops.append((pno, rect, png))
+                cdpi = _capped_dpi(rect, dpi)
+                with _RENDER_SLOTS:
+                    png = page.get_pixmap(clip=rect, dpi=cdpi).tobytes("png")
+                crops.append((pno, rect, png, cdpi))
     finally:
         doc.close()
 
@@ -853,12 +886,12 @@ def ocr_image_regions(pdf_path: str, regions: dict[int, list[tuple]] | None = No
     # labeled figures was paying for each region's round trip serially, this
     # is what made that add up. rapidocr stays sequential (local CPU model,
     # nothing to gain and a native-library thread-safety risk to take on).
-    def _ocr_one(item: tuple[int, "fitz.Rect", bytes]) -> list["Line"]:
-        pno, rect, png = item
+    def _ocr_one(item: tuple[int, "fitz.Rect", bytes, int]) -> list["Line"]:
+        pno, rect, png, cdpi = item
         if engine == "rapidocr":
-            return _rapidocr_lines(png, pno, rect, dpi)
+            return _rapidocr_lines(png, pno, rect, cdpi)
         if engine == "vision":
-            return _vision_lines(png, pno, rect, dpi)
+            return _vision_lines(png, pno, rect, cdpi)
         if engine == "http":
             # No geometry comes back, so the whole crop is one block. Fine
             # for reading a figure's text; not precise enough to mask
@@ -897,7 +930,7 @@ def ocr_image_regions(pdf_path: str, regions: dict[int, list[tuple]] | None = No
             except Exception as exc:  # noqa: BLE001
                 for f in futures:
                     f.cancel()
-                pno, rect, _png = crops[futures[fut]]
+                pno, rect, _png, _dpi = crops[futures[fut]]
                 if engine == "vision":
                     logger.error("vision: image OCR aborted at p%d region "
                                  "(%.0f,%.0f,%.0f,%.0f) — no image-OCR lines will "
@@ -916,7 +949,7 @@ def ocr_image_regions(pdf_path: str, regions: dict[int, list[tuple]] | None = No
     refused: list[str] = []
     try:
         for i, item in enumerate(crops):
-            pno, rect, _png = item
+            pno, rect, _png, _dpi = item
             page = doc.load_page(pno)
             for ln in raw_by_index.get(i, []):
                 ln.in_image = True

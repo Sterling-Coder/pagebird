@@ -181,8 +181,14 @@ export default function ProjectFilesPage() {
 
   function handleFilePicked(fileList: FileList | null) {
     if (!fileList || fileList.length === 0) return;
-    setError(null);
-    setPendingFiles(Array.from(fileList));
+    const all = Array.from(fileList);
+    const picked = all.filter((f) => !f.name.toLowerCase().endsWith(".indd"));
+    setError(
+      picked.length < all.length
+        ? ".indd files aren't supported. In InDesign, use File → Export → InDesign Markup (IDML) and upload the .idml."
+        : null
+    );
+    if (picked.length) setPendingFiles(picked);
   }
 
   const LINK_EXTENSIONS = [".ai", ".eps", ".pdf", ".psd"];
@@ -397,7 +403,7 @@ export default function ProjectFilesPage() {
         <input
           ref={inputRef}
           type="file"
-          accept=".pdf,.indd,.idml"
+          accept=".pdf,.idml"
           multiple
           className="hidden"
           onChange={(e) => handleFilePicked(e.target.files)}
@@ -458,7 +464,7 @@ export default function ProjectFilesPage() {
               {[
                 {
                   label: "Document(s)",
-                  hint: ".pdf, .indd, .idml — single or multiple",
+                  hint: ".pdf, .idml — single or multiple",
                   onSelect: () => inputRef.current?.click(),
                 },
                 {

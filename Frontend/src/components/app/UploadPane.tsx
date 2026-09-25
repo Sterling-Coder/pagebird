@@ -36,7 +36,7 @@ export function UploadPane({
   }, []);
 
   function handleFiles(files: FileList | null) {
-    if (files && files[0]) onFileChange(files[0]);
+    if (files && files[0] && !files[0].name.toLowerCase().endsWith(".indd")) onFileChange(files[0]);
   }
 
   return (
@@ -64,7 +64,7 @@ export function UploadPane({
       <input
         ref={inputRef}
         type="file"
-        accept=".pdf,.indd,.idml"
+        accept=".pdf,.idml"
         className="hidden"
         onChange={(e) => handleFiles(e.target.files)}
       />
@@ -114,7 +114,7 @@ export function UploadPane({
           <p className="font-mono text-[12px] uppercase tracking-widest text-ink-soft">
             Drop a file, or click to browse
           </p>
-          <p className="mt-2 text-xs text-muted">PDF · INDD · IDML</p>
+          <p className="mt-2 text-xs text-muted">PDF · IDML</p>
         </div>
       )}
 

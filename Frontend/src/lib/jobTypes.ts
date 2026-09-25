@@ -11,7 +11,7 @@ export const JOB_TYPES: JobTypeConfig[] = [
   {
     id: "document",
     label: "Document / PDF",
-    description: "PDF, INDD, IDML — layout-preserving translation.",
+    description: "PDF, IDML — layout-preserving translation.",
     enabled: true,
   },
   {
