@@ -572,10 +572,12 @@ def create_folder(project_id: str, body: FolderCreate, user: dict = Depends(requ
         _assert_owns_project(s, project_id, user)
         if body.parent_folder_id is not None:
             _assert_owns_folder(s, body.parent_folder_id, user)
-        folder_id = s.create_folder(project_id, body.name, body.parent_folder_id)
-        return s.get_folder(folder_id)
+        folder_id = s.create_folder(project_id, body.name, body.parent_folder_id, created_by=user["id"])
+        folder = s.get_folder(folder_id)
     finally:
         s.close()
+    folder["created_by_name"] = get_profile_names([folder.get("created_by")]).get(folder.get("created_by"))
+    return folder
 
 
 @app.get("/api/projects/{project_id}/folders")
@@ -584,9 +586,13 @@ def list_folders(project_id: str, parent_folder_id: str | None = None,
     s = _store()
     try:
         _assert_owns_project(s, project_id, user)
-        return s.list_folders(project_id, parent_folder_id, all=all)
+        folders = s.list_folders(project_id, parent_folder_id, all=all)
     finally:
         s.close()
+    names = get_profile_names([f.get("created_by") for f in folders])
+    for f in folders:
+        f["created_by_name"] = names.get(f.get("created_by"))
+    return folders
 
 
 @app.get("/api/folders/{folder_id}")

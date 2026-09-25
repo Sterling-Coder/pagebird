@@ -36,6 +36,8 @@ export type Folder = {
   name: string;
   parent_folder_id: string | null;
   created_at: number;
+  created_by?: string | null;
+  created_by_name?: string | null;
 };
 
 export async function createProject(input: {

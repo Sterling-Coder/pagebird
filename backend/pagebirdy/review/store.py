@@ -310,13 +310,14 @@ class ReviewStore:
     # ---- folders -----------------------------------------------------------
 
     def create_folder(self, project_id: str, name: str,
-                       parent_folder_id: str | None = None) -> str:
+                       parent_folder_id: str | None = None,
+                       created_by: str | None = None) -> str:
         folder_id = uuid.uuid4().hex[:12]
         with self.conn.cursor() as cur:
             cur.execute(
-                "INSERT INTO review_folders (id, project_id, name, parent_folder_id, created_at) "
-                "VALUES (%s,%s,%s,%s,%s)",
-                (folder_id, project_id, name, parent_folder_id, time.time()),
+                "INSERT INTO review_folders (id, project_id, name, parent_folder_id, created_at, created_by) "
+                "VALUES (%s,%s,%s,%s,%s,%s)",
+                (folder_id, project_id, name, parent_folder_id, time.time(), created_by),
             )
         self.conn.commit()
         return folder_id
@@ -330,13 +331,13 @@ class ReviewStore:
         with self.conn.cursor() as cur:
             if all:
                 cur.execute(
-                    "SELECT id, project_id, name, parent_folder_id, created_at "
+                    "SELECT id, project_id, name, parent_folder_id, created_at, created_by "
                     "FROM review_folders WHERE project_id = %s ORDER BY created_at DESC, id DESC",
                     (project_id,),
                 )
             else:
                 cur.execute(
-                    "SELECT id, project_id, name, parent_folder_id, created_at FROM review_folders "
+                    "SELECT id, project_id, name, parent_folder_id, created_at, created_by FROM review_folders "
                     "WHERE project_id = %s AND parent_folder_id IS NOT DISTINCT FROM %s "
                     "ORDER BY created_at DESC, id DESC",
                     (project_id, parent_folder_id),
@@ -346,7 +347,7 @@ class ReviewStore:
     def get_folder(self, folder_id: str) -> dict | None:
         with self.conn.cursor() as cur:
             cur.execute(
-                "SELECT id, project_id, name, parent_folder_id, created_at "
+                "SELECT id, project_id, name, parent_folder_id, created_at, created_by "
                 "FROM review_folders WHERE id = %s",
                 (folder_id,),
             )

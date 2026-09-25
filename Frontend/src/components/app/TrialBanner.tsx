@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { TalkToUsPanel } from "./TalkToUsPanel";
 
 type TrialState =
   | { status: "loading" }
@@ -12,6 +12,7 @@ type TrialState =
 
 export function TrialBanner() {
   const [trial, setTrial] = useState<TrialState>({ status: "loading" });
+  const [panelOpen, setPanelOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -46,28 +47,42 @@ export function TrialBanner() {
 
   if (trial.status === "expired") {
     return (
-      <div className="flex items-center justify-center gap-2 bg-red px-4 py-2 text-center text-sm text-paper">
-        <span>Your 14-day trial has ended — new translations are paused.</span>
-        <Link href="/contact" className="font-semibold underline underline-offset-2">
-          Contact us to keep going
-        </Link>
-      </div>
+      <>
+        <div className="flex items-center justify-center gap-2 bg-red px-4 py-2 text-center text-sm text-paper">
+          <span>Your 14-day trial has ended — new translations are paused.</span>
+          <button
+            type="button"
+            onClick={() => setPanelOpen(true)}
+            className="font-semibold underline underline-offset-2"
+          >
+            Contact us to keep going
+          </button>
+        </div>
+        {panelOpen && <TalkToUsPanel onClose={() => setPanelOpen(false)} />}
+      </>
     );
   }
 
   const urgent = trial.daysLeft <= 3;
   return (
-    <div
-      className={`flex items-center justify-center gap-2 px-4 py-2 text-center text-sm ${
-        urgent ? "bg-red text-paper" : "bg-paper-dim text-ink-soft"
-      }`}
-    >
-      {trial.daysLeft} {trial.daysLeft === 1 ? "day" : "days"} left in your free trial.
-      {urgent ? (
-        <Link href="/contact" className="font-semibold underline underline-offset-2">
-          Talk to us
-        </Link>
-      ) : null}
-    </div>
+    <>
+      <div
+        className={`flex items-center justify-center gap-2 px-4 py-2 text-center text-sm ${
+          urgent ? "bg-red text-paper" : "bg-paper-dim text-ink-soft"
+        }`}
+      >
+        {trial.daysLeft} {trial.daysLeft === 1 ? "day" : "days"} left in your free trial.
+        {urgent ? (
+          <button
+            type="button"
+            onClick={() => setPanelOpen(true)}
+            className="font-semibold underline underline-offset-2"
+          >
+            Talk to us
+          </button>
+        ) : null}
+      </div>
+      {panelOpen && <TalkToUsPanel onClose={() => setPanelOpen(false)} />}
+    </>
   );
 }
