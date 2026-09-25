@@ -268,6 +268,10 @@ export default function ProjectFilesPage() {
       ...prev,
       { id: tempId, name: linksDisplayName, startedAt: Date.now() },
     ]);
+    // The guard only needs to stop a double-click on this batch, and the
+    // modal is already closed by now. Holding it until the request returns
+    // (minutes) silently swallowed every batch picked while one was running.
+    submittingLinksRef.current = false;
 
     try {
       await translateLinks({
@@ -281,7 +285,6 @@ export default function ProjectFilesPage() {
       setError(err instanceof Error ? err.message : "Links upload failed");
     } finally {
       setInFlight((prev) => prev.filter((f) => f.id !== tempId));
-      submittingLinksRef.current = false;
     }
   }
 
