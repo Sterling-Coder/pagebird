@@ -1059,3 +1059,42 @@ def test_tofu_scores_what_reassembly_draws_not_the_stored_text():
     assert one("😀 hello") == 1     # emoji: no equivalent, still caught
     assert one("ꯀ test") == 1          # unsupported script, still caught
     assert one("안녕 3 - 2") == 0  # ordinary Korean and ASCII
+
+
+def test_idml_font_registration_and_weight_are_not_layout_changes(tmp_path):
+    """A hi job declares its target family in Fonts.xml and re-names each run's
+    weight on it; both are the font swap, not moved layout or restyled runs.
+    (hi, not zh: zh's `size_delta` writes a PointSize, a real style change.)"""
+    import zipfile
+
+    from pagebirdy import languages
+    from pagebirdy.idml.package import IdmlPackage
+    from pagebirdy.pipeline import _write_idml
+
+    story = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+             '<idPkg:Story xmlns:idPkg="http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging">'
+             '<Story Self="u1"><ParagraphStyleRange AppliedParagraphStyle="ParagraphStyle/Body">'
+             '<CharacterStyleRange FontStyle="Bold"><Content>Count the dots</Content>'
+             '</CharacterStyleRange></ParagraphStyleRange></Story></idPkg:Story>')
+    fonts = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+             '<idPkg:Fonts xmlns:idPkg="http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging">'
+             '<FontFamily Self="di1" Name="Minion Pro"/></idPkg:Fonts>')
+    src, out = tmp_path / "s.idml", tmp_path / "o.idml"
+    with zipfile.ZipFile(src, "w") as z:
+        z.writestr("mimetype", "application/vnd.adobe.indesign-idml-package")
+        z.writestr("Resources/Fonts.xml", fonts)
+        z.writestr("Stories/Story_u1.xml", story)
+
+    pkg = IdmlPackage(str(src))
+    segs = pkg.segments()
+    for s in segs:
+        s.target, s.status = "बिंदु गिनें", "translated"
+    _write_idml(pkg, segs, languages.get("hi"), document="s")
+    pkg.save(str(out))
+
+    with zipfile.ZipFile(out) as z:
+        assert b"Noto Sans Devanagari" in z.read("Resources/Fonts.xml")
+    result = layout_idml.evaluate(str(src), str(out))
+    assert result["asset_preservation"]["rate"] == 1.0
+    assert result["style_preservation"]["rate"] == 1.0
+    assert result["style_preservation"]["font_overrides"] == 1

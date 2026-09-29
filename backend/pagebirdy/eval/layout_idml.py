@@ -69,12 +69,28 @@ def _strip_auto_size(data: bytes) -> bytes:
     return etree.tostring(tree)
 
 
+def _strip_registered_fonts(data: bytes) -> bytes:
+    """`Resources/Fonts.xml` minus the families `idml.rtl.register_font` adds.
+
+    Declaring the target family is what lets its `AppliedFont` resolve in
+    InDesign; it adds one `FontFamily` (Self `pagebirdy…`) and touches nothing
+    the source declared.
+    """
+    tree = etree.fromstring(data, parser=_XML_PARSER)
+    for el in list(tree.iter()):
+        if _localname(el) == "FontFamily" and (el.get("Self") or "").startswith("pagebirdy"):
+            el.getparent().remove(el)
+    return etree.tostring(tree, method="c14n")
+
+
 def _same_asset(name: str, src: bytes, out: bytes) -> bool:
     if src == out:
         return True
-    if not (name.startswith("Spreads/") or name.startswith("MasterSpreads/")):
-        return False
     try:
+        if name == "Resources/Fonts.xml":
+            return _strip_registered_fonts(src) == _strip_registered_fonts(out)
+        if not (name.startswith("Spreads/") or name.startswith("MasterSpreads/")):
+            return False
         return _strip_auto_size(src) == _strip_auto_size(out)
     except etree.XMLSyntaxError:
         return False
@@ -93,11 +109,13 @@ def _style_key(content) -> tuple[dict, dict]:
     """(CharacterStyleRange attrs, ParagraphStyleRange attrs) for one run.
 
     Deliberately excludes AppliedFont, which lives in a Properties child and is
-    an intentional rewrite target — it is compared separately.
+    an intentional rewrite target — it is compared separately. `FontStyle`
+    goes with it: the run's weight is re-named on the target family when the
+    family is swapped (`IdmlPackage._retarget_font`).
     """
     csr = _ancestor(content, "CharacterStyleRange")
     psr = _ancestor(content, "ParagraphStyleRange")
-    return (dict(csr.attrib) if csr is not None else {},
+    return ({k: v for k, v in csr.attrib.items() if k != "FontStyle"} if csr is not None else {},
             dict(psr.attrib) if psr is not None else {})
 
 

@@ -37,6 +37,13 @@ class Language:
                               # (dense scripts like CJK/Hangul render visually
                               # heavier than Latin at the same point size, so the
                               # source size alone reliably overflows the box)
+    # The faces `idml_font` actually ships, in InDesign's own naming. A run's
+    # weight is inherited, not inline, so substituting the family without
+    # substituting the style leaves `Museo Sans 900` resolving against a family
+    # that has no `900` and every bold heading opens regular. Only faces listed
+    # here are ever named at the family, so a family with no italic is never
+    # asked for one; `idml.styles.target_font_style` degrades to the nearest.
+    idml_font_styles: tuple[str, ...] = ("Regular", "Bold")
 
 
 # Full-Unicode faces per script. First existing path wins; Windows / macOS /
@@ -230,16 +237,16 @@ LANGUAGES: dict[str, Language] = {
                    latin_script=False, fonts=_DEVANAGARI, idml_font="Noto Sans Devanagari"),
     "ar": Language("ar", "Arabic", "Modern Standard Arabic",
                    direction="rtl", latin_script=False, fonts=_ARABIC,
-                   idml_font="Noto Sans Arabic"),
+                   idml_font="Adobe Arabic"),
     "he": Language("he", "Hebrew", "Modern Hebrew (he-IL)",
                    direction="rtl", latin_script=False, fonts=_HEBREW,
-                   idml_font="Noto Sans Hebrew"),
+                   idml_font="Adobe Hebrew"),
     "fa": Language("fa", "Persian", "Persian / Farsi (fa-IR)",
                    direction="rtl", latin_script=False, fonts=_ARABIC,
-                   idml_font="Noto Sans Arabic"),
+                   idml_font="Adobe Arabic"),
     "ur": Language("ur", "Urdu", "Urdu (ur-PK)",
                    direction="rtl", latin_script=False, fonts=_URDU,
-                   idml_font="Noto Sans Arabic"),
+                   idml_font="Adobe Arabic"),
 }
 
 DEFAULT = "es"

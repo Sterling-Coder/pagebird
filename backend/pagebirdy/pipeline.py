@@ -315,6 +315,60 @@ def pdf_to_idml(
     return result
 
 
+def _write_idml(pkg, segments, lang, *, document: str,
+                keep_upright: tuple = ()) -> tuple[int, dict]:
+    """Write translations into the package, then turn it right to left if the
+    target reads that way. Returns `(runs written, rtl report)`.
+
+    `package.apply` writes `lang.idml_font` onto the runs that need it, but
+    naming a family the package never declares in `Resources/Fonts.xml` is not
+    enough — InDesign opens with a missing-font warning and substitutes a face.
+    Every target with an `idml_font` needs the declaration, so it stays ahead
+    of the direction split.
+
+    An RTL target then needs its text direction turned round, and its geometry
+    selectively adapted through the calibrated rule table — which recognised
+    objects move, restructure or mirror. See `idml.rtl.apply_rtl` and
+    `idml.rtl_rules`. The LTR path never enters it. Type sizes are not touched
+    here: `apply`'s own `size_delta` is the only fitting.
+    """
+    from pagebirdy.idml import rtl as idml_rtl
+
+    applied = pkg.apply(segments, idml_font=lang.idml_font,
+                        font_styles=lang.idml_font_styles,
+                        size_delta=lang.size_delta)
+    if lang.idml_font:
+        idml_rtl.register_font(pkg.document(idml_rtl.FONTS), lang.idml_font,
+                               lang.idml_font_styles)
+    if lang.direction != "rtl":
+        return applied, {}
+
+    rtl_report = idml_rtl.apply_rtl(
+        pkg, document=document, language=lang.code,
+        idml_font=lang.idml_font, font_styles=lang.idml_font_styles,
+        keep_upright=keep_upright)
+    logger.info(
+        "idml: rtl text direction, %d attribute(s) set, "
+        "%d run(s) pinned left-to-right, %d anchored badge(s) remirrored, "
+        "%d sub-part group(s) realigned (%d paragraph(s) indented), "
+        "%d item(s) repositioned, %d graphic(s) mirrored, "
+        "%d component(s) restructured, %d item(s) kept unchanged, "
+        "%d geometry-locked, %d graphic(s) refused",
+        rtl_report["rtl_text_direction_set"],
+        rtl_report["rtl_ltr_runs_pinned"],
+        rtl_report["rtl_anchors_mirrored"],
+        rtl_report["rtl_subpart_groups_aligned"],
+        rtl_report["rtl_subpart_paragraphs_indented"],
+        rtl_report["rtl_items_repositioned"],
+        rtl_report["rtl_graphics_mirrored"],
+        rtl_report["rtl_components_restructured"],
+        rtl_report["rtl_items_kept"],
+        rtl_report["rtl_geometry_locked"],
+        rtl_report["rtl_graphics_refused"],
+    )
+    return applied, rtl_report
+
+
 def translate_idml(
     src_idml: str,
     out_dir: str = "out",
@@ -422,10 +476,28 @@ def translate_idml(
     )
 
     _progress(88, "rebuilding document")
-    applied = pkg.apply(segments, idml_font=lang.idml_font, size_delta=lang.size_delta,
-                       direction=lang.direction)
+    # A graphic `relink` pointed at a translated copy holds a picture of the
+    # translation, so the RTL stage must never turn it round.
+    applied, rtl_report = _write_idml(pkg, segments, lang, document=base,
+                                      keep_upright=tuple(mapping.values()))
     pkg.save(out_idml)
     logger.info("translate_idml: saved output to %s (%d runs written)", out_idml, applied)
+
+    # Read the file back and check it against the source. Every guarantee the
+    # RTL stage makes — no page resized, no object lost or reshaped, no link or
+    # style dropped, no Arabic run in a face that cannot draw it — is invisible
+    # until someone opens the result in InDesign, so it is checked here instead.
+    validation_problems: list[str] = []
+    if lang.direction == "rtl":
+        try:
+            from pagebirdy.idml.validate import validate_rtl_idml
+
+            validation_problems = validate_rtl_idml(src_idml, out_idml, lang.code)["problems"]
+            if validation_problems:
+                logger.warning("translate_idml: validation found %d problem(s): %s",
+                               len(validation_problems), "; ".join(validation_problems))
+        except Exception:  # a report is never worth failing a finished job over
+            logger.exception("translate_idml: validation could not run")
 
     # Draft PDF preview (no InDesign) — a legibility proof of the translation,
     # served as the job's download?format=pdf. Best-effort: never fail the job.
@@ -463,6 +535,8 @@ def translate_idml(
         "job_id": None,
         "has_draft_pdf": has_draft_pdf,
         "graphics_files": graphics_files,
+        "validation_problems": validation_problems,
+        **rtl_report,
         "note": "PDF is a draft preview (no InDesign). Open the .idml in InDesign "
                 "(or run pagebirdy.idml.export) for a faithful PDF + INDD.",
     }
