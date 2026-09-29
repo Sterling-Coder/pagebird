@@ -113,6 +113,16 @@ export async function getJobEval(
   return res.json();
 }
 
+/** Every cached QA report in a project, keyed by job id, in one request.
+ * Never computes anything. */
+export async function listProjectEvals(projectId: string): Promise<Record<string, EvalReport>> {
+  const res = await fetch(`${API_BASE_URL}/api/projects/${projectId}/evals`, {
+    headers: await authHeaders(),
+  });
+  if (!res.ok) throw new Error(`Failed to load QA results (${res.status})`);
+  return res.json();
+}
+
 export function evalDownloadUrl(jobId: string, format: "pdf" | "md" | "json" = "pdf"): string {
   return `${API_BASE_URL}/api/jobs/${jobId}/eval/download?format=${format}`;
 }

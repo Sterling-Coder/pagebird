@@ -5,7 +5,6 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   listProjectFiles,
   getProject,
-  listFolders,
   listAllFolders,
   createFolder,
   deleteFolder,
@@ -13,13 +12,20 @@ import {
   type Folder,
 } from "@/lib/projects";
 import {
-  listLanguages, translateDocument, translateLinks, deleteJob, getJobEval,
+  listLanguages, translateDocument, translateLinks, deleteJob, getJobEval, listProjectEvals,
   API_BASE_URL, type Language, type EvalReport,
 } from "@/lib/translate";
 import { downloadAuthed } from "@/lib/supabase/authFetch";
 import { languageName } from "@/lib/languageNames";
 import { ConfirmDialog } from "@/components/app/ConfirmDialog";
 import { QaDetail } from "@/components/app/QaDetail";
+
+// Last list seen per project/folder, so returning to a page shows it at once
+// and refreshes behind it instead of starting from an empty screen.
+const filesCache = new Map<string, JobSummary[]>();
+const foldersCache = new Map<string, Folder[]>();
+const POLL_ACTIVE_MS = 3000; // while something is translating
+const POLL_IDLE_MS = 30000; // otherwise: just notice work started elsewhere
 
 const TRANSLATE_STAGES = ["Uploading", "Extracting text", "Translating", "Rebuilding document"];
 const STAGE_DURATION_MS = 4000;
@@ -37,8 +43,14 @@ export default function ProjectFilesPage() {
   const uploadButtonRef = useRef<HTMLButtonElement>(null);
   const uploadMenuItemRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const [files, setFiles] = useState<JobSummary[]>([]);
-  const [folders, setFolders] = useState<Folder[]>([]);
   const [allFolders, setAllFolders] = useState<Folder[]>([]);
+  // The current level is just the project's folders filtered by parent — one
+  // request for the whole tree serves both this list and the breadcrumb.
+  const folders = allFolders.filter((f) => (f.parent_folder_id ?? null) === (folderId ?? null));
+  const [loaded, setLoaded] = useState(false);
+  const [listError, setListError] = useState(false);
+  const processingRef = useRef(false);
+  const qaAskedRef = useRef<Set<string>>(new Set());
   const [breadcrumb, setBreadcrumb] = useState<Folder[]>([]);
   const [languages, setLanguages] = useState<Language[]>([]);
   const [targetLanguage, setTargetLanguage] = useState("es");
@@ -98,44 +110,61 @@ export default function ProjectFilesPage() {
       );
   }
 
-  function refresh() {
-    listProjectFiles(params.projectId, folderId)
+  function refreshQa() {
+    listProjectEvals(params.projectId)
+      .then((reports) => setQaScores((prev) => ({ ...prev, ...reports })))
+      .catch(() => {});
+  }
+
+  function refreshFiles() {
+    const cacheKey = `${params.projectId}:${folderId ?? ""}`;
+    return listProjectFiles(params.projectId, folderId)
       .then((fetched) => {
+        filesCache.set(cacheKey, fetched);
         setFiles(fetched);
-        // The backend now persists a "processing" row the moment upload
-        // starts (survives navigating away / a closed tab, visible from any
-        // tab polling this list) — once that real row shows up here, drop
-        // this tab's own optimistic placeholder for the same file so it
-        // doesn't render twice.
+        setLoaded(true);
+        setListError(false);
+        processingRef.current = fetched.some((f) => f.status === "processing");
+        // The backend persists a "processing" row the moment an upload
+        // starts — once the real row shows up, drop this tab's own
+        // optimistic placeholder for the same file.
         const known = new Set(fetched.map((f) => f.original_filename));
         setInFlight((prev) => prev.filter((f) => !known.has(f.name)));
 
-        // Never computes anything here — `cache_only` just reads whatever a
-        // prior "QA check" (on the project's Settings page) already wrote to
-        // disk, or reports "not computed". Layout scoring re-renders every
-        // page of the document, so triggering it for every row just because
-        // the list loaded would make opening this page expensive for no
-        // reason nobody asked for yet.
-        const done = fetched.filter((f) => f.status === "complete");
-        Promise.all(
-          done.map((f) =>
-            getJobEval(f.id, { cacheOnly: true }).then(
-              (r) => [f.id, r] as const,
-              () => [f.id, { not_computed: true } as EvalReport] as const
-            )
-          )
-        ).then((pairs) => setQaScores(Object.fromEntries(pairs)));
+        // QA scores come from one cached-only request, made only when a file
+        // has newly finished — never one request per file per poll.
+        const finished = fetched.filter(
+          (f) => f.status === "complete" && !qaAskedRef.current.has(f.id)
+        );
+        if (finished.length > 0) {
+          finished.forEach((f) => qaAskedRef.current.add(f.id));
+          refreshQa();
+        }
       })
-      .catch(() => setFiles([]));
-    listFolders(params.projectId, folderId).then(setFolders).catch(() => setFolders([]));
-    // Every folder in the project, fetched once (not per breadcrumb level) —
-    // building the breadcrumb used to walk the parent chain one `getFolder`
-    // round trip at a time, so opening a folder 4 levels deep meant 4
-    // sequential network calls before the breadcrumb could even render.
-    listAllFolders(params.projectId).then(setAllFolders).catch(() => setAllFolders([]));
+      .catch(() => setListError(true)); // keep what is on screen; the next poll retries
+  }
+
+  function refreshFolders() {
+    listAllFolders(params.projectId)
+      .then((fetched) => {
+        foldersCache.set(params.projectId, fetched);
+        setAllFolders(fetched);
+      })
+      .catch(() => setListError(true));
+  }
+
+  function refresh() {
+    refreshFiles();
+    refreshFolders();
   }
 
   useEffect(() => {
+    const cachedFiles = filesCache.get(`${params.projectId}:${folderId ?? ""}`);
+    const cachedFolders = foldersCache.get(params.projectId);
+    if (cachedFiles) setFiles(cachedFiles);
+    if (cachedFolders) setAllFolders(cachedFolders);
+    setLoaded(Boolean(cachedFiles));
+    qaAskedRef.current = new Set();
     refresh();
     setSelectedFolders(new Set());
     setSelectedFiles(new Set());
@@ -184,12 +213,28 @@ export default function ProjectFilesPage() {
     setBreadcrumb(chain);
   }, [folderId, allFolders]);
 
-  // Always poll while this page is open — not just while this tab kicked off
-  // an upload. A reload, a return visit, or an upload started elsewhere all
-  // used to mean the list froze until a manual refresh.
+  // Poll quickly only while something is translating; otherwise check rarely
+  // (so work started in another tab still shows up) and again whenever the
+  // tab becomes visible. A hidden tab makes no requests at all.
   useEffect(() => {
-    const pollInterval = setInterval(refresh, 5000);
-    return () => clearInterval(pollInterval);
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+    function schedule() {
+      timer = setTimeout(async () => {
+        if (!cancelled && !document.hidden) await refreshFiles();
+        if (!cancelled) schedule();
+      }, processingRef.current ? POLL_ACTIVE_MS : POLL_IDLE_MS);
+    }
+    function onVisible() {
+      if (!document.hidden) refreshFiles();
+    }
+    schedule();
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.projectId, folderId]);
 
@@ -263,7 +308,9 @@ export default function ProjectFilesPage() {
       );
       try {
         await translateDocument({ file, targetLanguage, projectId: params.projectId, folderId });
-        refresh();
+        // The upload returns as soon as the job exists; wait for the list to
+        // show its row before dropping this placeholder so it never blinks out.
+        await refreshFiles();
       } catch (err) {
         setError(err instanceof Error ? err.message : `Upload failed: ${file.name}`);
       } finally {
@@ -312,7 +359,7 @@ export default function ProjectFilesPage() {
         projectId: params.projectId,
         folderId,
       });
-      refresh();
+      await refreshFiles();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Links upload failed");
     } finally {
@@ -570,6 +617,14 @@ export default function ProjectFilesPage() {
       </div>
 
       {error ? <p className="mb-3 text-sm text-red">{error}</p> : null}
+      {listError ? (
+        <p className="mb-3 text-sm text-ink-soft">
+          Couldn&apos;t refresh this list — retrying automatically.{" "}
+          <button type="button" onClick={refresh} className="underline hover:no-underline">
+            Retry now
+          </button>
+        </p>
+      ) : null}
 
       <table className="w-full border-collapse text-sm">
         <thead>
@@ -688,7 +743,9 @@ export default function ProjectFilesPage() {
                 <td className="py-2">
                   <span className="text-ink">{name}</span>
                   {f.status === "failed" ? (
-                    <span className="ml-2 text-xs text-red">Error</span>
+                    <span className="ml-2 text-xs text-red" title={f.error ?? undefined}>
+                      Failed{f.error ? ` — ${f.error.length > 90 ? `${f.error.slice(0, 90)}…` : f.error}` : ""}
+                    </span>
                   ) : null}
                 </td>
                 <td className="py-2 text-ink-soft">{ext}</td>
@@ -815,7 +872,14 @@ export default function ProjectFilesPage() {
               </tr>
             );
           })}
-          {files.length === 0 && folders.length === 0 && inFlight.length === 0 ? (
+          {!loaded && files.length === 0 && folders.length === 0 && inFlight.length === 0 ? (
+            <tr>
+              <td colSpan={9} className="py-8 text-center text-muted">
+                Loading…
+              </td>
+            </tr>
+          ) : null}
+          {loaded && files.length === 0 && folders.length === 0 && inFlight.length === 0 ? (
             <tr>
               <td colSpan={9} className="py-8 text-center text-muted">
                 No files yet. Upload one to get started.

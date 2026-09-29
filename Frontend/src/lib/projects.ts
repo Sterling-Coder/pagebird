@@ -20,6 +20,7 @@ export type Project = {
 export type JobSummary = {
   id: string;
   status: string;
+  error?: string | null;
   original_filename: string | null;
   created_at: number;
   project_id?: string | null;

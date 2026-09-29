@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { getProject } from "@/lib/projects";
 import {
   API_BASE_URL,
@@ -20,7 +20,39 @@ import { ComingSoonWorkspace } from "@/components/app/ComingSoonWorkspace";
 import { getJobType } from "@/lib/jobTypes";
 import { downloadAuthed } from "@/lib/supabase/authFetch";
 
+/** Back to wherever the person came from (keeps the folder they were in);
+ * falls back to the project's Files list when the page was opened directly. */
+function BackBar({ projectId }: { projectId: string }) {
+  const router = useRouter();
+  return (
+    <div className="flex shrink-0 items-center bg-paper px-4 py-2">
+      <button
+        type="button"
+        onClick={() =>
+          window.history.length > 1 ? router.back() : router.push(`/app/jobs/${projectId}/files`)
+        }
+        className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-widest text-ink-soft transition-colors hover:text-ink"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="h-3.5 w-3.5">
+          <path d="M19 12H5M11 6l-6 6 6 6" />
+        </svg>
+        Back to files
+      </button>
+    </div>
+  );
+}
+
 export default function FileEditorPage() {
+  const params = useParams<{ projectId: string }>();
+  return (
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <BackBar projectId={params.projectId} />
+      <FileEditor />
+    </div>
+  );
+}
+
+function FileEditor() {
   const params = useParams<{ projectId: string; fileId: string }>();
   const [jobType, setJobType] = useState<string | null>(null);
   const [result, setResult] = useState<TranslateResult | null>(null);
