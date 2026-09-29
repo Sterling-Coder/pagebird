@@ -267,6 +267,7 @@ def test_close_returns_connection_to_pool_and_is_idempotent(tmp_path, monkeypatc
             again = _store(tmp_path)
             assert again.list_projects() is not None
             again.close()
+            store_mod.flush_returned_connections()
         assert pool.get_stats()["pool_size"] == size  # reused, not reopened
     finally:
         pool.close()
@@ -329,3 +330,22 @@ def test_assert_owns_project_light_and_full(tmp_path, monkeypatch):
     with pytest.raises(HTTPException) as e:
         api._assert_owns_project(st, "nope", {"id": "u1"}, full=True)
     assert e.value.status_code == 404
+
+
+def test_eval_reports_round_trip_and_follow_their_job(tmp_path):
+    st = _store(tmp_path)
+    pid = st.create_project("evals")
+    jid = st.save_job("a.pdf", "", [], {}, project_id=pid)
+    assert st.get_eval(jid) is None
+    st.save_eval(jid, {"job_id": jid, "overall": {"score": 0.5}})
+    st.save_eval(jid, {"job_id": jid, "overall": {"score": 0.9}})  # overwrites
+    assert st.get_eval(jid)["overall"]["score"] == 0.9
+    assert list(st.get_evals_for_project(pid)) == [jid]
+    st.delete_job(jid)
+    assert st.get_eval(jid) is None  # cascaded away with its job
+
+
+def test_save_eval_for_a_missing_job_is_ignored(tmp_path):
+    st = _store(tmp_path)
+    st.save_eval("no-such-job", {"x": 1})
+    assert st.get_eval("no-such-job") is None

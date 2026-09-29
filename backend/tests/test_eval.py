@@ -759,10 +759,13 @@ def test_eval_endpoint_scores_caches_and_404s(monkeypatch, tmp_path):
     assert body["integrity"]["placeholder_integrity"]["rate"] == 1.0
     assert "checks" in body["gates"]
 
-    cached = tmp_path / "out" / "eval" / f"{job_id}.eval.json"
-    assert cached.exists()
-    # A second request must serve the cache, not re-render every page.
-    cached.write_text(json.dumps({"job_id": job_id, "sentinel": True}), encoding="utf-8")
+    store = ReviewStore(api._REVIEW_DB)
+    try:
+        assert store.get_eval(job_id) is not None
+        # A second request must serve the cache, not re-render every page.
+        store.save_eval(job_id, {"job_id": job_id, "sentinel": True})
+    finally:
+        store.close()
     assert client.get(f"/api/jobs/{job_id}/eval").json().get("sentinel") is True
     # ...and refresh must bypass it, since rates move as segments get approved.
     assert "sentinel" not in client.get(f"/api/jobs/{job_id}/eval?refresh=1").json()

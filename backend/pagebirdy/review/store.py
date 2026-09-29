@@ -22,6 +22,7 @@ Schema: see migrations/versions/*_review_store_tables_*.py.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import threading
 import time
@@ -34,6 +35,8 @@ from psycopg.rows import dict_row
 from pagebirdy.config import load_env
 from pagebirdy.models import Segment
 from pagebirdy.translate import integrity
+
+logger = logging.getLogger(__name__)
 
 load_env()
 
@@ -118,6 +121,47 @@ def _checkout(pool):
         except Exception:
             pool.putconn(conn)  # broken: the pool discards it and replaces it
     return pool.getconn()
+
+
+# Returning a connection that ran only reads still has to roll back its open
+# transaction, which is a blocking round trip to the database. Doing that
+# after the response is on its way keeps it off the request's critical path.
+_return_executor = None
+_return_lock = threading.Lock()
+_pending_returns: set = set()
+
+
+def _return_connection(pool, conn) -> None:
+    from psycopg import pq
+
+    if conn.info.transaction_status == pq.TransactionStatus.IDLE:
+        pool.putconn(conn)
+        return
+    global _return_executor
+    if _return_executor is None:
+        with _return_lock:
+            if _return_executor is None:
+                from concurrent.futures import ThreadPoolExecutor
+
+                _return_executor = ThreadPoolExecutor(
+                    max_workers=4, thread_name_prefix="pool-return")
+
+    def _put() -> None:
+        try:
+            pool.putconn(conn)
+        except Exception:
+            logger.exception("could not return a connection to the pool")
+
+    future = _return_executor.submit(_put)
+    _pending_returns.add(future)
+    future.add_done_callback(_pending_returns.discard)
+
+
+def flush_returned_connections() -> None:
+    """Block until every connection handed back in the background is back in
+    the pool (used by tests that count pool connections)."""
+    for future in list(_pending_returns):
+        future.result()
 
 
 class ReviewStore:
@@ -311,6 +355,49 @@ class ReviewStore:
             cur.execute("DELETE FROM review_segments WHERE job_id = %s", (job_id,))
             cur.execute("DELETE FROM review_jobs WHERE id = %s", (job_id,))
         self.conn.commit()
+
+    # ---- QA reports -----------------------------------------------------------
+    # Kept in the database, not on the container's disk: a redeploy wipes the
+    # disk and every QA score with it. Tolerant of the table not existing yet
+    # so a deploy that lands before its migration degrades to "not computed".
+
+    def get_eval(self, job_id: str) -> dict | None:
+        try:
+            with self.conn.cursor() as cur:
+                cur.execute("SELECT report_json FROM review_evals WHERE job_id = %s", (job_id,))
+                row = cur.fetchone()
+        except psycopg.errors.UndefinedTable:
+            self.conn.rollback()
+            return None
+        return json.loads(row["report_json"]) if row else None
+
+    def get_evals_for_project(self, project_id: str) -> dict[str, dict]:
+        try:
+            with self.conn.cursor() as cur:
+                cur.execute(
+                    "SELECT e.job_id, e.report_json FROM review_evals e "
+                    "JOIN review_jobs j ON j.id = e.job_id WHERE j.project_id = %s",
+                    (project_id,),
+                )
+                rows = cur.fetchall()
+        except psycopg.errors.UndefinedTable:
+            self.conn.rollback()
+            return {}
+        return {r["job_id"]: json.loads(r["report_json"]) for r in rows}
+
+    def save_eval(self, job_id: str, report: dict) -> None:
+        try:
+            with self.conn.cursor() as cur:
+                cur.execute(
+                    "INSERT INTO review_evals (job_id, report_json, updated_at) "
+                    "VALUES (%s, %s, %s) ON CONFLICT (job_id) DO UPDATE SET "
+                    "report_json = EXCLUDED.report_json, updated_at = EXCLUDED.updated_at",
+                    (job_id, json.dumps(_pg_safe(report), ensure_ascii=False), time.time()),
+                )
+            self.conn.commit()
+        except (psycopg.errors.UndefinedTable, psycopg.errors.ForeignKeyViolation) as e:
+            self.conn.rollback()
+            logger.warning("QA report for job %s not saved: %s", job_id, e)
 
     # ---- read ----------------------------------------------------------------
 
@@ -747,7 +834,7 @@ class ReviewStore:
         conn, self.conn = getattr(self, "conn", None), None
         if conn is not None:
             _last_used[conn] = time.monotonic()
-            self._pool.putconn(conn)  # rolls back any open transaction
+            _return_connection(self._pool, conn)
 
 
 def _restore(text: str, placeholders: dict[str, str]) -> str:

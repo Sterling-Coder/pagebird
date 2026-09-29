@@ -25,6 +25,7 @@ import os.path
 import re
 import threading
 from collections import deque
+from concurrent.futures import ThreadPoolExecutor
 
 from pagebirdy.config import load_env
 
@@ -741,8 +742,20 @@ async def rebuild_job(job_id: str, user: dict = Depends(require_user)) -> dict:
     return {"ok": True, "output": output}
 
 
-def _eval_cache_path(job_id: str) -> str:
-    return os.path.join(_out_dir(), "eval", f"{job_id}.eval.json")
+def _load_eval(job_id: str) -> dict | None:
+    s = _store()
+    try:
+        return s.get_eval(job_id)
+    finally:
+        s.close()
+
+
+def _save_eval(job_id: str, report: dict) -> None:
+    s = _store()
+    try:
+        s.save_eval(job_id, report)
+    finally:
+        s.close()
 
 
 async def _eval_report(job_id: str, user: dict, refresh: bool = False) -> dict:
@@ -755,22 +768,18 @@ async def _eval_report(job_id: str, user: dict, refresh: bool = False) -> dict:
 
         python -m pagebirdy.eval job <id> --neural --mqm
 
-    Cached to out/eval/<job_id>.eval.json because the layout metrics re-render
+    Cached in the database (review_evals) because the layout metrics re-render
     every page. `refresh` recomputes — needed after approving edits, since
     integrity rates move as segments change.
     """
-    import json
     import shutil
 
-    job = _find_owned_job(job_id, user)
+    job = await run_in_threadpool(_find_owned_job, job_id, user)
 
-    cache = _eval_cache_path(job_id)
-    if not refresh and os.path.exists(cache):
-        try:
-            with open(cache, encoding="utf-8") as f:
-                return json.load(f)
-        except (OSError, json.JSONDecodeError):
-            pass  # unreadable cache is not an error, just recompute
+    if not refresh:
+        cached = await run_in_threadpool(_load_eval, job_id)
+        if cached is not None:
+            return cached
 
     from pagebirdy.eval import isolated, runner
 
@@ -809,9 +818,7 @@ async def _eval_report(job_id: str, user: dict, refresh: bool = False) -> dict:
         if tmp_dir:
             shutil.rmtree(tmp_dir, ignore_errors=True)
 
-    os.makedirs(os.path.dirname(cache), exist_ok=True)
-    with open(cache, "w", encoding="utf-8") as f:
-        json.dump(report, f, ensure_ascii=False, indent=2)
+    await run_in_threadpool(_save_eval, job_id, report)
     return report
 
 
@@ -821,26 +828,16 @@ async def get_eval(job_id: str, refresh: bool = False, cache_only: bool = False,
     """Accuracy scorecard for one job: gates, layout fidelity, content integrity.
 
     `cache_only=true` never runs a fresh evaluation (layout scoring re-renders
-    every page — real CPU work) — it just reads whatever `_eval_cache_path`
+    every page — real CPU work) — it just reads whatever the database
     already holds, or reports `{"not_computed": true}`. That's what the Files
     list's QA column uses: showing a real score once someone has run "QA
     check" on the project, but never silently kicking off N evaluations just
     because the list happened to render."""
     if cache_only:
-        import json
-
-        _find_owned_job(job_id, user)
-        cache = _eval_cache_path(job_id)
-        if not os.path.exists(cache):
-            return JSONResponse({"not_computed": True},
-                                headers={"Cache-Control": "no-store, no-cache, must-revalidate"})
-        try:
-            with open(cache, encoding="utf-8") as f:
-                return JSONResponse(json.load(f),
-                                    headers={"Cache-Control": "no-store, no-cache, must-revalidate"})
-        except (OSError, json.JSONDecodeError):
-            return JSONResponse({"not_computed": True},
-                                headers={"Cache-Control": "no-store, no-cache, must-revalidate"})
+        await run_in_threadpool(_find_owned_job, job_id, user)
+        cached = await run_in_threadpool(_load_eval, job_id)
+        return JSONResponse(cached if cached is not None else {"not_computed": True},
+                            headers={"Cache-Control": "no-store, no-cache, must-revalidate"})
 
     return JSONResponse(
         await _eval_report(job_id, user, refresh=refresh),
@@ -860,6 +857,19 @@ def _report_filename(job: dict | None, job_id: str, ext: str) -> str:
 
 
 _REPORT_FORMATS = ("pdf", "md", "json")
+
+
+@app.get("/api/projects/{project_id}/evals")
+def list_project_evals(project_id: str, user: dict = Depends(require_user)) -> dict:
+    """Every cached QA report in a project, in one request, keyed by job id.
+    Never computes anything — the Files list uses it instead of one request
+    per file."""
+    s = _store()
+    try:
+        _assert_owns_project(s, project_id, user)
+        return s.get_evals_for_project(project_id)
+    finally:
+        s.close()
 
 
 @app.get("/api/jobs/{job_id}/eval/download")
@@ -916,6 +926,59 @@ _UI_DEFAULT_LANG = "zh"  # UI-only default; pipeline's implicit fallback stays l
 def list_languages() -> dict:
     """Target languages the UI may offer, and which ones the PDF path renders."""
     return {"languages": languages.listing(), "default": _UI_DEFAULT_LANG}
+
+
+class _JobFailed(Exception):
+    """The job's failure is already recorded on its row; carries the message."""
+
+
+# Translation runs here, not inside the HTTP request: a big document takes
+# longer than a proxy allows a request to live, and a browser that navigates
+# away (or a redeploy) used to lose the response along with the work. The
+# upload returns as soon as the job row exists; the page polls that row.
+_job_executor = ThreadPoolExecutor(
+    max_workers=int(os.environ.get("PAGEBIRDY_JOB_WORKERS", "3")),
+    thread_name_prefix="job")
+
+
+def _fail_job(job_id: str, message: str, started: float) -> None:
+    import time
+
+    store = _store()
+    try:
+        store.mark_job_failed(job_id, message, duration_sec=time.time() - started)
+    finally:
+        store.close()
+
+
+async def _dispatch_job(finish, job_id: str, started: float, fmt: str):
+    """Run `finish` and answer the upload.
+
+    Normally that means queueing it and returning 202 with the job id at once.
+    PAGEBIRDY_SYNC_JOBS=1 (tests, one-off scripts) runs it inline and returns
+    the finished report the way the endpoint used to.
+    """
+    if os.environ.get("PAGEBIRDY_SYNC_JOBS") == "1":
+        try:
+            return await run_in_threadpool(finish)
+        except _JobFailed as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    def _background() -> None:
+        try:
+            finish()
+        except _JobFailed:
+            pass  # already recorded on the job row
+        except Exception as e:
+            logger.exception("job %s crashed", job_id)
+            try:
+                _fail_job(job_id, f"translation failed: {e}", started)
+            except Exception:
+                logger.exception("could not record the failure of job %s", job_id)
+
+    _job_executor.submit(_background)
+    return JSONResponse({"job_id": job_id, "status": "processing", "format": fmt},
+                        status_code=202)
 
 
 @app.post("/api/translate")
@@ -1077,100 +1140,82 @@ async def translate_upload(
 
         return report
 
-    try:
-        report = await run_in_threadpool(_run)
-    except Exception as e:  # surface pipeline failure to the UI, but still record it
-        logger.info("upload: pipeline failed for %s: %s", name, e)
-        _activity(f"Translation failed for {name}", owner_id=user["id"])
-        store = _store()
+    def _finish() -> dict:
         try:
-            store.mark_job_failed(job_id, str(e), duration_sec=time.time() - started)
-        finally:
-            store.close()
-        raise HTTPException(status_code=500, detail=f"translation failed: {e}")
+            report = _run()
+        except Exception as e:  # record the failure on the job, then report it
+            logger.info("upload: pipeline failed for %s: %s", name, e)
+            _activity(f"Translation failed for {name}", owner_id=user["id"])
+            _fail_job(job_id, str(e), started)
+            raise _JobFailed(f"translation failed: {e}") from e
 
-    _activity(f"Finished translating {name}", owner_id=user["id"])
+        _activity(f"Finished translating {name}", owner_id=user["id"])
 
-    # The pipeline wrote source/output to local scratch space (Railway's disk
-    # resets on every redeploy) and pointed the job row at those local paths.
-    # Upload both to durable Storage, then repoint the row at the storage
-    # keys — same repoint mechanism already used above for the INDD export
-    # swap, applied uniformly to every format now.
-    job_id = report.get("job_id")
-    if job_id and report.get("source") and report.get("output"):
-        stem = os.path.splitext(os.path.basename(name))[0]
-        source_ext = os.path.splitext(report["source"])[1] or ext
-        output_ext = os.path.splitext(report["output"])[1] or ext
-        source_key = f"jobs/{job_id}/{stem}{source_ext}"
-        output_key = f"jobs/{job_id}/{stem}.{lang.code}{output_ext}"
+        # The pipeline wrote source/output to local scratch space (Railway's disk
+        # resets on every redeploy) and pointed the job row at those local paths.
+        # Upload both to durable Storage, then repoint the row at the storage
+        # keys — same repoint mechanism already used above for the INDD export
+        # swap, applied uniformly to every format now.
+        rjob = report.get("job_id")
+        if rjob and report.get("source") and report.get("output"):
+            stem = os.path.splitext(os.path.basename(name))[0]
+            source_ext = os.path.splitext(report["source"])[1] or ext
+            output_ext = os.path.splitext(report["output"])[1] or ext
+            source_key = f"jobs/{rjob}/{stem}{source_ext}"
+            output_key = f"jobs/{rjob}/{stem}.{lang.code}{output_ext}"
 
-        try:
-            await run_in_threadpool(_upload_with_retry, report["source"], source_key)
-            await run_in_threadpool(_upload_with_retry, report["output"], output_key)
-        except Exception as e:
-            # The two lines above are the ONLY thing that makes this job
-            # durably downloadable — if they can't be persisted after
-            # retrying, the job is not actually usable long-term even though
-            # translation itself succeeded. Mark it failed rather than
-            # leaving a "complete" row that 404s on every future download.
-            logger.exception("upload: failed to persist job %s to storage, marking failed", job_id)
+            try:
+                _upload_with_retry(report["source"], source_key)
+                _upload_with_retry(report["output"], output_key)
+            except Exception as e:
+                # The two uploads above are the ONLY thing that makes this job
+                # durably downloadable — if they can't be persisted after
+                # retrying, the job is not actually usable long-term even though
+                # translation itself succeeded. Mark it failed rather than
+                # leaving a "complete" row that 404s on every future download.
+                logger.exception("upload: failed to persist job %s to storage, marking failed", rjob)
+                _fail_job(rjob, f"translated successfully but failed to persist to storage: {e}",
+                          started)
+                raise _JobFailed(
+                    f"translation succeeded but saving the result failed: {e}") from e
+
+            # Keep the local output path (needed for the draft-PDF sibling below)
+            # before overwriting report["output"] with its storage key.
+            local_output_path = report["output"]
+            report["source"] = source_key
+            report["output"] = output_key
+
+            # Best-effort extras: a missing draft-PDF preview must not fail a
+            # job whose actual source/output are already safely persisted.
+            try:
+                # The draft-PDF preview (idml jobs only, see pipeline.translate_idml)
+                # lives as a local .pdf sibling of the .idml output — upload it under
+                # the matching storage key so download_output's fmt="pdf" branch
+                # (_output_pdf_path) can find it later.
+                if report.get("draft_pdf"):
+                    local_draft_pdf = os.path.splitext(local_output_path)[0] + ".pdf"
+                    if os.path.exists(local_draft_pdf):
+                        draft_pdf_key = os.path.splitext(output_key)[0] + ".pdf"
+                        storage.upload_file(local_draft_pdf, draft_pdf_key)
+            except Exception:
+                logger.exception("upload: failed to persist draft pdf for job %s (non-fatal)", rjob)
+
             store = _store()
             try:
-                store.mark_job_failed(
-                    job_id, f"translated successfully but failed to persist to storage: {e}",
-                    duration_sec=time.time() - started,
-                )
+                store.update_job_paths(rjob, source=source_key, output=output_key)
             finally:
                 store.close()
-            raise HTTPException(
-                status_code=500,
-                detail=f"translation succeeded but saving the result failed: {e}",
-            )
 
-        # Keep the local output path (needed for the draft-PDF sibling below)
-        # before overwriting report["output"] with its storage key.
-        local_output_path = report["output"]
-        report["source"] = source_key
-        report["output"] = output_key
+        if project_id:
+            store = _store()
+            try:
+                store.set_project_target_lang_if_unset(project_id, lang.code)
+            finally:
+                store.close()
 
-        # Best-effort extras below: a missing draft-PDF preview or linked
-        # graphic must not fail a job whose actual source/output are already
-        # safely persisted above — log and move on.
-        try:
-            # The draft-PDF preview (idml jobs only, see pipeline.translate_idml)
-            # lives as a local .pdf sibling of the .idml output — upload it under
-            # the matching storage key so download_output's fmt="pdf" branch
-            # (_output_pdf_path) can find it later.
-            if report.get("draft_pdf"):
-                local_draft_pdf = os.path.splitext(local_output_path)[0] + ".pdf"
-                if os.path.exists(local_draft_pdf):
-                    draft_pdf_key = os.path.splitext(output_key)[0] + ".pdf"
-                    await run_in_threadpool(storage.upload_file, local_draft_pdf, draft_pdf_key)
-        except Exception:
-            logger.exception("upload: failed to persist draft pdf for job %s (non-fatal)", job_id)
+        return report
 
-        # Linked graphics are now their own independent upload/job (see
-        # /api/translate-links) rather than an attachment to this one — no
-        # per-document Links folder to persist here anymore. A document's own
-        # translate_idml still best-effort-translates a linked graphic when
-        # its *original absolute path* happens to resolve locally (rare in a
-        # hosted deployment), but that no longer has a matching upload/persist
-        # step; it stays an in-place edit of the .idml itself when it fires.
-
-        store = _store()
-        try:
-            store.update_job_paths(job_id, source=source_key, output=output_key)
-        finally:
-            store.close()
-
-    if project_id:
-        store = _store()
-        try:
-            store.set_project_target_lang_if_unset(project_id, lang.code)
-        finally:
-            store.close()
-
-    return report
+    return await _dispatch_job(_finish, job_id, started, ext.lstrip("."))
 
 
 @app.post("/api/translate-links")
@@ -1299,119 +1344,102 @@ async def translate_links_upload(
             original_filename=display_name, job_id=job_id, progress_cb=_progress_cb,
         )
 
-    try:
-        report = await run_in_threadpool(_run)
-    except Exception as e:
-        logger.info("upload(links): pipeline failed: %s", e)
-        _activity(f"Translation failed for {display_name}", owner_id=user["id"])
-        store = _store()
+    def _finish() -> dict:
         try:
-            store.mark_job_failed(job_id, str(e), duration_sec=time.time() - started)
-        finally:
-            store.close()
-        raise HTTPException(status_code=500, detail=f"translation failed: {e}")
+            report = _run()
+        except Exception as e:
+            logger.info("upload(links): pipeline failed: %s", e)
+            _activity(f"Translation failed for {display_name}", owner_id=user["id"])
+            _fail_job(job_id, str(e), started)
+            raise _JobFailed(f"translation failed: {e}") from e
 
-    _activity(f"Translated {len(report.get('translated_files') or [])} of "
-             f"{report.get('total_files', len(saved_paths))} file(s) in {display_name}",
-             owner_id=user["id"])
-
-    # Every translated output is persisted to storage. A file with no
-    # extractable text (pure artwork — the common case) never produces a
-    # translated output, so its untouched original is persisted instead
-    # (see `translate_links_folder`'s `untranslated_files`) rather than
-    # silently dropping it — a links batch is otherwise missing whatever
-    # fraction of its files had nothing to translate, both from any per-file
-    # listing and from the download zip's "original file everywhere else"
-    # fallback (`_links_zip_entries`).
-    translated_dir = os.path.join(_out_dir(), f"translated_{lang.code}")
-
-    async def _upload_one(gname: str) -> bool:
-        gpath = os.path.join(translated_dir, gname)
-        if not os.path.isfile(gpath):
-            logger.error(
-                "upload(links): translated file %r missing on local disk for job %s "
-                "(should be unreachable — translate_links_folder reported it as written)",
-                gname, job_id)
-            return False
-        try:
-            await run_in_threadpool(
-                _upload_with_retry, gpath, f"jobs/{job_id}/Links_{lang.code}/{gname}")
-        except Exception:
-            logger.exception(
-                "upload(links): failed to persist translated %r for job %s (non-fatal)", gname, job_id)
-            return False
-        return True
-
-    async def _upload_original(item: dict) -> bool:
-        # `path` is the file's real source path (possibly inside a
-        # subfolder — `saved_paths`/`links_dir` preserve the upload's
-        # relative structure), `name` is the disambiguated flat display name
-        # `translate_links_folder` assigned it. Both still live on local disk
-        # for the duration of this request.
-        opath = item["path"]
-        oname = item["name"]
-        if not os.path.isfile(opath):
-            logger.error(
-                "upload(links): original file %r missing on local disk for job %s "
-                "(should be unreachable)", oname, job_id)
-            return False
-        try:
-            await run_in_threadpool(
-                _upload_with_retry, opath, f"jobs/{job_id}/Links/{oname}")
-        except Exception:
-            logger.exception(
-                "upload(links): failed to persist original %r for job %s (non-fatal)", oname, job_id)
-            return False
-        return True
-
-    # These are independent uploads to Supabase Storage — doing them one at a
-    # time in a loop was pure serialized network latency, the actual cause of
-    # a 300+ file batch taking minutes just to finish persisting after
-    # translation itself was already done. A semaphore caps how many run at
-    # once so this doesn't hammer Storage with hundreds of concurrent PUTs.
-    _UPLOAD_CONCURRENCY = 8
-    upload_semaphore = asyncio.Semaphore(_UPLOAD_CONCURRENCY)
-
-    async def _upload_one_bounded(gname: str) -> bool:
-        async with upload_semaphore:
-            return await _upload_one(gname)
-
-    async def _upload_original_bounded(item: dict) -> bool:
-        async with upload_semaphore:
-            return await _upload_original(item)
-
-    translated_names = report.get("translated_files") or []
-    untranslated_items = report.get("untranslated_files") or []
-    upload_results = await asyncio.gather(
-        *(_upload_one_bounded(g) for g in translated_names),
-        *(_upload_original_bounded(o) for o in untranslated_items),
-    )
-    persisted_count = sum(1 for ok in upload_results if ok)
-    total_count = len(translated_names) + len(untranslated_items)
-    # The end-to-end count for this job — received -> saved -> translated ->
-    # persisted — so a client-reported "my file is missing" can be answered
-    # by grepping this job id's logs instead of reproducing the upload.
-    logger.info("upload(links): job %s persisted %d/%d file(s) to storage",
-                job_id, persisted_count, total_count)
-    if persisted_count != total_count:
-        logger.error(
-            "upload(links): job %s only persisted %d/%d file(s) — some translated "
-            "work was lost to a storage upload failure, see prior exceptions",
-            job_id, persisted_count, total_count)
-        _activity(f"{display_name}: {persisted_count} of {total_count} file(s) ready — "
-                 f"some files failed to save, contact support if any are missing",
+        _activity(f"Translated {len(report.get('translated_files') or [])} of "
+                 f"{report.get('total_files', len(saved_paths))} file(s) in {display_name}",
                  owner_id=user["id"])
-    else:
-        _activity(f"{display_name} ready to download", owner_id=user["id"])
 
-    if project_id:
-        store = _store()
-        try:
-            store.set_project_target_lang_if_unset(project_id, lang.code)
-        finally:
-            store.close()
+        # Every translated output is persisted to storage. A file with no
+        # extractable text (pure artwork — the common case) never produces a
+        # translated output, so its untouched original is persisted instead
+        # (see `translate_links_folder`'s `untranslated_files`) rather than
+        # silently dropping it — a links batch is otherwise missing whatever
+        # fraction of its files had nothing to translate, both from any per-file
+        # listing and from the download zip's "original file everywhere else"
+        # fallback (`_links_zip_entries`).
+        translated_dir = os.path.join(_out_dir(), f"translated_{lang.code}")
 
-    return report
+        def _upload_one(gname: str) -> bool:
+            gpath = os.path.join(translated_dir, gname)
+            if not os.path.isfile(gpath):
+                logger.error(
+                    "upload(links): translated file %r missing on local disk for job %s "
+                    "(should be unreachable — translate_links_folder reported it as written)",
+                    gname, job_id)
+                return False
+            try:
+                _upload_with_retry(gpath, f"jobs/{job_id}/Links_{lang.code}/{gname}")
+            except Exception:
+                logger.exception(
+                    "upload(links): failed to persist translated %r for job %s (non-fatal)",
+                    gname, job_id)
+                return False
+            return True
+
+        def _upload_original(item: dict) -> bool:
+            # `path` is the file's real source path (possibly inside a
+            # subfolder), `name` is the disambiguated flat display name
+            # `translate_links_folder` assigned it.
+            opath, oname = item["path"], item["name"]
+            if not os.path.isfile(opath):
+                logger.error(
+                    "upload(links): original file %r missing on local disk for job %s "
+                    "(should be unreachable)", oname, job_id)
+                return False
+            try:
+                _upload_with_retry(opath, f"jobs/{job_id}/Links/{oname}")
+            except Exception:
+                logger.exception(
+                    "upload(links): failed to persist original %r for job %s (non-fatal)",
+                    oname, job_id)
+                return False
+            return True
+
+        # Independent uploads: doing them one at a time was pure serialized
+        # network latency. A bounded pool keeps this from hammering Storage
+        # with hundreds of concurrent PUTs.
+        translated_names = report.get("translated_files") or []
+        untranslated_items = report.get("untranslated_files") or []
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            futures = ([pool.submit(_upload_one, g) for g in translated_names]
+                       + [pool.submit(_upload_original, o) for o in untranslated_items])
+            upload_results = [f.result() for f in futures]
+        persisted_count = sum(1 for ok in upload_results if ok)
+        total_count = len(translated_names) + len(untranslated_items)
+        # The end-to-end count for this job — received -> saved -> translated ->
+        # persisted — so a client-reported "my file is missing" can be answered
+        # by grepping this job id's logs instead of reproducing the upload.
+        logger.info("upload(links): job %s persisted %d/%d file(s) to storage",
+                    job_id, persisted_count, total_count)
+        if persisted_count != total_count:
+            logger.error(
+                "upload(links): job %s only persisted %d/%d file(s) — some translated "
+                "work was lost to a storage upload failure, see prior exceptions",
+                job_id, persisted_count, total_count)
+            _activity(f"{display_name}: {persisted_count} of {total_count} file(s) ready — "
+                     f"some files failed to save, contact support if any are missing",
+                     owner_id=user["id"])
+        else:
+            _activity(f"{display_name} ready to download", owner_id=user["id"])
+
+        if project_id:
+            store = _store()
+            try:
+                store.set_project_target_lang_if_unset(project_id, lang.code)
+            finally:
+                store.close()
+
+        return report
+
+    return await _dispatch_job(_finish, job_id, started, "links")
 
 
 @app.get("/api/jobs/{job_id}/source")

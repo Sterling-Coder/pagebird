@@ -67,3 +67,10 @@ def _no_real_object_storage(request, monkeypatch):
     for name in ("ensure_bucket", "upload_file", "download_to", "read_bytes",
                  "delete", "list_prefix", "delete_prefix"):
         monkeypatch.setattr(storage, name, _refuse)
+
+
+@pytest.fixture(autouse=True)
+def _sync_jobs(monkeypatch):
+    """Uploads normally return 202 and translate in the background; most
+    tests want the finished report back from the request itself."""
+    monkeypatch.setenv("PAGEBIRDY_SYNC_JOBS", "1")
