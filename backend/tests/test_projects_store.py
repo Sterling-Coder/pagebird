@@ -252,14 +252,80 @@ def test_get_job_returns_one_job_or_none(tmp_path):
     assert st.get_job("does-not-exist") is None
 
 
-def test_close_returns_connection_to_pool_and_is_idempotent(tmp_path):
+def test_close_returns_connection_to_pool_and_is_idempotent(tmp_path, monkeypatch):
+    import pagebirdy.review.store as store_mod
+
+    monkeypatch.setattr(store_mod, "_pools", {})
     st = _store(tmp_path)
-    conn = st.conn
-    st.close()
-    st.close()
-    again = _store(tmp_path)
+    pool = store_mod._get_pool()
     try:
-        assert again.conn is conn  # single idle pooled connection is reused
-        assert again.list_projects() is not None
+        st.close()
+        st.close()
+        pool.wait()
+        size = pool.get_stats()["pool_size"]
+        for _ in range(5):
+            again = _store(tmp_path)
+            assert again.list_projects() is not None
+            again.close()
+        assert pool.get_stats()["pool_size"] == size  # reused, not reopened
     finally:
-        again.close()
+        pool.close()
+
+
+def test_get_project_counts_jobs_with_and_without_segments(tmp_path):
+    st = _store(tmp_path)
+    pid = st.create_project("counts")
+    st.save_job("a.pdf", "", [_seg("s1", "a", "b"), _seg("s2", "c", "d", "needs_human")],
+                {}, project_id=pid)
+    st.save_job("b.pdf", "", [], {}, project_id=pid)
+    project = st.get_project(pid)
+    assert project["file_count"] == 2
+    assert project["status_counts"] == {"approved": 1, "needs_human": 1}
+    assert st.get_project_row(pid)["id"] == pid
+    assert st.get_project_row("nope") is None
+
+
+def test_pool_recovers_a_connection_the_server_closed(tmp_path, monkeypatch):
+    import pagebirdy.review.store as store_mod
+
+    monkeypatch.setattr(store_mod, "_pools", {})
+    st = _store(tmp_path)
+    pool = store_mod._get_pool()
+    try:
+        conn = st.conn
+        pid = conn.info.backend_pid
+        st.close()
+        other = store_mod.psycopg.connect(store_mod._db_url(), autocommit=True)
+        other.execute("SELECT pg_terminate_backend(%s)", (pid,))
+        other.close()
+        store_mod._last_used[conn] = 0.0  # looks long idle, so it is re-checked
+        fresh = _store(tmp_path)
+        try:
+            assert fresh.conn is not conn
+            assert fresh.list_projects() is not None
+        finally:
+            fresh.close()
+    finally:
+        pool.close()
+
+
+def test_assert_owns_project_light_and_full(tmp_path, monkeypatch):
+    import pytest
+    from fastapi import HTTPException
+
+    import pagebirdy.api as api
+
+    monkeypatch.setattr(api, "effective_owner_ids", lambda uid: [uid])
+    st = _store(tmp_path)
+    pid = st.create_project("mine", created_by="u1")
+    st.save_job("a.pdf", "", [_seg("s1", "a", "b")], {}, project_id=pid, created_by="u1")
+
+    assert api._assert_owns_project(st, pid, {"id": "u1"})["id"] == pid
+    full = api._assert_owns_project(st, pid, {"id": "u1"}, full=True)
+    assert full["file_count"] == 1 and full["status_counts"] == {"approved": 1}
+    with pytest.raises(HTTPException) as e:
+        api._assert_owns_project(st, pid, {"id": "u2"})
+    assert e.value.status_code == 403
+    with pytest.raises(HTTPException) as e:
+        api._assert_owns_project(st, "nope", {"id": "u1"}, full=True)
+    assert e.value.status_code == 404

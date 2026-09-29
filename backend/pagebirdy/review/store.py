@@ -26,6 +26,7 @@ import os
 import threading
 import time
 import uuid
+import weakref
 
 import psycopg
 from psycopg.rows import dict_row
@@ -90,7 +91,6 @@ def _get_pool():
                     max_size=int(os.environ.get("PAGEBIRDY_DB_POOL_MAX", "20")),
                     kwargs={"row_factory": dict_row, "autocommit": False,
                             "prepare_threshold": None},
-                    check=ConnectionPool.check_connection,
                     max_idle=300, open=False,
                 )
                 pool.open()
@@ -98,12 +98,34 @@ def _get_pool():
     return pool
 
 
+# Pooled connections are health-checked (one extra round trip) only after
+# sitting idle this long, not on every checkout — a page polling every few
+# seconds would otherwise pay that round trip on every request.
+_IDLE_RECHECK_SECONDS = 30.0
+_last_used: "weakref.WeakKeyDictionary" = weakref.WeakKeyDictionary()
+
+
+def _checkout(pool):
+    from psycopg_pool import ConnectionPool
+
+    for _ in range(3):
+        conn = pool.getconn()
+        if time.monotonic() - _last_used.get(conn, 0.0) < _IDLE_RECHECK_SECONDS:
+            return conn
+        try:
+            ConnectionPool.check_connection(conn)
+            return conn
+        except Exception:
+            pool.putconn(conn)  # broken: the pool discards it and replaces it
+    return pool.getconn()
+
+
 class ReviewStore:
     def __init__(self, path: str = ""):
         # `path` (an old SQLite filename) is accepted for call-site
         # compatibility but unused now — everything reads from SUPABASE_DB_URL.
         self._pool = _get_pool()
-        self.conn = self._pool.getconn()
+        self.conn = _checkout(self._pool)
 
     def __del__(self):
         # Callers that never close() must not leak a pooled connection.
@@ -514,16 +536,31 @@ class ReviewStore:
             cur.execute("DELETE FROM review_projects WHERE id = %s", (project_id,))
         self.conn.commit()
 
-    def get_project(self, project_id: str) -> dict | None:
+    def get_project_row(self, project_id: str) -> dict | None:
+        """The bare project row, one query — enough for an ownership check."""
         with self.conn.cursor() as cur:
             cur.execute("SELECT * FROM review_projects WHERE id = %s", (project_id,))
-            row = cur.fetchone()
+            return cur.fetchone()
+
+    def get_project(self, project_id: str) -> dict | None:
+        row = self.get_project_row(project_id)
         if row is None:
             return None
+        # Job ids and their per-status segment counts in one round trip.
         with self.conn.cursor() as cur:
-            cur.execute("SELECT id FROM review_jobs WHERE project_id = %s", (row["id"],))
-            job_ids = [jr["id"] for jr in cur.fetchall()]
-        return self._project_row_to_dict(row, job_ids, self._status_counts_batch(job_ids))
+            cur.execute(
+                "SELECT j.id AS job_id, s.status, COUNT(s.job_id) AS c "
+                "FROM review_jobs j LEFT JOIN review_segments s ON s.job_id = j.id "
+                "WHERE j.project_id = %s GROUP BY j.id, s.status",
+                (row["id"],),
+            )
+            rows = cur.fetchall()
+        job_ids = list(dict.fromkeys(r["job_id"] for r in rows))
+        counts_by_job: dict[str, dict[str, int]] = {}
+        for r in rows:
+            if r["status"] is not None:
+                counts_by_job.setdefault(r["job_id"], {})[r["status"]] = r["c"]
+        return self._project_row_to_dict(row, job_ids, counts_by_job)
 
     def list_projects(self, created_by: str | list[str] | None = None) -> list[dict]:
         if isinstance(created_by, str):
@@ -709,6 +746,7 @@ class ReviewStore:
     def close(self) -> None:
         conn, self.conn = getattr(self, "conn", None), None
         if conn is not None:
+            _last_used[conn] = time.monotonic()
             self._pool.putconn(conn)  # rolls back any open transaction
 
 

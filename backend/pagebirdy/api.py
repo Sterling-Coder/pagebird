@@ -164,11 +164,13 @@ def _find_job(job_id: str) -> dict | None:
         s.close()
 
 
-def _assert_owns_project(store: ReviewStore, project_id: str, user: dict) -> dict:
+def _assert_owns_project(store: ReviewStore, project_id: str, user: dict,
+                         full: bool = False) -> dict:
     """404 if the project doesn't exist, 403 if it belongs to someone outside
     the caller's team (or predates auth and has no owner — same effect,
     treated as orphaned)."""
-    project = store.get_project(project_id)
+    # The bare row is one query; `full` adds file counts and status roll-ups.
+    project = store.get_project(project_id) if full else store.get_project_row(project_id)
     if project is None:
         raise HTTPException(status_code=404, detail="project not found")
     if project.get("created_by") not in effective_owner_ids(user["id"]):
@@ -528,7 +530,7 @@ def list_projects(user: dict = Depends(require_user)) -> list[dict]:
 def get_project(project_id: str, user: dict = Depends(require_user)) -> dict:
     s = _store()
     try:
-        return _assert_owns_project(s, project_id, user)
+        return _assert_owns_project(s, project_id, user, full=True)
     finally:
         s.close()
 
