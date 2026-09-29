@@ -772,7 +772,7 @@ async def _eval_report(job_id: str, user: dict, refresh: bool = False) -> dict:
         except (OSError, json.JSONDecodeError):
             pass  # unreadable cache is not an error, just recompute
 
-    from pagebirdy.eval import runner
+    from pagebirdy.eval import isolated, runner
 
     # `job["source"]`/`job["output"]` are Storage KEYS, not local paths — the
     # layout metrics (everything but a links batch's own early return) need
@@ -789,15 +789,21 @@ async def _eval_report(job_id: str, user: dict, refresh: bool = False) -> dict:
             return runner.evaluate_job(job_id, review_db=_REVIEW_DB)
         local_source, local_output = _materialize_job_files(job)
         tmp_dir = os.path.dirname(local_source)
-        return runner.evaluate_job(job_id, review_db=_REVIEW_DB,
-                                   source_path=local_source, output_path=local_output)
+        # In a child process: page rendering can run out of memory or crash
+        # natively, and must not take the API server down with it.
+        return isolated.run("pagebirdy.eval.runner:evaluate_job", job_id,
+                            review_db=_REVIEW_DB,
+                            source_path=local_source, output_path=local_output)
 
     try:
         report = await run_in_threadpool(_run)
     except KeyError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except TimeoutError as e:
+        logger.warning("eval timed out for job %s: %s", job_id, e)
+        raise HTTPException(status_code=504, detail=f"evaluation failed: {e}")
     except Exception as e:
-        logger.info("eval failed for job %s: %s", job_id, e)
+        logger.warning("eval failed for job %s: %s", job_id, e)
         raise HTTPException(status_code=500, detail=f"evaluation failed: {e}")
     finally:
         if tmp_dir:
