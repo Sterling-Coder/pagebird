@@ -65,6 +65,38 @@ export default function ProjectFilesPage() {
   const [, setTick] = useState(0);
   const [qaScores, setQaScores] = useState<Record<string, EvalReport>>({});
   const [qaModalId, setQaModalId] = useState<string | null>(null);
+  const [qaRunning, setQaRunning] = useState<Set<string>>(new Set());
+  const [qaErrors, setQaErrors] = useState<Record<string, string>>({});
+
+  // Runs the full evaluation for one file, then opens its report. The list
+  // itself only ever reads cached results, so this is the explicit opt-in.
+  function runQa(jobId: string) {
+    if (qaRunning.has(jobId)) return;
+    setQaRunning((prev) => new Set(prev).add(jobId));
+    setQaErrors((prev) => {
+      const next = { ...prev };
+      delete next[jobId];
+      return next;
+    });
+    getJobEval(jobId, { refresh: true })
+      .then((report) => {
+        setQaScores((prev) => ({ ...prev, [jobId]: report }));
+        setQaModalId(jobId);
+      })
+      .catch((err) =>
+        setQaErrors((prev) => ({
+          ...prev,
+          [jobId]: err instanceof Error ? err.message : "QA failed",
+        }))
+      )
+      .finally(() =>
+        setQaRunning((prev) => {
+          const next = new Set(prev);
+          next.delete(jobId);
+          return next;
+        })
+      );
+  }
 
   function refresh() {
     listProjectFiles(params.projectId, folderId)
@@ -698,9 +730,25 @@ export default function ProjectFilesPage() {
                 {(() => {
                   const qa = qaScores[f.id];
                   if (!qa || qa.not_computed) {
+                    if (f.status !== "complete") {
+                      return <td className="py-2 text-muted">—</td>;
+                    }
+                    const running = qaRunning.has(f.id);
+                    const failure = qaErrors[f.id];
                     return (
-                      <td className="py-2 text-muted" title="Run QA check on the project's Settings page">
-                        —
+                      <td className="py-2" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          type="button"
+                          disabled={running}
+                          onClick={() => runQa(f.id)}
+                          aria-busy={running}
+                          title={failure ? `${failure} — click to retry` : "Run QA check and open the report"}
+                          className={`border px-2 py-0.5 font-mono text-[10px] uppercase tracking-widest hover:border-ink hover:text-ink disabled:opacity-60 ${
+                            failure ? "border-red text-red" : "border-rule text-ink-soft"
+                          }`}
+                        >
+                          {running ? "Running…" : failure ? "Retry" : "Run QA"}
+                        </button>
                       </td>
                     );
                   }

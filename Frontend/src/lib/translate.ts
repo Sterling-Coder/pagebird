@@ -106,7 +106,10 @@ export async function getJobEval(
   if (opts.refresh) url.searchParams.set("refresh", "true");
   if (opts.cacheOnly) url.searchParams.set("cache_only", "true");
   const res = await fetch(url, { headers: await authHeaders() });
-  if (!res.ok) throw new Error(`Failed to load eval (${res.status})`);
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(body?.detail ?? `Failed to load eval (${res.status})`);
+  }
   return res.json();
 }
 
