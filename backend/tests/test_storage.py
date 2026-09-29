@@ -72,7 +72,7 @@ class FakeS3:
 def s3(monkeypatch):
     fake = FakeS3()
     monkeypatch.setattr(storage, "_client", fake)
-    monkeypatch.setenv("BABEL_S3_BUCKET", "docs")
+    monkeypatch.setenv("PAGEBIRDY_S3_BUCKET", "docs")
     return fake
 
 
@@ -142,30 +142,30 @@ def test_an_upload_with_no_bucket_configured_raises(monkeypatch, tmp_path):
 
 
 def test_region_is_read_from_the_b2_endpoint_when_not_set_explicitly(monkeypatch):
-    monkeypatch.delenv("BABEL_S3_REGION", raising=False)
-    monkeypatch.setenv("BABEL_S3_ENDPOINT", "https://s3.us-west-004.backblazeb2.com")
+    monkeypatch.delenv("PAGEBIRDY_S3_REGION", raising=False)
+    monkeypatch.setenv("PAGEBIRDY_S3_ENDPOINT", "https://s3.us-west-004.backblazeb2.com")
     assert storage._cfg()["region"] == "us-west-004"
 
 
 def test_an_explicit_region_wins_over_the_endpoint(monkeypatch):
-    monkeypatch.setenv("BABEL_S3_ENDPOINT", "https://s3.us-west-004.backblazeb2.com")
-    monkeypatch.setenv("BABEL_S3_REGION", "eu-central-003")
+    monkeypatch.setenv("PAGEBIRDY_S3_ENDPOINT", "https://s3.us-west-004.backblazeb2.com")
+    monkeypatch.setenv("PAGEBIRDY_S3_REGION", "eu-central-003")
     assert storage._cfg()["region"] == "eu-central-003"
 
 
 def test_an_endpoint_that_does_not_name_a_region_leaves_it_unresolved(monkeypatch):
-    monkeypatch.delenv("BABEL_S3_REGION", raising=False)
-    monkeypatch.setenv("BABEL_S3_ENDPOINT", "https://my-custom-host.example.com")
+    monkeypatch.delenv("PAGEBIRDY_S3_REGION", raising=False)
+    monkeypatch.setenv("PAGEBIRDY_S3_ENDPOINT", "https://my-custom-host.example.com")
     assert storage._cfg()["region"] == ""
 
 
 def test_an_unresolvable_region_raises_a_clear_error(monkeypatch, tmp_path):
     monkeypatch.setattr(storage, "_client", None)
-    monkeypatch.setenv("BABEL_S3_ENDPOINT", "https://my-custom-host.example.com")
-    monkeypatch.setenv("BABEL_S3_BUCKET", "docs")
-    monkeypatch.setenv("BABEL_S3_ACCESS_KEY", "key")
-    monkeypatch.setenv("BABEL_S3_SECRET_KEY", "secret")
-    monkeypatch.delenv("BABEL_S3_REGION", raising=False)
+    monkeypatch.setenv("PAGEBIRDY_S3_ENDPOINT", "https://my-custom-host.example.com")
+    monkeypatch.setenv("PAGEBIRDY_S3_BUCKET", "docs")
+    monkeypatch.setenv("PAGEBIRDY_S3_ACCESS_KEY", "key")
+    monkeypatch.setenv("PAGEBIRDY_S3_SECRET_KEY", "secret")
+    monkeypatch.delenv("PAGEBIRDY_S3_REGION", raising=False)
     src = tmp_path / "a.pdf"
     src.write_bytes(b"x")
     with pytest.raises(RuntimeError, match="region"):

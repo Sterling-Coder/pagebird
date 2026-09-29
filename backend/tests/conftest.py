@@ -24,8 +24,8 @@ import pytest
 
 os.environ["SUPABASE_DB_URL"] = os.environ.get("TEST_DATABASE_URL", "")
 for _name in ("SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_ANON_KEY",
-              "BABEL_S3_ENDPOINT", "BABEL_S3_BUCKET", "BABEL_S3_ACCESS_KEY",
-              "BABEL_S3_SECRET_KEY"):
+              "PAGEBIRDY_S3_ENDPOINT", "PAGEBIRDY_S3_BUCKET", "PAGEBIRDY_S3_ACCESS_KEY",
+              "PAGEBIRDY_S3_SECRET_KEY"):
     os.environ[_name] = ""
 
 

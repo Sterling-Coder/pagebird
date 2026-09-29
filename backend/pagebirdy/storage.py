@@ -13,11 +13,11 @@ only the env below needs to point elsewhere; nothing here is B2-specific.
 
 Env (from the B2 bucket's "S3 Compatible" tab — Application Key ID / Key are
 the access/secret key pair, scoped to just this bucket):
-  BABEL_S3_ENDPOINT     e.g. https://s3.us-west-004.backblazeb2.com
-  BABEL_S3_BUCKET       bucket name
-  BABEL_S3_ACCESS_KEY   B2 Application Key ID
-  BABEL_S3_SECRET_KEY   B2 Application Key
-  BABEL_S3_REGION       e.g. "us-west-004" — must match the endpoint's
+  PAGEBIRDY_S3_ENDPOINT     e.g. https://s3.us-west-004.backblazeb2.com
+  PAGEBIRDY_S3_BUCKET       bucket name
+  PAGEBIRDY_S3_ACCESS_KEY   B2 Application Key ID
+  PAGEBIRDY_S3_SECRET_KEY   B2 Application Key
+  PAGEBIRDY_S3_REGION       e.g. "us-west-004" — must match the endpoint's
                          region; B2 rejects "auto"
 
 Unlike an optional engine, storage is not best-effort: a job whose files were
@@ -55,13 +55,13 @@ def _region_from_endpoint(endpoint: str) -> str:
 
 
 def _cfg() -> dict:
-    endpoint = os.environ.get("BABEL_S3_ENDPOINT", "")
+    endpoint = os.environ.get("PAGEBIRDY_S3_ENDPOINT", "")
     return {
         "endpoint": endpoint,
-        "bucket": os.environ.get("BABEL_S3_BUCKET", ""),
-        "access_key": os.environ.get("BABEL_S3_ACCESS_KEY", ""),
-        "secret_key": os.environ.get("BABEL_S3_SECRET_KEY", ""),
-        "region": os.environ.get("BABEL_S3_REGION", "") or _region_from_endpoint(endpoint),
+        "bucket": os.environ.get("PAGEBIRDY_S3_BUCKET", ""),
+        "access_key": os.environ.get("PAGEBIRDY_S3_ACCESS_KEY", ""),
+        "secret_key": os.environ.get("PAGEBIRDY_S3_SECRET_KEY", ""),
+        "region": os.environ.get("PAGEBIRDY_S3_REGION", "") or _region_from_endpoint(endpoint),
     }
 
 
@@ -85,12 +85,12 @@ def _get_client():
             return _client
         if not enabled():
             raise RuntimeError(
-                "storage is not configured: set BABEL_S3_ENDPOINT, BABEL_S3_BUCKET, "
-                "BABEL_S3_ACCESS_KEY and BABEL_S3_SECRET_KEY")
+                "storage is not configured: set PAGEBIRDY_S3_ENDPOINT, PAGEBIRDY_S3_BUCKET, "
+                "PAGEBIRDY_S3_ACCESS_KEY and PAGEBIRDY_S3_SECRET_KEY")
         c = _cfg()
         if not c["region"]:
             raise RuntimeError(
-                "storage: could not determine a region — set BABEL_S3_REGION "
+                "storage: could not determine a region — set PAGEBIRDY_S3_REGION "
                 f"(endpoint {c['endpoint']!r} doesn't match B2's s3.<region>.backblazeb2.com)")
         import boto3
         from botocore.config import Config
