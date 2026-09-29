@@ -29,7 +29,11 @@ from lxml import etree
 # vector (local file read, SSRF, or billion-laughs DoS via a crafted Story
 # XML). Every `etree.fromstring` call in this module must go through this
 # hardened parser instead of the bare default.
-_XML_PARSER = etree.XMLParser(resolve_entities=False, no_network=True, huge_tree=False)
+# huge_tree lifts libxml2's 10 MB text-node cap: InDesign embeds pasted/
+# embedded images as base64 in a single <Contents> node of the Spread XML,
+# and real magazines exceed it. It does not re-enable entity expansion —
+# resolve_entities=False still blocks billion-laughs.
+_XML_PARSER = etree.XMLParser(resolve_entities=False, no_network=True, huge_tree=True)
 
 
 def _localname(el) -> str:

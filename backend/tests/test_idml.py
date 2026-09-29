@@ -451,6 +451,26 @@ def test_spread_survives_save_roundtrip_untouched(tmp_path):
     assert 'GeometricBounds="0 0 100 300"' in spread
 
 
+def test_spread_with_embedded_image_over_10mb_text_node_parses(tmp_path):
+    # InDesign stores embedded images as base64 in one <Contents> text node;
+    # past libxml2's 10 MB default cap this raised "Text node too long, try
+    # XML_PARSE_HUGE" in production.
+    big = "A" * (11 * 1024 * 1024)
+    spread = SPREAD_SIMPLE.replace(
+        "</Spread>",
+        f'<Rectangle Self="ur1"><Image Self="ui1"><Properties>'
+        f"<Contents><![CDATA[{big}]]></Contents></Properties></Image></Rectangle>"
+        "</Spread>")
+    src = str(tmp_path / "in.idml")
+    _make_idml_with_spread(src, spread_xml=spread)
+
+    pkg = IdmlPackage(src)
+    out = str(tmp_path / "out.idml")
+    pkg.save(out)
+    with zipfile.ZipFile(out) as z:
+        assert big in z.read("Spreads/Spread_us1.xml").decode("utf-8")
+
+
 def test_reflect_transform_pure_translation():
     # A frame whose own X-extent is 0..40 in a 300-wide spread (centerX=150)
     # moves so its extent becomes 260..300 — same width, mirrored position,

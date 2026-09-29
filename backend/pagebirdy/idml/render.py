@@ -29,6 +29,10 @@ from lxml import etree
 from pagebirdy import fonts as pagebirdy_fonts
 from pagebirdy import languages
 
+# Same hardened parser as idml/package.py (no XXE; huge_tree for embedded
+# base64 image <Contents> that exceed libxml2's 10 MB text-node cap).
+_XML_PARSER = etree.XMLParser(resolve_entities=False, no_network=True, huge_tree=True)
+
 logger = logging.getLogger("pagebirdy.idml.render")
 
 _RASTER_EXTS = (".png", ".jpg", ".jpeg", ".tif", ".tiff", ".gif", ".bmp")
@@ -59,7 +63,7 @@ def _story_texts(z: zipfile.ZipFile) -> dict[str, str]:
     for name in z.namelist():
         if not (name.startswith("Stories/") and name.endswith(".xml")):
             continue
-        tree = etree.fromstring(z.read(name))
+        tree = etree.fromstring(z.read(name), parser=_XML_PARSER)
         for story in tree.iter():
             if _ln(story) != "Story":
                 continue
@@ -125,7 +129,7 @@ def render_idml_to_pdf(idml_path: str, out_pdf: str, target_lang: str = "") -> s
                          if n.startswith("Spreads/") and n.endswith(".xml"))
         doc = fitz.open()
         for sname in spreads:
-            tree = etree.fromstring(z.read(sname))
+            tree = etree.fromstring(z.read(sname), parser=_XML_PARSER)
             # Pages of this spread, with their spread-space placement.
             pages = []
             for pg in tree.iter():

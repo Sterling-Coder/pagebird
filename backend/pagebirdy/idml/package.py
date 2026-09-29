@@ -35,7 +35,11 @@ from pagebirdy.protect.mathguard import _TOKEN_RE, Allocator
 # vector (local file read, SSRF, or billion-laughs DoS via a crafted
 # Stories/Spreads/MasterSpreads XML). Every `etree.fromstring` call in this
 # module must go through this hardened parser instead of the bare default.
-_XML_PARSER = etree.XMLParser(resolve_entities=False, no_network=True, huge_tree=False)
+# huge_tree lifts libxml2's 10 MB text-node cap: InDesign embeds pasted/
+# embedded images as base64 in a single <Contents> node of the Spread XML,
+# and real magazines exceed it. It does not re-enable entity expansion —
+# resolve_entities=False still blocks billion-laughs.
+_XML_PARSER = etree.XMLParser(resolve_entities=False, no_network=True, huge_tree=True)
 
 _MATH_FONT_KEYS = ("math", "pi lt", "pilt", "mathematicalpi")
 # InDesign's forced line/paragraph break, embedded mid-run in Content text.
