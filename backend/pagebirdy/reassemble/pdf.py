@@ -18,6 +18,7 @@ Policy (this path is "draft + manual finish", safety over completeness):
 
 from __future__ import annotations
 
+import contextvars
 import hashlib
 import os
 import re
@@ -955,6 +956,45 @@ def _border_average_color(page, rect: "fitz.Rect", dpi: int = 150) -> int:
     return (r << 16) | (g << 8) | b
 
 
+# xref of the Optional Content Group (Illustrator/PDF layer) the segment being
+# drawn came from; 0 = no layer. Set per segment around `_place` so the
+# translation lands in the same layer as the text it replaces, not loose on
+# the page.
+_current_layer: contextvars.ContextVar[int] = contextvars.ContextVar("pdf_layer", default=0)
+
+
+def _layer() -> int:
+    return _current_layer.get()
+
+
+def _segment_layers(doc, page, segs: list[Segment]) -> dict[str, int]:
+    """Map segment id -> OCG xref of the layer its source text is drawn in.
+
+    Text spans report their layer by name (`get_texttrace`); the segment takes
+    the layer covering most of its box. Only the first OCG of a duplicated
+    name is addressable, so same-named layers collapse to that one.
+    """
+    ocgs = doc.get_ocgs()
+    if not ocgs:
+        return {}
+    by_name: dict[str, int] = {}
+    for xref, info in ocgs.items():
+        by_name.setdefault(info.get("name", ""), xref)
+    spans = [(fitz.Rect(t["bbox"]), t["layer"]) for t in page.get_texttrace()
+             if t.get("layer") in by_name]
+    out: dict[str, int] = {}
+    for s in segs:
+        box = fitz.Rect(s.bbox)
+        best, best_area = None, 0.0
+        for rect, name in spans:
+            area = (rect & box).get_area()
+            if area > best_area:
+                best, best_area = name, area
+        if best is not None:
+            out[s.id] = by_name[best]
+    return out
+
+
 def _strip_ai_private_data(doc) -> None:
     """Drop each page's `/PieceInfo /Illustrator /Private` stream.
 
@@ -1023,6 +1063,8 @@ def rebuild_pdf(src_pdf: str, segments: list[Segment], out_path: str,
                 for tok, box in x.math_boxes.items()
                 if _norm(x.math_fonts.get(tok, "")) not in faces
             }
+
+            layer_of = _segment_layers(doc, page, replace)
 
             # Sampled before any redaction touches the page, so it reflects
             # the real original fill regardless of whether the redaction
@@ -1122,8 +1164,12 @@ def rebuild_pdf(src_pdf: str, segments: list[Segment], out_path: str,
             shared = _fit_page(replace, lang, room, serif)
             shared = _relieve_overlaps(replace, page_segs, lang, room, serif, shared)
             for s in replace:
-                outcomes.append(_place(page, s, lang, shared.get(s.id), room[s.id],
-                                       serif, faces, snaps))
+                token = _current_layer.set(layer_of.get(s.id, 0))
+                try:
+                    outcomes.append(_place(page, s, lang, shared.get(s.id), room[s.id],
+                                           serif, faces, snaps))
+                finally:
+                    _current_layer.reset(token)
 
             for s in page_segs:
                 if s in replace:
@@ -1370,13 +1416,13 @@ def _place(page, seg: Segment, lang, size_hint: float | None = None,
         parts = _leader_parts(line, font, size, box) if i == len(lines) - 1 else None
         if parts and len(parts) > 1:  # a dot leader owns this line's geometry
             for x, part in parts:
-                page.insert_text(fitz.Point(x, y), part, **kwargs)
+                page.insert_text(fitz.Point(x, y), part, oc=_layer(), **kwargs)
             continue
         words = line.split()
         line_bold = bold_words[word_i:word_i + len(words)]
         if not any(line_bold):
             page.insert_text(fitz.Point(_align_x(line, font, size, box, align), y), **kwargs,
-                             text=line)
+                             text=line, oc=_layer())
         else:
             x = _align_x(line, font, size, box, align)
             space_w = font.text_length(" ", size)
@@ -1385,7 +1431,7 @@ def _place(page, seg: Segment, lang, size_hint: float | None = None,
                 wfont = bold_font if is_bold else font
                 word_size = accent_size if is_bold else size
                 wkwargs = dict(bold_kwargs if is_bold else kwargs, fontsize=word_size)
-                page.insert_text(fitz.Point(x, y), word, **wkwargs)
+                page.insert_text(fitz.Point(x, y), word, oc=_layer(), **wkwargs)
                 x += wfont.text_length(word, word_size) + space_w
         word_i += len(words)
 
@@ -1408,7 +1454,7 @@ def _place(page, seg: Segment, lang, size_hint: float | None = None,
         cx = box.x0 - size * 0.35 - radius
         cy = baselines[0] - size * 0.32
         color = _rgb(seg.bullet_color)
-        page.draw_circle(fitz.Point(cx, cy), radius, color=color, fill=color)
+        page.draw_circle(fitz.Point(cx, cy), radius, color=color, fill=color, oc=_layer())
 
     if overflow:
         return LineOutcome(
@@ -1441,7 +1487,7 @@ def _draw_rtl(page, text: str, x: float, y: float, font_path: str | None,
     # TextWriter has no `rotate`; turned type is written flat and then spun
     # about its own start point, which is where insert_text's rotate pivots too.
     morph = (fitz.Point(x, y), fitz.Matrix(rotate)) if rotate else None
-    writer.write_text(page, color=color, morph=morph)
+    writer.write_text(page, color=color, morph=morph, oc=_layer())
 
 
 def _alignment(rows) -> str:
@@ -1554,7 +1600,7 @@ def _place_rotated(page, seg: Segment, lang, size_hint, serif) -> LineOutcome:
             _draw_rtl(page, line, start.x, start.y, font_path, size,
                       _rgb(seg.color), rotate=seg.rotation)
         else:
-            page.insert_text(start, line, **kwargs)
+            page.insert_text(start, line, oc=_layer(), **kwargs)
 
     if overflow:
         return LineOutcome(seg.id, seg.page, "overflow",
@@ -1669,7 +1715,7 @@ def _place_with_math(page, seg: Segment, lang, size_hint, limit_y, serif,
                 writer = fitz.TextWriter(page.rect)
                 writer.append(fitz.Point(x, y), text, font=font, fontsize=size,
                               right_to_left=1)
-                writer.write_text(page, color=_rgb(seg.color))
+                writer.write_text(page, color=_rgb(seg.color), oc=_layer())
                 x += w
                 continue
             for piece, is_math in word:
@@ -1680,16 +1726,17 @@ def _place_with_math(page, seg: Segment, lang, size_hint, limit_y, serif,
                     w = seg.math_widths[piece] * size
                     h = w * pix.height / pix.width if pix.width else size
                     page.insert_image(fitz.Rect(x, y - h * 0.74, x + w, y + h * 0.26),
-                                      pixmap=pix)
+                                      pixmap=pix, oc=_layer())
                 elif is_math:
                     buf = faces[_norm(seg.math_fonts[piece])]
                     name = "m" + hashlib.md5(buf).hexdigest()[:10]
                     page.insert_font(fontname=name, fontbuffer=buf)
                     page.insert_text(fitz.Point(x, y), seg.placeholders[piece],
-                                     fontname=name, fontsize=size, color=_rgb(seg.color))
+                                     fontname=name, fontsize=size, color=_rgb(seg.color),
+                                     oc=_layer())
                     w = seg.math_widths[piece] * size
                 else:
-                    page.insert_text(fitz.Point(x, y), piece, **text_kw)
+                    page.insert_text(fitz.Point(x, y), piece, oc=_layer(), **text_kw)
                     w = font.text_length(piece, size)
                 x += w
 
