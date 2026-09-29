@@ -609,3 +609,52 @@ def test_without_its_styles_the_font_evidence_goes_quiet_rather_than_wrong():
     assert rtl_features.math_font_story_index(docs)["s0"] is False
     feature = next(f for f in rtl_features.collect(docs) if f.self_id == "f0")
     assert feature.math_text and not feature.math_operator
+
+
+# ---- an equation named by its object style keeps its drawing ---------------
+
+
+def _styled_bracket(self_id, x0, x1, y0, y1):
+    return _bracket(self_id, x0, x1, y0, y1).replace(
+        'ItemLayer="layer"',
+        'ItemLayer="layer" AppliedObjectStyle="ObjectStyle/long division arrow 1"', 1)
+
+
+def _outline(docs, self_id):
+    el = _element(docs, self_id)
+    return [p.get("Anchor") for p
+            in el.find("./Properties/PathGeometry").iter("PathPointType")]
+
+
+def test_a_lone_styled_bracket_crosses_the_page_without_turning_round():
+    """`math.styled` repositions an item as one rigid unit. Standing alone --
+    in no component -- the bracket still moves, but its outline stays as
+    drawn: reversed, it means the opposite of itself."""
+    docs = _docs([_styled_bracket("brk", 100.0, 112.0, 200.0, 224.0)], [])
+    before_x0, before_outline = _x0(docs, "brk"), _outline(docs, "brk")
+
+    plan = _run(docs)
+
+    decision = next(d for d in plan.decisions if d.object == "brk")
+    assert decision.rule == "math.styled"
+    assert _x0(docs, "brk") != before_x0, "the bracket did not cross the page"
+    assert _outline(docs, "brk") == before_outline, "its outline turned round"
+
+
+def test_a_rigid_child_of_a_mirroring_group_keeps_its_drawing():
+    """`_mirror_arrangement` moves every child to its mirrored place and
+    reflects a decorative outline as it goes. A child listed as rigid is moved
+    whole but its own drawing is left as it was, as the docstring promises."""
+    items = [_text_frame("head", "s_head", (100.0, 200.0, 280.0, 214.0)),
+             _bracket("brk", 100.0, 112.0, 220.0, 244.0),
+             _bracket("arrow", 150.0, 162.0, 220.0, 244.0)]
+    docs = _docs([('<Group Self="grp" ItemTransform="1 0 0 1 0 0" '
+                   'ItemLayer="layer">' + "".join(items) + "</Group>")], [])
+    brk, arrow = _outline(docs, "brk"), _outline(docs, "arrow")
+    brk_x0 = _x0(docs, "brk")
+
+    rtl._mirror_arrangement(_element(docs, "grp"), rigid=frozenset({"brk"}))
+
+    assert _x0(docs, "brk") != brk_x0, "the rigid child was not moved"
+    assert _outline(docs, "brk") == brk, "the rigid child's outline turned round"
+    assert _outline(docs, "arrow") != arrow, "a decorative child is still reflected"

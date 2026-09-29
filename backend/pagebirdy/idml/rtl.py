@@ -1015,7 +1015,9 @@ def _mirror_arrangement(group, rigid: frozenset = frozenset(),
             t = parse_transform(child.get("ItemTransform"))
             child.set("ItemTransform",
                       format_transform(t[:4] + (t[4] + dx, t[5])))
-            if not in_block:
+            # A rigid child crosses whole: its drawing, like its inside, is
+            # left exactly as it was.
+            if not in_block and child.get("Self") not in rigid:
                 reflect_path(child)
             moved += 1
             if (_is(child, "Group") and not in_block
@@ -1149,7 +1151,8 @@ def _move_component(anchor, members, index, extents, centre,
         dx = keep_on_page(box, 2.0 * axis - (box[0] + box[2]), extents)
         t = parse_transform(el.get("ItemTransform"))
         el.set("ItemTransform", format_transform(t[:4] + (t[4] + dx, t[5])))
-        reflect_path(el)
+        if anchor.object not in rigid:
+            reflect_path(el)
         if anchor.action == RTL_MIRROR:
             _mirror_arrangement(el, rigid, blocks)
         return True
@@ -1178,7 +1181,8 @@ def _move_component(anchor, members, index, extents, centre,
             dx = 2.0 * axis - (box[0] + box[2]) + shift
             t = parse_transform(el.get("ItemTransform"))
             el.set("ItemTransform", format_transform(t[:4] + (t[4] + dx, t[5])))
-            reflect_path(el)
+            if d.object not in rigid:
+                reflect_path(el)
             if _is(el, "Group") and d.object not in rigid:
                 _mirror_arrangement(el, rigid, blocks)
         return True
@@ -1463,7 +1467,12 @@ def apply_plan(documents: dict, plan) -> dict:
                             t = parse_transform(el.get("ItemTransform"))
                             el.set("ItemTransform",
                                    format_transform(t[:4] + (t[4] + dx, t[5])))
-                            reflect_path(el)
+                            # A rigid item -- an equation named by its style,
+                            # say -- crosses the page as drawn. Reversed, a
+                            # long-division bracket means the opposite of
+                            # itself, exactly as inside an equation block.
+                            if self_id not in rigid:
+                                reflect_path(el)
                             if (decision.action == _plan.RTL_MIRROR
                                     and _is(el, "Group")
                                     and self_id not in rigid):
@@ -1646,23 +1655,21 @@ def _paragraph_styles_by_id(documents: dict) -> dict:
     return styles
 
 
-def _effective_alignment(para, styles: dict, default: str | None) -> str | None:
-    """What InDesign aligns this paragraph by, before this pass changes anything.
+def _effective_attr(para, styles: dict, name: str, default: str | None) -> str | None:
+    """What this paragraph resolves `name` to, before this pass changes anything.
 
     Its own declaration, else the nearest style up the `BasedOn` chain that
-    declares one, else the document default. The corpus's vertical lesson
-    title declares none at any level, which is exactly why flipping the
-    document default reaches it.
+    declares one, else the document default.
     """
-    own = para.get("Justification")
-    if own:
+    own = para.get(name)
+    if own is not None:
         return own
     seen: set = set()
     style = styles.get(para.get("AppliedParagraphStyle"))
     while style is not None and id(style) not in seen:
         seen.add(id(style))
-        declared = style.get("Justification")
-        if declared:
+        declared = style.get(name)
+        if declared is not None:
             return declared
         props = style.find("./{*}Properties")
         based = _property(props, "BasedOn") if props is not None else None
@@ -1670,15 +1677,82 @@ def _effective_alignment(para, styles: dict, default: str | None) -> str | None:
     return default
 
 
-def _hold_turned_alignment(documents: dict, preferences, turned: frozenset) -> list:
-    """`(paragraph, alignment)` for every paragraph in a turned frame.
+def _effective_alignment(para, styles: dict, default: str | None) -> str | None:
+    """What InDesign aligns this paragraph by, before this pass changes anything.
 
-    Read before this pass flips anything, and written back after it, so that
-    a paragraph inheriting its alignment cannot be moved by the flip applied
-    to whatever it inherits from. Only alignments the flip would actually
-    have moved are held: a centred paragraph is unaffected either way, and a
-    binding-relative one resolves against `PageBinding`, which this pipeline
-    never flips.
+    The corpus's vertical lesson title declares no alignment at any level,
+    which is exactly why flipping the document default reaches it.
+    """
+    return _effective_attr(para, styles, "Justification", default) or default
+
+
+def _already_right_to_left(documents: dict, preferences) -> dict:
+    """`{id: element}` for every paragraph, paragraph style and text default
+    that already reads right to left before this pass changes anything.
+
+    Their alignment and indents were written for right-to-left text -- an
+    Arabic-authored source, or a right-to-left passage inside an English one
+    -- so flipping them as well would set correct text flush the wrong way.
+    Keyed by `id` with the element held alongside, because an lxml proxy's
+    `id` is only stable while something keeps the proxy alive.
+    """
+    default = None
+    if preferences is not None:
+        for el in preferences.iter():
+            if _localname(el) == "TextDefault":
+                default = el
+                break
+    default_dir = default.get("ParagraphDirection") if default is not None else None
+    styles = _paragraph_styles_by_id(documents)
+
+    def style_direction(style):
+        seen: set = set()
+        while style is not None and id(style) not in seen:
+            seen.add(id(style))
+            declared = style.get("ParagraphDirection")
+            if declared:
+                return declared
+            props = style.find("./{*}Properties")
+            based = _property(props, "BasedOn") if props is not None else None
+            style = styles.get((based.text or "").strip()) if based is not None else None
+        return default_dir
+
+    found: dict = {}
+    if default is not None and default_dir == _RTL:
+        found[id(default)] = default
+    for style in styles.values():
+        if style_direction(style) == _RTL:
+            found[id(style)] = style
+    for name, tree in documents.items():
+        if not name.startswith("Stories/"):
+            continue
+        for para in tree.iter("{*}ParagraphStyleRange"):
+            direction = (para.get("ParagraphDirection")
+                         or style_direction(styles.get(para.get("AppliedParagraphStyle"))))
+            if direction == _RTL:
+                found[id(para)] = para
+    return found
+
+
+# Edge-measured values a paragraph falls back to when nothing declares them.
+# A side that resolved to nothing has to be pinned to this, or the swap hands
+# it the other side's inherited value. Colours, tints and line types have no
+# such neutral value, so a turned paragraph holds those pairs only when the
+# source resolved both sides.
+_EDGE_ZERO_SUFFIXES = ("Indent", "Offset", "LineWeight", "CornerRadius")
+
+
+def _hold_turned_paragraphs(documents: dict, preferences, turned: frozenset) -> list:
+    """`(paragraph, attribute, value)` to restore on every paragraph in a turned frame.
+
+    Read before this pass flips anything, and written back after it, so that a
+    paragraph inheriting its alignment or its indents cannot be moved by the
+    flip applied to whatever it inherits from. In a turned frame both are
+    measured along an axis that is not the page's horizontal (see
+    :func:`_lies_along_the_page`). Only values the flip would actually have
+    moved are held: a centred paragraph, or equal left and right indents, are
+    unaffected either way, and a binding-relative alignment resolves against
+    `PageBinding`, which this pipeline never flips.
     """
     if not turned:
         return []
@@ -1686,8 +1760,12 @@ def _hold_turned_alignment(documents: dict, preferences, turned: frozenset) -> l
     if preferences is not None:
         for el in preferences.iter():
             if _localname(el) == "TextDefault":
-                default = el.get("Justification")
+                default = el
                 break
+
+    def fallback(name):
+        return default.get(name) if default is not None else None
+
     styles = _paragraph_styles_by_id(documents)
     held: list = []
     for name, tree in documents.items():
@@ -1697,9 +1775,27 @@ def _hold_turned_alignment(documents: dict, preferences, turned: frozenset) -> l
             if story.get("Self") not in turned:
                 continue
             for para in story.iter("{*}ParagraphStyleRange"):
-                alignment = _effective_alignment(para, styles, default)
+                alignment = _effective_alignment(para, styles, fallback("Justification"))
                 if alignment in _ALIGN_FLIP:
-                    held.append((para, alignment))
+                    held.append((para, "Justification", alignment))
+                for left_name, right_name in _INDENT_PAIRS + _CORNER_PAIRS:
+                    left = _effective_attr(para, styles, left_name, fallback(left_name))
+                    right = _effective_attr(para, styles, right_name, fallback(right_name))
+                    if left == right:
+                        continue
+                    # What the paragraph declares itself lives in a turned
+                    # story this pass never swaps; only an inherited side can
+                    # be moved by the flip applied to a style or the default.
+                    inherited = any(para.get(n) is None and v is not None
+                                    for n, v in ((left_name, left), (right_name, right)))
+                    if not inherited:
+                        continue
+                    if left is None or right is None:
+                        if not left_name.endswith(_EDGE_ZERO_SUFFIXES):
+                            continue
+                        left, right = left or "0", right or "0"
+                    held.append((para, left_name, left))
+                    held.append((para, right_name, right))
     return held
 
 
@@ -1747,7 +1843,7 @@ def set_text_direction(documents: dict, preferences=None, fonts=None) -> int:
     the source resolved to, and still gets every genuine direction change --
     `ParagraphDirection`, digits, composer, bullet. Position and text are
     independent fields, and this is where they had been conflated. See
-    :func:`_lies_along_the_page` and :func:`_hold_turned_alignment`.
+    :func:`_lies_along_the_page` and :func:`_hold_turned_paragraphs`.
 
     `fonts` is `Resources/Fonts.xml`, wanted only because turning a one-way
     dingbat bullet round moves it to another face, and a face the package never
@@ -1763,7 +1859,11 @@ def set_text_direction(documents: dict, preferences=None, fonts=None) -> int:
     # :func:`_lies_along_the_page`.
     turned = _turned_story_ids(documents)
     turned_documents = _turned_story_documents(documents, turned)
-    held_alignment = _hold_turned_alignment(documents, preferences, turned)
+    held = _hold_turned_paragraphs(documents, preferences, turned)
+    already_rtl = _already_right_to_left(documents, preferences)
+
+    def reads_rtl(el) -> bool:
+        return already_rtl.get(id(el)) is el
 
     if preferences is not None:
         for el in preferences.iter():
@@ -1775,15 +1875,18 @@ def set_text_direction(documents: dict, preferences=None, fonts=None) -> int:
                 # What every paragraph that overrides nothing inherits. Left
                 # Latin and left-aligned it quietly re-imposes both on the bulk
                 # of the document, however many paragraph styles were flipped.
+                source_rtl = reads_rtl(el)
                 el.set("ParagraphDirection", _RTL)
                 el.set("DigitsType", _DIGITS)
-                flipped = _ALIGN_FLIP.get(el.get("Justification"))
-                if flipped:
-                    el.set("Justification", flipped)
-                _swap_indents(el)
+                if not source_rtl:
+                    flipped = _ALIGN_FLIP.get(el.get("Justification"))
+                    if flipped:
+                        el.set("Justification", flipped)
+                    _swap_indents(el)
                 _set_world_ready_composer(el)
-                changed += _mirror_bullet(el, character_styles, styled_runs,
-                                          fonts, bullet_faces)
+                if not source_rtl:
+                    changed += _mirror_bullet(el, character_styles, styled_runs,
+                                              fonts, bullet_faces)
                 changed += 1
 
     for name, tree in documents.items():
@@ -1812,24 +1915,28 @@ def set_text_direction(documents: dict, preferences=None, fonts=None) -> int:
                 el.set("TableDirection", _RTL)
                 changed += 1
             elif tag in ("ParagraphStyleRange", "ParagraphStyle"):
+                # Already right to left in the source: its alignment, indents
+                # and bullet were written for this direction and stay as they are.
+                source_rtl = reads_rtl(el)
                 el.set("ParagraphDirection", _RTL)
-                if name not in turned_documents:
+                if name not in turned_documents and not source_rtl:
                     flipped = _ALIGN_FLIP.get(el.get("Justification"))
                     if flipped:
                         el.set("Justification", flipped)
                     _swap_indents(el)
                 _set_world_ready_composer(el)
                 el.set("DigitsType", _DIGITS)
-                changed += _mirror_bullet(el, character_styles, styled_runs,
-                                          fonts, bullet_faces)
+                if not source_rtl:
+                    changed += _mirror_bullet(el, character_styles, styled_runs,
+                                              fonts, bullet_faces)
                 changed += 1
 
-    # Last, so that a paragraph inheriting its alignment is not left following
-    # a style or a document default this pass has just flipped for everyone
-    # else. Writing the value the source resolved to makes the inheritance
-    # explicit rather than changing what it says.
-    for para, alignment in held_alignment:
-        para.set("Justification", alignment)
+    # Last, so that a paragraph inheriting its alignment or indents is not left
+    # following a style or a document default this pass has just flipped for
+    # everyone else. Writing the value the source resolved to makes the
+    # inheritance explicit rather than changing what it says.
+    for para, attr, value in held:
+        para.set(attr, value)
     return changed
 
 

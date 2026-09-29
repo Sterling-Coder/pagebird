@@ -95,7 +95,7 @@ def test_rtl_reposition_reflects_tx_and_leaves_abcd_alone():
     assert ty == 0.0
 
 
-def test_rtl_reposition_reflects_an_asymmetric_paths_own_outline():
+def test_rtl_mirror_reflects_an_asymmetric_paths_own_outline():
     """A rectangle can never show this: `tx` and `item_bounds` are identical
     whether or not `reflect_path` ran on a symmetric shape. An arrowhead's
     tip visibly swaps sides, which is exactly what a decorative outline's own
@@ -103,11 +103,22 @@ def test_rtl_reposition_reflects_an_asymmetric_paths_own_outline():
     the page it faces."""
     docs = _docs(_arrow("a", base_x=50, tip_x=90))
     before = _path_xs(docs, "a")
-    rtl.apply_plan(docs, _plan(_d("a", rtl_plan.RTL_REPOSITION)))
+    rtl.apply_plan(docs, _plan(_d("a", rtl_plan.RTL_MIRROR)))
     after = _path_xs(docs, "a")
     # Local path axis is (50+90)/2 = 70; every anchor's x reflects about it.
     assert after == [2 * 70 - x for x in before]
     assert after != before
+
+
+def test_rtl_reposition_moves_an_asymmetric_path_but_keeps_its_outline():
+    """`RTL_REPOSITION` is the rigid move (`math.equation`, `math.styled`): the
+    item crosses the page as drawn. A long-division bracket reversed means
+    the opposite of itself, so its outline is left alone."""
+    docs = _docs(_arrow("a", base_x=50, tip_x=90))
+    before, before_tx = _path_xs(docs, "a"), _tx(docs, "a")
+    rtl.apply_plan(docs, _plan(_d("a", rtl_plan.RTL_REPOSITION)))
+    assert _tx(docs, "a") != before_tx
+    assert _path_xs(docs, "a") == before
 
 
 def test_mirror_graphic_flips_content_without_moving_the_frame():

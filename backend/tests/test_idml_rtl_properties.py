@@ -1123,3 +1123,111 @@ def test_a_bullet_is_left_alone_when_one_of_its_faces_cannot_follow():
          "Stories/Story_u10.xml": etree.fromstring(BULLET_STORY.encode())})
     assert _bullet(styles, "Dingbat").get("BulletCharacterValue") == "10148"
     assert _style(styles, "CharacterStyle/blue").find(".//AppliedFont").text         == "ITC Zapf Dingbats Std"
+
+
+# ---- a turned frame keeps its inherited indents ------------------------------
+
+_TURNED_SPREAD = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<idPkg:Spread xmlns:idPkg="http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging">
+  <Spread Self="sp" ItemTransform="1 0 0 1 0 0">
+    <TextFrame Self="tv" ParentStory="uv" ItemTransform="0 -1 1 0 20 400"/>
+    <TextFrame Self="tu" ParentStory="uu" ItemTransform="1 0 0 1 100 100"/>
+  </Spread>
+</idPkg:Spread>"""
+
+_TURNED_STYLES = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<idPkg:Styles xmlns:idPkg="http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging">
+  <RootParagraphStyleGroup Self="r">
+    <ParagraphStyle Self="ParagraphStyle/Title" Name="Title" LeftIndent="20"
+        RuleBelowLeftIndent="5"/>
+  </RootParagraphStyleGroup>
+</idPkg:Styles>"""
+
+
+def _turned_story(story_id):
+    return etree.fromstring(f"""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<idPkg:Story xmlns:idPkg="http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging">
+  <Story Self="{story_id}"><ParagraphStyleRange AppliedParagraphStyle="ParagraphStyle/Title">
+    <CharacterStyleRange><Content>Lesson 3</Content></CharacterStyleRange>
+  </ParagraphStyleRange></Story></idPkg:Story>""".encode())
+
+
+def _resolved(documents, story_name, attr):
+    from pagebirdy.idml.styles import StyleIndex
+    para = documents[story_name].find(".//ParagraphStyleRange")
+    value = StyleIndex(documents["Resources/Styles.xml"]).effective(para, None, attr)
+    return float(value or 0)
+
+
+def test_a_turned_frame_keeps_the_indents_its_style_gives_it():
+    """In a 90-degree frame left and right run along the page's vertical, so
+    swapping an inherited indent moves the title up or down its margin. The
+    same style in an upright frame still swaps."""
+    documents = {
+        "Spreads/S.xml": etree.fromstring(_TURNED_SPREAD.encode()),
+        "Resources/Styles.xml": etree.fromstring(_TURNED_STYLES.encode()),
+        "Stories/Story_uv.xml": _turned_story("uv"),
+        "Stories/Story_uu.xml": _turned_story("uu"),
+    }
+    rtl.set_text_direction(documents)
+
+    turned, upright = "Stories/Story_uv.xml", "Stories/Story_uu.xml"
+    assert _resolved(documents, turned, "LeftIndent") == 20
+    assert _resolved(documents, turned, "RightIndent") == 0
+    assert _resolved(documents, turned, "RuleBelowLeftIndent") == 5
+    assert _resolved(documents, turned, "RuleBelowRightIndent") == 0
+    assert _resolved(documents, upright, "LeftIndent") == 0
+    assert _resolved(documents, upright, "RightIndent") == 20
+
+
+# ---- a paragraph that already reads right to left is left as written --------
+
+_MIXED_DIRECTION_STORY = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<idPkg:Story xmlns:idPkg="http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging">
+  <Story Self="um">
+    <ParagraphStyleRange AppliedParagraphStyle="ParagraphStyle/Body"
+        ParagraphDirection="RightToLeftDirection" Justification="RightAlign"
+        RightIndent="12"><CharacterStyleRange><Content>مرحبا</Content>
+    </CharacterStyleRange></ParagraphStyleRange>
+    <ParagraphStyleRange AppliedParagraphStyle="ParagraphStyle/ArabicQuote">
+      <CharacterStyleRange><Content>اقرأ</Content></CharacterStyleRange>
+    </ParagraphStyleRange>
+    <ParagraphStyleRange AppliedParagraphStyle="ParagraphStyle/Body"
+        Justification="LeftAlign" LeftIndent="12"><CharacterStyleRange>
+      <Content>Hello</Content></CharacterStyleRange></ParagraphStyleRange>
+  </Story>
+</idPkg:Story>"""
+
+_MIXED_DIRECTION_STYLES = """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<idPkg:Styles xmlns:idPkg="http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging">
+  <RootParagraphStyleGroup Self="r">
+    <ParagraphStyle Self="ParagraphStyle/Body" Name="Body"/>
+    <ParagraphStyle Self="ParagraphStyle/ArabicQuote" Name="ArabicQuote"
+        ParagraphDirection="RightToLeftDirection" Justification="RightAlign"
+        RightIndent="9"/>
+  </RootParagraphStyleGroup>
+</idPkg:Styles>"""
+
+
+def test_a_paragraph_already_right_to_left_keeps_its_alignment_and_indents():
+    """An Arabic passage in the source was aligned and indented for right to
+    left already; flipping it as well sets correct text flush left. Only the
+    English beside it turns round -- and a style that already reads right to
+    left is left alone too."""
+    documents = {
+        "Stories/Story_um.xml": etree.fromstring(_MIXED_DIRECTION_STORY.encode()),
+        "Resources/Styles.xml": etree.fromstring(_MIXED_DIRECTION_STYLES.encode()),
+    }
+    rtl.set_text_direction(documents)
+
+    arabic, quote, english = documents["Stories/Story_um.xml"].iter("ParagraphStyleRange")
+    assert arabic.get("Justification") == "RightAlign"
+    assert arabic.get("RightIndent") == "12" and arabic.get("LeftIndent") is None
+    style = next(s for s in documents["Resources/Styles.xml"].iter("ParagraphStyle")
+                 if s.get("Name") == "ArabicQuote")
+    assert style.get("Justification") == "RightAlign"
+    assert style.get("RightIndent") == "9" and style.get("LeftIndent") is None
+    assert english.get("Justification") == "RightAlign"
+    assert english.get("RightIndent") == "12" and english.get("LeftIndent") is None
+    assert all(p.get("ParagraphDirection") == "RightToLeftDirection"
+               for p in (arabic, quote, english))
