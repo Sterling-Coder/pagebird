@@ -222,3 +222,44 @@ def test_delete_project_removes_project_and_its_jobs(tmp_path):
     assert st.get_project(pid) is None
     assert all(j["id"] != jid for j in st.list_jobs())
     assert st.get_segments(jid) == []
+
+
+def test_list_jobs_filters_by_project_and_folder_in_sql(tmp_path):
+    st = _store(tmp_path)
+    owner = "owner-" + __import__("uuid").uuid4().hex
+    p1 = st.create_project("p1", created_by=owner)
+    p2 = st.create_project("p2", created_by=owner)
+    folder = st.create_folder(p1, "f", created_by=owner)
+    root = st.save_job("a.pdf", "", [], {}, project_id=p1, created_by=owner)
+    inside = st.save_job("b.pdf", "", [], {}, project_id=p1, folder_id=folder, created_by=owner)
+    other = st.save_job("c.pdf", "", [], {}, project_id=p2, created_by=owner)
+
+    ids = lambda **kw: {j["id"] for j in st.list_jobs(created_by=owner, **kw)}
+    assert ids() == {root, inside, other}
+    assert ids(project_id=p1) == {root, inside}
+    assert ids(project_id=p1, folder_id=None) == {root}
+    assert ids(project_id=p1, folder_id=folder) == {inside}
+    assert ids(project_id=p2, folder_id=None) == {other}
+
+
+def test_get_job_returns_one_job_or_none(tmp_path):
+    st = _store(tmp_path)
+    jid = st.save_job("a.pdf", "", [_seg("s1", "hi", "hola")], {"k": 1})
+    job = st.get_job(jid)
+    assert job["id"] == jid
+    assert job["meta"] == {"k": 1}
+    assert job["status_counts"] == {"approved": 1}
+    assert st.get_job("does-not-exist") is None
+
+
+def test_close_returns_connection_to_pool_and_is_idempotent(tmp_path):
+    st = _store(tmp_path)
+    conn = st.conn
+    st.close()
+    st.close()
+    again = _store(tmp_path)
+    try:
+        assert again.conn is conn  # single idle pooled connection is reused
+        assert again.list_projects() is not None
+    finally:
+        again.close()

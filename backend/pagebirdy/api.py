@@ -159,10 +159,7 @@ def _upload_with_retry(local_path: str, key: str, attempts: int = 3) -> None:
 def _find_job(job_id: str) -> dict | None:
     s = _store()
     try:
-        for j in s.list_jobs():
-            if j["id"] == job_id:
-                return j
-        return None
+        return s.get_job(job_id)
     finally:
         s.close()
 
@@ -556,7 +553,7 @@ def delete_project(project_id: str, user: dict = Depends(require_user)) -> dict:
     s = _store()
     try:
         _assert_owns_project(s, project_id, user)
-        job_ids = [j["id"] for j in s.list_jobs() if j.get("project_id") == project_id]
+        job_ids = [j["id"] for j in s.list_jobs(project_id=project_id)]
         s.delete_project(project_id)
     finally:
         s.close()
@@ -623,12 +620,10 @@ def list_project_files(project_id: str, folder_id: str | None = None,
     s = _store()
     try:
         _assert_owns_project(s, project_id, user)
-        jobs = s.list_jobs(created_by=effective_owner_ids(user["id"]))
+        scoped = s.list_jobs(created_by=effective_owner_ids(user["id"]), project_id=project_id,
+                             **({} if all else {"folder_id": folder_id}))
     finally:
         s.close()
-    scoped = ([j for j in jobs if j.get("project_id") == project_id] if all else
-              [j for j in jobs
-               if j.get("project_id") == project_id and j.get("folder_id") == folder_id])
     # Resolve each job's raw created_by id to a display name in one batch
     # call rather than the Files table showing the id or an empty dash.
     names = get_profile_names([j.get("created_by") for j in scoped])

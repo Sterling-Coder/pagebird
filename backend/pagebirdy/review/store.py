@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import json
 import os
+import threading
 import time
 import uuid
 
@@ -65,11 +66,51 @@ def _db_url() -> str:
     return url.replace("postgresql+psycopg://", "postgresql://", 1)
 
 
+_pools: dict[str, object] = {}
+_pools_lock = threading.Lock()
+_ANY = object()  # "no filter" marker for list_jobs' folder_id (None means root)
+
+
+def _get_pool():
+    """One shared connection pool per database URL. A fresh `psycopg.connect`
+    per request meant a full TCP+TLS+auth handshake (several round trips to
+    Supabase) before every query. `prepare_threshold=None` keeps this safe
+    behind Supabase's transaction-mode pooler; `check` drops connections the
+    server closed while idle."""
+    url = _db_url()
+    pool = _pools.get(url)
+    if pool is None:
+        with _pools_lock:
+            pool = _pools.get(url)
+            if pool is None:
+                from psycopg_pool import ConnectionPool
+
+                pool = ConnectionPool(
+                    url, min_size=1,
+                    max_size=int(os.environ.get("PAGEBIRDY_DB_POOL_MAX", "20")),
+                    kwargs={"row_factory": dict_row, "autocommit": False,
+                            "prepare_threshold": None},
+                    check=ConnectionPool.check_connection,
+                    max_idle=300, open=False,
+                )
+                pool.open()
+                _pools[url] = pool
+    return pool
+
+
 class ReviewStore:
     def __init__(self, path: str = ""):
         # `path` (an old SQLite filename) is accepted for call-site
         # compatibility but unused now — everything reads from SUPABASE_DB_URL.
-        self.conn = psycopg.connect(_db_url(), row_factory=dict_row, autocommit=False)
+        self._pool = _get_pool()
+        self.conn = self._pool.getconn()
+
+    def __del__(self):
+        # Callers that never close() must not leak a pooled connection.
+        try:
+            self.close()
+        except Exception:
+            pass
 
     # ---- write ---------------------------------------------------------------
 
@@ -277,24 +318,40 @@ class ReviewStore:
             r["status"] = "failed"
             r["error"] = "job never completed (server restarted or crashed mid-translation)"
 
-    def list_jobs(self, created_by: str | list[str] | None = None) -> list[dict]:
+    _JOB_COLS = ("id, source, output, created_at, meta_json, original_filename, "
+                 "file_hash, file_size, duration_sec, status, error, project_id, job_type, "
+                 "folder_id, created_by")
+
+    def list_jobs(self, created_by: str | list[str] | None = None, *,
+                  project_id: str | None = None, folder_id=_ANY) -> list[dict]:
+        """`project_id` / `folder_id` filter in SQL rather than after loading
+        every job. `folder_id=None` means "at the project root"; leave it
+        unset for no folder filter."""
         if isinstance(created_by, str):
             created_by = [created_by]
+        where, args = [], []
+        if created_by is not None:
+            where.append("created_by = ANY(%s)")
+            args.append(list(created_by))
+        if project_id is not None:
+            where.append("project_id = %s")
+            args.append(project_id)
+        if folder_id is not _ANY:
+            where.append("folder_id IS NOT DISTINCT FROM %s")
+            args.append(folder_id)
+        return self._query_jobs(where, args)
+
+    def get_job(self, job_id: str) -> dict | None:
+        jobs = self._query_jobs(["id = %s"], [job_id])
+        return jobs[0] if jobs else None
+
+    def _query_jobs(self, where: list[str], args: list) -> list[dict]:
+        sql = f"SELECT {self._JOB_COLS} FROM review_jobs"
+        if where:
+            sql += " WHERE " + " AND ".join(where)
+        sql += " ORDER BY created_at DESC, id DESC"
         with self.conn.cursor() as cur:
-            if created_by is not None:
-                cur.execute(
-                    "SELECT id, source, output, created_at, meta_json, original_filename, "
-                    "file_hash, file_size, duration_sec, status, error, project_id, job_type, "
-                    "folder_id, created_by FROM review_jobs WHERE created_by = ANY(%s) "
-                    "ORDER BY created_at DESC, id DESC",
-                    (list(created_by),),
-                )
-            else:
-                cur.execute(
-                    "SELECT id, source, output, created_at, meta_json, original_filename, "
-                    "file_hash, file_size, duration_sec, status, error, project_id, job_type, "
-                    "folder_id, created_by FROM review_jobs ORDER BY created_at DESC, id DESC"
-                )
+            cur.execute(sql, args)
             rows = cur.fetchall()
         self._reap_stale_processing(rows)
         counts_by_job = self._status_counts_batch([r["id"] for r in rows])
@@ -650,7 +707,9 @@ class ReviewStore:
             return cur.fetchone() is not None
 
     def close(self) -> None:
-        self.conn.close()
+        conn, self.conn = getattr(self, "conn", None), None
+        if conn is not None:
+            self._pool.putconn(conn)  # rolls back any open transaction
 
 
 def _restore(text: str, placeholders: dict[str, str]) -> str:

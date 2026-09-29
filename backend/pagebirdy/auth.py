@@ -137,14 +137,28 @@ def get_profile_names(user_ids: list[str]) -> dict[str, str]:
     ids = sorted({i for i in user_ids if i})
     if not ids or not _SUPABASE_URL or not _SUPABASE_SERVICE_ROLE_KEY:
         return {}
-    resp = requests.get(
-        f"{_SUPABASE_URL}/rest/v1/profiles",
-        params={"id": f"in.({','.join(ids)})", "select": "id,email,full_name"},
-        headers=_service_headers(),
-        timeout=10,
-    )
-    resp.raise_for_status()
-    return {row["id"]: row.get("full_name") or row.get("email") or row["id"] for row in resp.json()}
+    now = time.monotonic()
+    result: dict[str, str] = {}
+    missing = []
+    for i in ids:
+        hit = _profile_name_cache.get(i)
+        if hit and hit[0] > now:
+            result[i] = hit[1]
+        else:
+            missing.append(i)
+    if missing:
+        resp = requests.get(
+            f"{_SUPABASE_URL}/rest/v1/profiles",
+            params={"id": f"in.({','.join(missing)})", "select": "id,email,full_name"},
+            headers=_service_headers(),
+            timeout=10,
+        )
+        resp.raise_for_status()
+        for row in resp.json():
+            name = row.get("full_name") or row.get("email") or row["id"]
+            _profile_name_cache[row["id"]] = (now + _PROFILE_NAME_TTL, name)
+            result[row["id"]] = name
+    return result
 
 
 def require_trial_active(user: dict) -> None:
@@ -164,6 +178,8 @@ def require_trial_active(user: dict) -> None:
 
 
 _owner_ids_cache: dict[str, tuple[float, list[str]]] = {}
+_PROFILE_NAME_TTL = 300.0
+_profile_name_cache: dict[str, tuple[float, str]] = {}
 
 
 def invalidate_owner_ids_cache(user_id: str) -> None:

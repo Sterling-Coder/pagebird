@@ -572,7 +572,7 @@ def rebuild_from_edits(job_id: str, out_dir: str = "out",
 
     store = ReviewStore(review_db)
     try:
-        job = next((j for j in store.list_jobs() if j["id"] == job_id), None)
+        job = store.get_job(job_id)
         if job is None:
             raise KeyError(f"job {job_id} not found")
         rows = store.get_segments(job_id)
