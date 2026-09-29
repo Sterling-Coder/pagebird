@@ -204,6 +204,17 @@ def test_named_weights_are_recognised():
         assert is_bold(name), name
 
 
+
+def test_light_weights_named_with_ultra_or_demi_are_not_bold():
+    # `ultra`/`demi` qualify whatever follows them: "Ultra Light" is thinner
+    # than Regular, and mapping it onto the target family's Bold turned light
+    # captions heavy.
+    for name in ("Ultra Light", "UltraLight", "Demi Light", "DemiLight",
+                 "Extra Light", "ExtraLight Italic", "Ultra Thin", "Light", "Thin"):
+        assert not is_bold(name), name
+    for name in ("Demi", "Demibold", "Ultra", "Ultra Black", "UltraBold", "Demi Bold Italic"):
+        assert is_bold(name), name
+
 def test_slant_is_recognised():
     assert is_italic("Semibold Italic") and is_italic("Oblique")
     assert not is_italic("Semibold")

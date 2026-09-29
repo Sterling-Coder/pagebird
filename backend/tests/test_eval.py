@@ -1098,3 +1098,21 @@ def test_idml_font_registration_and_weight_are_not_layout_changes(tmp_path):
     assert result["asset_preservation"]["rate"] == 1.0
     assert result["style_preservation"]["rate"] == 1.0
     assert result["style_preservation"]["font_overrides"] == 1
+
+
+def test_faces_added_to_a_family_the_source_declares_are_not_layout_changes(tmp_path):
+    from lxml import etree
+
+    from pagebirdy.idml import rtl
+
+    fonts = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+             '<idPkg:Fonts xmlns:idPkg="http://ns.adobe.com/AdobeInDesign/idml/1.0/packaging">'
+             '<FontFamily Self="di1" Name="Adobe Arabic"><Font Self="f1" '
+             'FontFamily="Adobe Arabic" FontStyleName="Regular"/></FontFamily></idPkg:Fonts>')
+    tree = etree.fromstring(fonts.encode())
+    assert rtl.register_font(tree, "Adobe Arabic", ("Regular", "Bold")) == 1
+    out_fonts = etree.tostring(tree, xml_declaration=True, encoding="UTF-8", standalone=True)
+    assert layout_idml._same_asset("Resources/Fonts.xml", fonts.encode(), out_fonts)
+    # A face the source declared going missing is still a change.
+    gone = out_fonts.replace(b'<Font Self="f1" FontFamily="Adobe Arabic" FontStyleName="Regular"/>', b"")
+    assert not layout_idml._same_asset("Resources/Fonts.xml", fonts.encode(), gone)

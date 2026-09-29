@@ -176,7 +176,12 @@ def _candidates(spread, story_els: dict) -> list[dict]:
         story_el = story_els.get(frame_el.get("ParentStory"))
         if story_el is None or not _usable_frame(frame_el):
             continue
-        bounds = rtl.item_bounds(frame_el)
+        # Spread space, not the frame's own: `spread.iter()` also reaches
+        # frames drawn inside a Group, whose path is in that group's space.
+        # Sibling labels split across differently-offset groups would
+        # otherwise land in different buckets and get indents off by the
+        # groups' offset.
+        bounds = rtl.item_bounds(frame_el, rtl._parent_transform(frame_el))
         if bounds is None:
             continue
         frame_right = bounds[2] - _right_inset(frame_el)

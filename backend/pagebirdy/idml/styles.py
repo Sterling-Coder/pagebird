@@ -178,6 +178,11 @@ def ranges_of(content):
 _BOLD_WORDS = ("bold", "black", "heavy", "semibold", "demi", "extrabold",
                "ultra", "extra bold", "semi bold")
 _ITALIC_WORDS = ("italic", "oblique", "kursiv")
+# `ultra`, `demi` and `extra` only qualify the word after them: "Ultra Light"
+# is thinner than Regular. A light word therefore wins over them, and loses
+# only to a name that also says outright that it is heavy.
+_LIGHT_WORDS = ("light", "thin", "hairline")
+_HEAVY_WORDS = ("bold", "black", "heavy")
 _BOLD_WEIGHT = 600
 
 
@@ -188,6 +193,8 @@ def is_bold(style: str | None) -> bool:
         return False
     if name.replace(" ", "").isdigit():
         return int(name.replace(" ", "")) >= _BOLD_WEIGHT
+    if any(word in name for word in _LIGHT_WORDS):
+        return any(word in name for word in _HEAVY_WORDS)
     return any(word in name for word in _BOLD_WORDS)
 
 

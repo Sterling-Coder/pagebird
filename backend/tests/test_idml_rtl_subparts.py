@@ -345,3 +345,27 @@ def test_numbered_point_wrapped_lines_follow_content_not_the_marker():
     rtl_subparts.normalize_subpart_indentation(docs)
     edges = [_edge(docs, sid, x1) for (_l, sid, _x0, _y0, x1, _y1) in rows]
     assert max(edges) - min(edges) < 1e-6, edges
+
+
+def test_frames_in_differently_offset_groups_are_measured_on_the_spread():
+    """Each label frame sits in its own Group, drawn in that group's space. On
+    the spread they share one left edge; measured in group space they would
+    not, and neither the bucketing nor the indent would match the page."""
+    rows = [("a", "a", 0, 0, 100, 20), ("b", "b", 0, 40, 140, 60),
+            ("c", "c", 0, 80, 90, 100)]
+    items = []
+    docs = {}
+    for i, (letter, sid, x0, y0, x1, y1) in enumerate(rows):
+        offset = 100 * (i + 1)
+        frame = _frame(f"tf_{sid}", sid, x0 - offset, y0, x1 - offset, y1)
+        items.append(f'<Group Self="g_{sid}" ItemTransform="1 0 0 1 {offset} 0">'
+                     f"{frame}</Group>")
+        docs[f"Stories/Story_{sid}.xml"] = etree.fromstring(
+            _story_xml(STORY, sid, letter, x1).encode())
+    docs["Spreads/S.xml"] = etree.fromstring(SPREAD.format(items="".join(items)).encode())
+
+    report = rtl_subparts.normalize_subpart_indentation(docs)
+
+    edges = [_edge(docs, sid, x1) for (_l, sid, _x0, _y0, x1, _y1) in rows]
+    assert max(edges) - min(edges) < 1e-6, edges
+    assert report["rtl_subpart_groups_aligned"] == 1

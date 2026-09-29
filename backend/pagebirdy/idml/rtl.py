@@ -2463,27 +2463,43 @@ def register_font(fonts, family: str | None,
     """
     if fonts is None or not family:
         return 0
+    styles = styles or ("Regular",)
+    slug = "".join(ch for ch in family if ch.isalnum())
     for el in fonts.iter():
         if _localname(el) == "FontFamily" and el.get("Name") == family:
-            return 0
+            # InDesign records only the faces a document actually uses, so a
+            # source that set anything in this family declares it with those
+            # faces alone. Add the ones the target styles need and it lacks.
+            # A face whose style cannot be read might be any of them, so such
+            # a family is left exactly as the source wrote it.
+            faces = [f for f in el if _localname(f) == "Font"]
+            if any(not f.get("FontStyleName") for f in faces):
+                return 0
+            have = {f.get("FontStyleName") for f in faces}
+            missing = [style for style in styles if style not in have]
+            for style in missing:
+                _add_font_face(el, family, slug, style)
+            return 1 if missing else 0
 
-    root = fonts if _localname(fonts) != "Fonts" else fonts
-    slug = "".join(ch for ch in family if ch.isalnum())
-    fam = etree.SubElement(root, "FontFamily")
+    fam = etree.SubElement(fonts, "FontFamily")
     fam.set("Self", f"pagebirdy{slug}")
     fam.set("Name", family)
-    for style in styles or ("Regular",):
-        face = etree.SubElement(fam, "Font")
-        face.set("Self", f"pagebirdy{slug}Font{style.replace(' ', '')}")
-        face.set("FontFamily", family)
-        face.set("Name", f"{family} {style}")
-        # InDesign's own convention: the family with its spaces removed, a
-        # hyphen, then the style with its spaces removed -- "AdobeArabic-Bold".
-        face.set("PostScriptName",
-                 f"{family.replace(' ', '')}-{style.replace(' ', '')}")
-        face.set("FontStyleName", style)
-        face.set("Status", "Installed")
+    for style in styles:
+        _add_font_face(fam, family, slug, style)
     return 1
+
+
+def _add_font_face(fam, family: str, slug: str, style: str) -> None:
+    face = etree.SubElement(fam, "Font")
+    face.set("Self", f"pagebirdy{slug}Font{style.replace(' ', '')}")
+    face.set("FontFamily", family)
+    face.set("Name", f"{family} {style}")
+    # InDesign's own convention: the family with its spaces removed, a
+    # hyphen, then the style with its spaces removed -- "AdobeArabic-Bold".
+    face.set("PostScriptName",
+             f"{family.replace(' ', '')}-{style.replace(' ', '')}")
+    face.set("FontStyleName", style)
+    face.set("Status", "Installed")
 
 
 # ---- the stage -------------------------------------------------------------

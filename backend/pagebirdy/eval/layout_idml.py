@@ -70,15 +70,18 @@ def _strip_auto_size(data: bytes) -> bytes:
 
 
 def _strip_registered_fonts(data: bytes) -> bytes:
-    """`Resources/Fonts.xml` minus the families `idml.rtl.register_font` adds.
+    """`Resources/Fonts.xml` minus what `idml.rtl.register_font` adds.
 
     Declaring the target family is what lets its `AppliedFont` resolve in
-    InDesign; it adds one `FontFamily` (Self `pagebirdy…`) and touches nothing
-    the source declared.
+    InDesign. It adds a `FontFamily`, or the missing `Font` faces of a family
+    the source already declares -- both with Self `pagebirdy…` -- and changes
+    nothing the source wrote.
     """
     tree = etree.fromstring(data, parser=_XML_PARSER)
     for el in list(tree.iter()):
-        if _localname(el) == "FontFamily" and (el.get("Self") or "").startswith("pagebirdy"):
+        if (_localname(el) in ("FontFamily", "Font")
+                and (el.get("Self") or "").startswith("pagebirdy")
+                and el.getparent() is not None):
             el.getparent().remove(el)
     return etree.tostring(tree, method="c14n")
 

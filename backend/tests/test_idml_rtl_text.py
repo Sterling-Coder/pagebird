@@ -175,6 +175,24 @@ def test_registering_with_no_styles_still_declares_a_regular():
     assert [f.get("FontStyleName") for f in fam.findall("Font")] == ["Regular"]
 
 
+
+def test_a_family_the_source_declares_gets_the_faces_it_lacks():
+    """InDesign records only the faces a document uses. A source that already
+    set something in Adobe Arabic Regular declares the family with that face
+    alone, and every bold heading the translation names would open with a
+    missing-style warning."""
+    tree = etree.fromstring(FONTS.replace(
+        "</idPkg:Fonts>",
+        '<FontFamily Self="fam2" Name="Adobe Arabic"><Font Self="f2" '
+        'FontFamily="Adobe Arabic" Name="Adobe Arabic Regular" '
+        'FontStyleName="Regular" PostScriptName="AdobeArabic-Regular"/>'
+        "</FontFamily></idPkg:Fonts>").encode())
+    assert rtl.register_font(tree, "Adobe Arabic", ("Regular", "Bold")) == 1
+    fams = [f for f in tree.iter("FontFamily") if f.get("Name") == "Adobe Arabic"]
+    assert len(fams) == 1
+    assert [f.get("FontStyleName") for f in fams[0].findall("Font")] == ["Regular", "Bold"]
+    assert rtl.register_font(tree, "Adobe Arabic", ("Regular", "Bold")) == 0
+
 # ---- keeping left-to-right content left-to-right ----------------------------
 
 MIXED = f"""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
