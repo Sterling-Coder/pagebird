@@ -1,13 +1,15 @@
 """Translation engines.
 
 `Engine.translate(list[str]) -> list[str]` is the whole contract. Every engine
-must preserve `⟦m…⟧` placeholders verbatim; the integrity gate enforces it
-afterwards regardless.
+should preserve `⟦m…⟧` placeholders verbatim, but nothing here enforces it —
+the live pipeline ships whatever a segment's target ends up as.
 
 Engines available:
   * IdentityEngine  — passthrough, no network; makes the pipeline testable offline.
   * AnthropicEngine — LLM primary (glossary-aware, math-safe). Needs ANTHROPIC_API_KEY.
-  * DeepLEngine     — secondary, for consensus/disagreement flags. Needs DEEPL_AUTH_KEY.
+  * DeepLEngine     — built when DEEPL_AUTH_KEY is set and reported as
+                      `engine_secondary`, but `Translator` never calls it: its
+                      only use was a disagreement flag, which was removed.
 
 `build_engines()` returns (primary, secondary) based on available API keys,
 falling back to identity so nothing crashes when offline.
@@ -30,9 +32,9 @@ _MAX_CONCURRENT_CHUNKS = 6  # OpenAI 429s are absorbed by SDK max_retries=8
 # network/HTTP failures (429, timeout, ...), but a 200 response with
 # malformed/wrong-shaped JSON raises from our own _parse_batch and was never
 # retried at all — one bad sample from the model permanently dropped that
-# whole chunk's segments to needs_human/English. Retry the chunk itself a
-# few times (LLM sampling is non-deterministic, so a retry often succeeds)
-# before giving up.
+# whole chunk's segments to shipping in English (see `failed_sources` below).
+# Retry the chunk itself a few times (LLM sampling is non-deterministic, so a
+# retry often succeeds) before giving up.
 _CHUNK_ATTEMPTS = 3
 _CHUNK_RETRY_DELAY = 1.5  # seconds, linear backoff
 
@@ -59,9 +61,9 @@ class _ChunkedEngine(Engine):
     and are reported, while every chunk that did succeed still ships.
 
     `failed_sources` is populated with every source string that came back from a
-    failed chunk, so the caller can mark those segments as `needs_human` rather
-    than `translated` — preventing the blank-source-equals-blank-target check in
-    reassembly from silently leaving them in the source language on the page.
+    failed chunk, so the caller (`Translator`) can note which segments shipped
+    untranslated rather than treat the source text as a real translation with
+    no indication anything went wrong.
 
     Chunks run concurrently (bounded pool) since the SDK clients here are
     synchronous, blocking, I/O-bound calls — output order always matches input
@@ -232,9 +234,9 @@ def _parse_batch(text: str, chunk: list[str]) -> list[str]:
 
     Raising rather than silently returning the source text means the caller
     (_ChunkedEngine.translate) can catch the failure, record the affected
-    sources in `failed_sources`, and let the translator mark those segments
-    as `needs_human` for a re-run — instead of silently leaving them in the
-    source language on the output page.
+    sources in `failed_sources`, and let the translator note those segments
+    as untranslated for a re-run rather than pass the source text off as a
+    real translation with nothing recorded about the failure.
     """
     try:
         data = json.loads(_strip_fence(text))

@@ -208,9 +208,7 @@ def test_translate_pdf_records_duration_and_meta(tmp_path, monkeypatch):
     assert row[1] == "complete"
     meta = json.loads(row[2])
     assert "engine_failures" in meta
-    assert "disagreements" in meta
     assert "needs_human_count" in meta
-    assert "verify_flagged" in meta
 
 
 def test_translate_pdf_merges_ocr_image_regions_by_default(tmp_path, monkeypatch):

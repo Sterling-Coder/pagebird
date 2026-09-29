@@ -187,9 +187,13 @@ class Segment:
     bullet_color: Optional[int] = None
     bullet_bbox: Optional[BBox] = None
     target: Optional[str] = None  # protected ES text (placeholders intact)
-    status: str = "pending"  # pending | translated | needs_human | tm_hit | empty
+    # pending | translated | needs_human | tm_hit | empty. needs_human is set
+    # only by pipeline.translate_pdf's RTL figure-mirror flag and by a human
+    # edit that would drop a math placeholder (review/store.py) — translation
+    # itself always ships as "translated", gate or no gate.
+    status: str = "pending"
     engine: Optional[str] = None
-    disagreement: bool = False  # primary vs secondary engine differed
+    disagreement: bool = False  # unused: was primary-vs-secondary; always False now
     notes: list[str] = field(default_factory=list)
     # --- provenance, set when the segment came from OCR or the equation layer ---
     from_ocr: bool = False

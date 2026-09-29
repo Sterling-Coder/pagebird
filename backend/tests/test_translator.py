@@ -19,22 +19,34 @@ def seg(id, source, placeholders=None):
                    source=source, placeholders=placeholders or {})
 
 
-def test_integrity_failure_routes_to_human():
+def test_a_dropped_placeholder_still_ships_no_gate():
+    # There is no integrity gate on the live pipeline any more: whatever the
+    # engine returns ships, even a run that dropped a math placeholder.
     eng = MapEngine({"Add ⟦m0⟧": "Suma"})  # dropped the placeholder
     s = seg("a", "Add ⟦m0⟧", {"⟦m0⟧": "5"})
     Translator(eng, None).run([s])
-    assert s.status == "needs_human" and s.target is None
-
-
-def test_engine_disagreement_is_advisory_not_forced_review():
-    # Two good-but-different MT outputs: flag it, but don't force human review.
-    primary = MapEngine({"The ratio": "La razón"})
-    secondary = MapEngine({"The ratio": "La proporción"})
-    s = seg("a", "The ratio")
-    Translator(primary, secondary).run([s])
-    assert s.disagreement is True
     assert s.status == "translated"
-    assert any("engine disagreement" in n for n in s.notes)
+    assert s.target == "Suma"
+
+
+def test_a_configured_secondary_engine_is_never_called():
+    # `secondary` (DeepL) is still accepted for `engine_secondary` reporting,
+    # but its only use was the disagreement flag, which is gone.
+    calls = []
+
+    class Spy(Engine):
+        name = "spy-secondary"
+
+        def translate(self, texts):
+            calls.append(texts)
+            return texts
+
+    primary = MapEngine({"The ratio": "La razón"})
+    s = seg("a", "The ratio")
+    Translator(primary, Spy()).run([s])
+    assert calls == []
+    assert s.status == "translated"
+    assert s.disagreement is False
 
 
 def test_value_visible_token_allows_noun_agreement():
@@ -54,7 +66,6 @@ def test_glossary_miss_is_flagged_but_still_ships():
     Translator(eng, None).run([s])
     assert s.status == "translated"
     assert any("glossary miss" in n for n in s.notes)
-    assert any("flagged for review" in n for n in s.notes)
 
 
 def test_plural_target_is_not_a_glossary_miss():
@@ -92,54 +103,3 @@ def test_diagram_labels_never_reach_the_engine():
         assert s.status == "translated"   # handled, so coverage still counts it
     # A real word is unaffected.
     assert word.target == "Refleja"
-
-
-def test_primary_and_secondary_run_concurrently():
-    import threading
-    import time
-
-    from pagebirdy.translate.engine import Engine
-
-    events = {"primary_started": None, "secondary_started": None}
-
-    class SlowPrimary(Engine):
-        name = "slow-primary"
-
-        def translate(self, texts):
-            events["primary_started"] = time.time()
-            time.sleep(0.15)
-            return [f"{t}-p" for t in texts]
-
-    class SlowSecondary(Engine):
-        name = "slow-secondary"
-
-        def translate(self, texts):
-            events["secondary_started"] = time.time()
-            time.sleep(0.15)
-            return [f"{t}-s" for t in texts]
-
-    s = seg("a", "hello")
-    started = time.time()
-    Translator(SlowPrimary(), SlowSecondary()).run([s])
-    elapsed = time.time() - started
-
-    assert elapsed < 0.25  # sequential would be >= 0.3s (2 * 0.15s)
-    # Both started within a tight window of each other -> concurrent, not sequential.
-    assert abs(events["primary_started"] - events["secondary_started"]) < 0.05
-
-
-def test_secondary_failure_does_not_block_or_fail_primary():
-    from pagebirdy.translate.engine import Engine
-
-    class BrokenSecondary(Engine):
-        name = "broken"
-
-        def translate(self, texts):
-            raise RuntimeError("secondary down")
-
-    eng = MapEngine({"hello": "hola"})
-    s = seg("a", "hello")
-    Translator(eng, BrokenSecondary()).run([s])
-    assert s.status == "translated"
-    assert s.target == "hola"
-    assert s.disagreement is False  # secondary failure -> no comparison, no crash

@@ -1,9 +1,14 @@
-"""Review store: persists a translation job's segments so the human-review UI
-has something to load, edit, and approve.
+"""Review store: persists a translation job's segments and their text — the
+source of truth for the job report, the PDF path's in-browser text editor, and
+the download endpoints.
 
-This is what turns "MT output" into "high accuracy": every segment the pipeline
-was unsure about (needs_human, disagreement, glossary miss) surfaces here for a
-person to fix.
+Every segment's status, target text and notes (e.g. a glossary miss) land
+here regardless of outcome; there is no live quality gate upstream deciding
+what does or doesn't get stored — see `translate/translator.py`. `status ==
+"needs_human"` still occurs (a PDF page mirrored for RTL that holds a figure,
+or a human edit that would drop a math placeholder — see
+`pipeline.translate_pdf` and `update_segment` below), but is otherwise never
+set by translation itself.
 
 Backed by Supabase Postgres (via SUPABASE_DB_URL) — not local SQLite. A local
 SQLite file lived on Railway's container disk, which resets to empty on every

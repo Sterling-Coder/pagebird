@@ -66,8 +66,7 @@ def cmd_translate(args) -> int:
     print(f"segments   : {report['segments_total']}  (math lines: {report['lines_with_math']})")
     print(f"status     : {report['status_counts']}")
     print(f"reassembly : {report['reassembly_actions']}")
-    print(f"verify     : {report['verifier']} flagged {report['verify_flagged']}")
-    print(f"disagree   : {report['disagreements']}   needs_human: {report['needs_human_count']}")
+    print(f"needs_human: {report['needs_human_count']}  (RTL figure-mirror risk only)")
     if report["overflow"]:
         print(f"overflow   : {len(report['overflow'])} lines (see report)")
     if report["graphic_pages"]:
@@ -91,8 +90,6 @@ def cmd_translate_idml(args) -> int:
     print(f"runs       : {report['segments_total']}  (math: {report['runs_with_math']}, written: {report['runs_written']})")
     print(f"graphics   : {report['graphics_translated']} linked graphic(s) translated")
     print(f"status     : {report['status_counts']}")
-    print(f"verify     : {report['verifier']} flagged {report['verify_flagged']}")
-    print(f"needs_human: {report['needs_human_count']}   disagree: {report['disagreements']}")
 
     if args.export:
         from pagebirdy.idml.export import export

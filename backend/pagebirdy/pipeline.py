@@ -98,12 +98,6 @@ def translate_pdf(
         ),
     )
 
-    from pagebirdy.translate.verify import build_verifier, run_verification
-
-    _progress(70, "checking accuracy")
-    verifier = build_verifier(target_lang=lang.code)
-    verify_flagged = run_verification(segments, verifier)
-
     _progress(80, "rebuilding document")
     outcomes = rebuild_pdf(src_pdf, segments, out_pdf, target_lang=lang.code)
     _progress(95, "finishing")
@@ -132,6 +126,10 @@ def translate_pdf(
 
     status_counts = Counter(s.status for s in segments)
     action_counts = Counter(o.action for o in outcomes)
+    # The only remaining source of needs_human on this path: a figure page
+    # an RTL mirror may have inverted (set just above). Translation quality
+    # no longer routes here — every translated segment ships as the engine
+    # returned it, gate or no gate.
     needs_human = [
         {"id": s.id, "page": s.page, "source": s.source, "notes": s.notes}
         for s in segments
@@ -168,9 +166,6 @@ def translate_pdf(
         "lines_with_math": sum(1 for s in segments if s.placeholders),
         "status_counts": dict(status_counts),
         "reassembly_actions": dict(action_counts),
-        "disagreements": sum(1 for s in segments if s.disagreement),
-        "verifier": verifier.name if verifier else None,
-        "verify_flagged": verify_flagged,
         "needs_human_count": len(needs_human),
         "graphic_pages": graphic_pages,
         "needs_human": needs_human[:200],
@@ -196,9 +191,7 @@ def translate_pdf(
                 "direction": lang.direction,
                 "figure_pages": figures,
                 "engine_failures": report["engine_failures"],
-                "disagreements": report["disagreements"],
                 "needs_human_count": report["needs_human_count"],
-                "verify_flagged": report["verify_flagged"],
             }
             if job_id:
                 store.finalize_job(job_id, out_pdf, segments, meta,
@@ -463,18 +456,6 @@ def translate_idml(
     # exact filenames this job produced is the only reliable scope.
     graphics_files = [os.path.basename(uri[len("file:"):]) for uri in mapping.values()]
 
-    from pagebirdy.translate.verify import build_verifier, run_verification
-
-    verifier = build_verifier(target_lang=lang.code)
-    verify_flagged = run_verification(segments, verifier)
-
-    disagreements = sum(1 for s in segments if s.disagreement)
-    needs_human = sum(1 for s in segments if s.status == "needs_human")
-    logger.info(
-        "translate_idml: translation complete, %d needs_human, %d disagreements",
-        needs_human, disagreements,
-    )
-
     _progress(88, "rebuilding document")
     # A graphic `relink` pointed at a translated copy holds a picture of the
     # translation, so the RTL stage must never turn it round.
@@ -528,10 +509,6 @@ def translate_idml(
         "runs_written": applied,
         "graphics_translated": graphics_translated,
         "status_counts": dict(status_counts),
-        "disagreements": sum(1 for s in segments if s.disagreement),
-        "verifier": verifier.name if verifier else None,
-        "verify_flagged": verify_flagged,
-        "needs_human_count": sum(1 for s in segments if s.status == "needs_human"),
         "job_id": None,
         "has_draft_pdf": has_draft_pdf,
         "graphics_files": graphics_files,
@@ -552,9 +529,6 @@ def translate_idml(
                 "format": "idml",
                 "target_lang": lang.code,
                 "graphics_files": graphics_files,
-                "disagreements": report["disagreements"],
-                "needs_human_count": report["needs_human_count"],
-                "verify_flagged": report["verify_flagged"],
             }
             if job_id:
                 store.finalize_job(job_id, out_idml, segments, meta,
