@@ -1,163 +1,193 @@
-"""Supabase Storage — where uploaded and translated files actually live.
+"""Railway Storage Bucket (S3-compatible) — where uploaded and translated files
+actually live.
 
 Railway's container disk is ephemeral: it resets to empty on every
-redeploy. Local paths (uploads/, out/) are now scratch space only, used
-while a job is actively processing; the durable copy lives here, in a
-private Supabase Storage bucket, keyed by job id.
+redeploy. Local paths (uploads/, out/) are scratch space only, used while a
+job is actively processing; the durable copy of every job's original upload
+and its translated output lives here, keyed by job id (`jobs/<job_id>/…`).
+
+Env (set on the Railway service, as references to the bucket's own
+credentials):
+  BABEL_S3_ENDPOINT     the bucket's S3 endpoint URL
+  BABEL_S3_BUCKET       bucket name
+  BABEL_S3_ACCESS_KEY
+  BABEL_S3_SECRET_KEY
+  BABEL_S3_REGION       default "auto"
+
+Unlike an optional engine, storage is not best-effort: a job whose files were
+never persisted is not downloadable once the container restarts. So an
+upload with no bucket configured, or one the bucket refuses, raises — the
+caller (`api._upload_with_retry`) retries and then marks the job failed.
 """
 
 from __future__ import annotations
 
+import logging
 import mimetypes
 import os
-
-import requests
+import threading
 
 from pagebirdy.config import load_env
 
 load_env()
 
-_SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
-_SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
-_BUCKET = os.environ.get("BABEL_STORAGE_BUCKET", "documents")
+logger = logging.getLogger("pagebirdy.storage")
 
-_bucket_ready = False
+_client = None
+_client_lock = threading.Lock()
 
 
-def _headers(**extra: str) -> dict:
+def _cfg() -> dict:
     return {
-        "apikey": _SUPABASE_SERVICE_ROLE_KEY,
-        "Authorization": f"Bearer {_SUPABASE_SERVICE_ROLE_KEY}",
-        **extra,
+        "endpoint": os.environ.get("BABEL_S3_ENDPOINT", ""),
+        "bucket": os.environ.get("BABEL_S3_BUCKET", ""),
+        "access_key": os.environ.get("BABEL_S3_ACCESS_KEY", ""),
+        "secret_key": os.environ.get("BABEL_S3_SECRET_KEY", ""),
+        "region": os.environ.get("BABEL_S3_REGION", "") or "auto",
     }
 
 
+def enabled() -> bool:
+    c = _cfg()
+    return bool(c["endpoint"] and c["bucket"] and c["access_key"] and c["secret_key"])
+
+
+def _bucket() -> str:
+    return _cfg()["bucket"]
+
+
+def _get_client():
+    """Lazily built, cached boto3 client. Only a successful build is cached,
+    so one transient failure does not disable storage for the process."""
+    global _client
+    if _client is not None:
+        return _client
+    with _client_lock:
+        if _client is not None:
+            return _client
+        if not enabled():
+            raise RuntimeError(
+                "storage is not configured: set BABEL_S3_ENDPOINT, BABEL_S3_BUCKET, "
+                "BABEL_S3_ACCESS_KEY and BABEL_S3_SECRET_KEY")
+        import boto3
+        from botocore.config import Config
+
+        c = _cfg()
+        _client = boto3.client(
+            "s3",
+            endpoint_url=c["endpoint"],
+            aws_access_key_id=c["access_key"],
+            aws_secret_access_key=c["secret_key"],
+            region_name=c["region"],
+            config=Config(signature_version="s3v4",
+                          retries={"max_attempts": 3, "mode": "standard"}),
+        )
+    return _client
+
+
+def _missing(error) -> bool:
+    """Is this botocore error a plain "no such object"?"""
+    code = str(getattr(error, "response", {}).get("Error", {}).get("Code", ""))
+    return code in ("404", "NoSuchKey", "NotFound")
+
+
 def ensure_bucket() -> None:
-    """Creates the storage bucket if it doesn't exist yet. Idempotent —
-    call at startup; a 400 "already exists" is not an error here."""
-    global _bucket_ready
-    if _bucket_ready:
-        return
-    if not _SUPABASE_URL or not _SUPABASE_SERVICE_ROLE_KEY:
-        return
-    requests.post(
-        f"{_SUPABASE_URL}/storage/v1/bucket",
-        json={"id": _BUCKET, "name": _BUCKET, "public": False},
-        headers=_headers(),
-        timeout=10,
-    )
-    _bucket_ready = True
+    """Kept for callers of the old Supabase module. A Railway bucket is
+    created on the platform, never by the app, so there is nothing to do."""
 
 
 def upload_file(local_path: str, key: str) -> str:
     """Uploads a local file to the bucket under `key`, overwriting any
-    existing object there. Returns `key` (what gets stored in the DB)."""
-    ensure_bucket()
+    existing object there. Returns `key` (what gets stored in the DB).
+    Raises when the upload does not happen."""
     content_type = mimetypes.guess_type(local_path)[0] or "application/octet-stream"
-    with open(local_path, "rb") as f:
-        resp = requests.post(
-            f"{_SUPABASE_URL}/storage/v1/object/{_BUCKET}/{key}",
-            data=f,
-            headers=_headers(**{"Content-Type": content_type, "x-upsert": "true"}),
-            timeout=120,
-        )
-    resp.raise_for_status()
+    _get_client().upload_file(local_path, _bucket(), key,
+                              ExtraArgs={"ContentType": content_type})
     return key
 
 
 def download_to(key: str, local_path: str) -> bool:
     """Downloads object `key` to `local_path`. Returns False (and writes
     nothing) if the object doesn't exist — callers treat that as 404."""
-    resp = requests.get(
-        f"{_SUPABASE_URL}/storage/v1/object/{_BUCKET}/{key}",
-        headers=_headers(),
-        timeout=120,
-    )
-    if resp.status_code in (400, 404):
-        return False
-    resp.raise_for_status()
+    from botocore.exceptions import ClientError
+
     os.makedirs(os.path.dirname(local_path) or ".", exist_ok=True)
-    with open(local_path, "wb") as f:
-        f.write(resp.content)
+    partial = local_path + ".part"
+    try:
+        _get_client().download_file(_bucket(), key, partial)
+    except ClientError as e:
+        if os.path.exists(partial):
+            os.remove(partial)
+        if _missing(e):
+            return False
+        raise
+    os.replace(partial, local_path)
     return True
 
 
 def read_bytes(key: str) -> bytes | None:
     """Reads an object straight into memory — for streaming a download
     response without an intermediate temp file. None if it doesn't exist."""
-    resp = requests.get(
-        f"{_SUPABASE_URL}/storage/v1/object/{_BUCKET}/{key}",
-        headers=_headers(),
-        timeout=120,
-    )
-    if resp.status_code in (400, 404):
-        return None
-    resp.raise_for_status()
-    return resp.content
+    from botocore.exceptions import ClientError
+
+    try:
+        obj = _get_client().get_object(Bucket=_bucket(), Key=key)
+    except ClientError as e:
+        if _missing(e):
+            return None
+        raise
+    return obj["Body"].read()
 
 
 def delete(key: str) -> None:
-    requests.delete(
-        f"{_SUPABASE_URL}/storage/v1/object/{_BUCKET}/{key}",
-        headers=_headers(),
-        timeout=30,
-    )
+    _get_client().delete_object(Bucket=_bucket(), Key=key)
 
 
 def list_prefix(prefix: str) -> list[str]:
-    """Lists object names (not full keys) directly under `prefix` — a
-    single non-recursive listing, matching Supabase Storage's own semantics
-    (see `delete_prefix` for the same list call used to build the delete
-    payload)."""
-    resp = requests.post(
-        f"{_SUPABASE_URL}/storage/v1/object/list/{_BUCKET}",
-        json={"prefix": prefix},
-        headers=_headers(),
-        timeout=30,
-    )
-    if resp.status_code != 200:
-        return []
-    return [item["name"] for item in resp.json() if item.get("name")]
+    """Names (not full keys) directly under `prefix` — files, plus the names
+    of any subfolders — the same one-level listing the old Supabase module
+    returned."""
+    names: list[str] = []
+    paginator = _get_client().get_paginator("list_objects_v2")
+    for page in paginator.paginate(Bucket=_bucket(), Prefix=prefix, Delimiter="/"):
+        for obj in page.get("Contents", []):
+            name = obj["Key"][len(prefix):]
+            if name:
+                names.append(name)
+        for sub in page.get("CommonPrefixes", []):
+            name = sub["Prefix"][len(prefix):].rstrip("/")
+            if name:
+                names.append(name)
+    return names
 
 
 def _list_recursive(prefix: str) -> list[str]:
-    """Lists every real object key under `prefix`, walking into subfolders
-    (Supabase Storage's list endpoint is non-recursive — a subfolder comes
-    back as a pseudo-entry with `id: null`, not its files)."""
-    resp = requests.post(
-        f"{_SUPABASE_URL}/storage/v1/object/list/{_BUCKET}",
-        json={"prefix": prefix},
-        headers=_headers(),
-        timeout=30,
-    )
-    if resp.status_code != 200:
-        return []
+    """Every object key under `prefix`, subfolders included."""
     keys: list[str] = []
-    for item in resp.json():
-        name = item.get("name")
-        if not name:
-            continue
-        full = f"{prefix}{name}"
-        if item.get("id") is None:
-            keys.extend(_list_recursive(f"{full}/"))
-        else:
-            keys.append(full)
+    paginator = _get_client().get_paginator("list_objects_v2")
+    for page in paginator.paginate(Bucket=_bucket(), Prefix=prefix):
+        keys.extend(obj["Key"] for obj in page.get("Contents", []))
     return keys
 
 
 def delete_prefix(prefix: str) -> None:
     """Deletes every object under `prefix` (a job's whole folder, e.g. when
     the job itself is deleted), including nested subfolders such as a links
-    job's `Links/` and `Links_<lang>/` — see `_list_recursive`. The old
-    version only listed one level deep, so a links job's nested files were
-    never actually deleted (left orphaned in storage) and listing kept
-    growing slower over time."""
-    names = _list_recursive(prefix)
-    for i in range(0, len(names), 1000):
-        chunk = names[i:i + 1000]
-        requests.delete(
-            f"{_SUPABASE_URL}/storage/v1/object/{_BUCKET}",
-            json={"prefixes": chunk},
-            headers=_headers(),
-            timeout=60,
-        )
+    job's `Links/` and `Links_<lang>/`.
+
+    A prefix is only trusted when it names one folder inside a top-level one
+    (`jobs/<id>/`): anything shorter, or with an empty segment (`jobs//`,
+    from an empty id), would match every job in the bucket."""
+    parts = prefix.split("/")
+    if (not prefix.endswith("/") or len(parts) < 3
+            or any(part == "" for part in parts[:-1])):
+        raise ValueError(f"refusing to delete unscoped prefix {prefix!r}")
+    keys = _list_recursive(prefix)
+    client = _get_client()
+    for i in range(0, len(keys), 1000):
+        chunk = keys[i:i + 1000]
+        resp = client.delete_objects(
+            Bucket=_bucket(),
+            Delete={"Objects": [{"Key": k} for k in chunk], "Quiet": True})
+        for err in resp.get("Errors", []):
+            logger.error("storage: delete failed for %s: %s", err.get("Key"), err.get("Message"))
