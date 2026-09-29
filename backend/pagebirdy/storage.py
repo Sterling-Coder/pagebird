@@ -1,18 +1,24 @@
-"""Railway Storage Bucket (S3-compatible) — where uploaded and translated files
-actually live.
+"""Backblaze B2 (S3-compatible) — where uploaded and translated files actually
+live. Postgres (`review_jobs`/`review_segments`, see `review/store.py`) never
+holds file bytes, only the key this module returns from `upload_file`.
 
 Railway's container disk is ephemeral: it resets to empty on every
 redeploy. Local paths (uploads/, out/) are scratch space only, used while a
 job is actively processing; the durable copy of every job's original upload
 and its translated output lives here, keyed by job id (`jobs/<job_id>/…`).
 
-Env (set on the Railway service, as references to the bucket's own
-credentials):
-  BABEL_S3_ENDPOINT     the bucket's S3 endpoint URL
+The client is plain boto3 against B2's S3-compatible endpoint, so any other
+S3-compatible provider (Railway's own bucket, R2, MinIO, ...) works too —
+only the env below needs to point elsewhere; nothing here is B2-specific.
+
+Env (from the B2 bucket's "S3 Compatible" tab — Application Key ID / Key are
+the access/secret key pair, scoped to just this bucket):
+  BABEL_S3_ENDPOINT     e.g. https://s3.us-west-004.backblazeb2.com
   BABEL_S3_BUCKET       bucket name
-  BABEL_S3_ACCESS_KEY
-  BABEL_S3_SECRET_KEY
-  BABEL_S3_REGION       default "auto"
+  BABEL_S3_ACCESS_KEY   B2 Application Key ID
+  BABEL_S3_SECRET_KEY   B2 Application Key
+  BABEL_S3_REGION       e.g. "us-west-004" — must match the endpoint's
+                         region; B2 rejects "auto"
 
 Unlike an optional engine, storage is not best-effort: a job whose files were
 never persisted is not downloadable once the container restarts. So an
@@ -37,13 +43,25 @@ _client = None
 _client_lock = threading.Lock()
 
 
+def _region_from_endpoint(endpoint: str) -> str:
+    """B2's own endpoint names its region: `s3.us-west-004.backblazeb2.com`
+    -> `us-west-004`. A fallback for a bucket wired up with only the
+    endpoint set — unlike AWS, B2 has no "auto"; a wrong or missing region
+    is a signature failure on every request, not a slow one, so this is
+    worth deriving rather than leaving the caller to hit that blind."""
+    host = endpoint.split("//", 1)[-1].split("/", 1)[0]
+    parts = host.split(".")
+    return parts[1] if len(parts) >= 4 and parts[0] == "s3" else ""
+
+
 def _cfg() -> dict:
+    endpoint = os.environ.get("BABEL_S3_ENDPOINT", "")
     return {
-        "endpoint": os.environ.get("BABEL_S3_ENDPOINT", ""),
+        "endpoint": endpoint,
         "bucket": os.environ.get("BABEL_S3_BUCKET", ""),
         "access_key": os.environ.get("BABEL_S3_ACCESS_KEY", ""),
         "secret_key": os.environ.get("BABEL_S3_SECRET_KEY", ""),
-        "region": os.environ.get("BABEL_S3_REGION", "") or "auto",
+        "region": os.environ.get("BABEL_S3_REGION", "") or _region_from_endpoint(endpoint),
     }
 
 
@@ -69,10 +87,14 @@ def _get_client():
             raise RuntimeError(
                 "storage is not configured: set BABEL_S3_ENDPOINT, BABEL_S3_BUCKET, "
                 "BABEL_S3_ACCESS_KEY and BABEL_S3_SECRET_KEY")
+        c = _cfg()
+        if not c["region"]:
+            raise RuntimeError(
+                "storage: could not determine a region — set BABEL_S3_REGION "
+                f"(endpoint {c['endpoint']!r} doesn't match B2's s3.<region>.backblazeb2.com)")
         import boto3
         from botocore.config import Config
 
-        c = _cfg()
         _client = boto3.client(
             "s3",
             endpoint_url=c["endpoint"],
