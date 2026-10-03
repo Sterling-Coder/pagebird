@@ -62,6 +62,24 @@ const FEATURES = [
 
 const FORMATS = [".idml", ".pdf", ".ai", ".psd", ".eps", ".srt", ".vtt", ".docx", ".pptx", ".xlsx", ".html"];
 
+const FORMATS_EXTENDED = [
+  { label: ".idml", soon: false },
+  { label: ".pdf", soon: false },
+  { label: ".ai", soon: false },
+  { label: ".psd", soon: false },
+  { label: ".eps", soon: false },
+  { label: ".srt", soon: false },
+  { label: ".vtt", soon: false },
+  { label: ".html", soon: false },
+  { label: ".docx", soon: true },
+  { label: ".pptx", soon: true },
+  { label: ".xlsx", soon: true },
+  { label: ".xliff", soon: true },
+  { label: ".indd", soon: false },
+  { label: ".svg", soon: true },
+  { label: ".mp4 subs", soon: true },
+];
+
 export default function Home() {
   return (
     <>
@@ -519,6 +537,229 @@ export default function Home() {
         </div>
       </section>
 
+      {/* ─── PRODUCT SHOWCASE — full-width alternating rows ─── */}
+      <section className="pb-glass-section bg-pb-bg">
+        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14">
+          <div className="flex items-center gap-3 mb-4">
+            <span className="inline-block h-2 w-2 bg-pb-accent" />
+            <span className="font-pb-mono text-[11px] font-bold tracking-widest text-pb-accent uppercase">All Products</span>
+          </div>
+          <h2 className="pb-stencil mb-14" style={{ fontSize: "clamp(2rem,3.5vw,3.2rem)", lineHeight: 1.05 }}>
+            Five products. One platform.
+          </h2>
+        </div>
+
+        {[
+          {
+            n: "01", live: true, color: "#e08a6f",
+            title: "Documents / PDF",
+            sub: "InDesign IDML and PDF, layout-preserved.",
+            bullets: ["Frame-level layout parsing", "RTL full-page mirror (Arabic, Hebrew)", "QA scoring per job"],
+            href: "/platform/documents",
+            visual: (
+              <div style={{ background: "#0e0d0b", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "8px", padding: "24px", minHeight: "160px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
+                  <div style={{ background: "#1a1916", borderRadius: "4px", padding: "12px" }}>
+                    <div style={{ fontSize: "9px", color: "rgba(255,255,255,0.35)", marginBottom: "8px", fontFamily: "monospace" }}>SOURCE · EN</div>
+                    {[88,96,70].map(w => <div key={w} style={{ height: "3px", width: `${w}%`, background: "rgba(255,255,255,0.12)", borderRadius: "2px", marginBottom: "5px" }} />)}
+                    <div style={{ height: "32px", background: "rgba(255,255,255,0.05)", borderRadius: "3px", marginTop: "8px" }} />
+                  </div>
+                  <div style={{ background: "#f5f0e6", borderRadius: "4px", padding: "12px" }}>
+                    <div style={{ fontSize: "9px", color: "#a09a88", marginBottom: "8px", fontFamily: "monospace" }}>TRANSLATED · ZH</div>
+                    {[76,88,58].map(w => <div key={w} style={{ height: "3px", width: `${w}%`, background: "rgba(26,25,20,0.15)", borderRadius: "2px", marginBottom: "5px" }} />)}
+                    <div style={{ height: "32px", background: "rgba(26,25,20,0.07)", borderRadius: "3px", marginTop: "8px" }} />
+                  </div>
+                </div>
+              </div>
+            ),
+          },
+          {
+            n: "02", live: false, color: "#8b6fbf",
+            title: "SRT / VTT Subtitles",
+            sub: "Subtitle files translated, timecodes intact.",
+            bullets: ["SRT + VTT both supported", "40+ target languages", "Platform-ready output (YouTube, Vimeo, Final Cut)"],
+            href: "/platform/subtitles",
+            visual: (
+              <div style={{ background: "#0e0b14", border: "1px solid rgba(139,111,191,0.2)", borderRadius: "8px", padding: "20px", minHeight: "160px", fontFamily: "monospace" }}>
+                {[["00:00:01,000","00:00:04,200","The document stays intact."],["00:00:04,500","00:00:07,000","Le document reste intact."]].map(([s,e,t],i) => (
+                  <div key={i} style={{ marginBottom: "12px" }}>
+                    <div style={{ fontSize: "10px", color: "rgba(139,111,191,0.7)", marginBottom: "2px" }}>{s} → {e}</div>
+                    <div style={{ fontSize: "12px", color: i===0 ? "rgba(255,255,255,0.7)" : "rgba(139,111,191,0.9)" }}>{t}</div>
+                  </div>
+                ))}
+              </div>
+            ),
+          },
+          {
+            n: "03", live: false, color: "#4a9e8a",
+            title: "Image Translator",
+            sub: "Text in images, translated in place.",
+            bullets: ["Google Vision OCR detection", "PSD layer preservation", "Signs, labels, infographics, packaging"],
+            href: "/platform/images",
+            visual: (
+              <div style={{ background: "#080f0e", border: "1px solid rgba(74,158,138,0.2)", borderRadius: "8px", padding: "20px", minHeight: "160px" }}>
+                <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+                  <div style={{ flex: 1, border: "1px dashed rgba(255,80,80,0.4)", borderRadius: "6px", padding: "16px", textAlign: "center" }}>
+                    <div style={{ fontSize: "11px", fontWeight: 700, color: "rgba(255,255,255,0.6)" }}>OPEN DAILY</div>
+                    <div style={{ fontSize: "10px", color: "rgba(255,255,255,0.35)" }}>9AM – 5PM</div>
+                  </div>
+                  <span style={{ color: "#4a9e8a", fontSize: "18px" }}>→</span>
+                  <div style={{ flex: 1, border: "1px dashed rgba(74,158,138,0.5)", borderRadius: "6px", padding: "16px", textAlign: "center" }}>
+                    <div style={{ fontSize: "11px", fontWeight: 700, color: "rgba(74,158,138,0.9)" }}>مفتوح يومياً</div>
+                    <div style={{ fontSize: "10px", color: "rgba(74,158,138,0.5)" }}>٩ص – ٥م</div>
+                  </div>
+                </div>
+                <div style={{ marginTop: "12px", fontSize: "9px", color: "rgba(74,158,138,0.5)", fontFamily: "monospace" }}>14 text regions detected · translated in place</div>
+              </div>
+            ),
+          },
+          {
+            n: "04", live: false, color: "#5a9e5a",
+            title: "Website Translator",
+            sub: "Your entire site, every language.",
+            bullets: ["SEO-friendly /lang/ URL paths", "CSS, images, layout untouched", "Auto-translate new pages on publish"],
+            href: "/platform/websites",
+            visual: (
+              <div style={{ background: "#080f08", border: "1px solid rgba(90,158,90,0.2)", borderRadius: "8px", padding: "20px", minHeight: "160px", fontFamily: "monospace" }}>
+                {[["yoursite.com/about","→","yoursite.com/fr/about"],["yoursite.com/pricing","→","yoursite.com/de/pricing"],["yoursite.com/contact","→","yoursite.com/es/contact"]].map(([s,a,d],i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px", fontSize: "11px" }}>
+                    <span style={{ color: "rgba(255,255,255,0.3)" }}>{s}</span>
+                    <span style={{ color: "#5a9e5a" }}>{a}</span>
+                    <span style={{ color: "rgba(90,158,90,0.8)" }}>{d}</span>
+                  </div>
+                ))}
+              </div>
+            ),
+          },
+          {
+            n: "05", live: false, color: "#c94040",
+            title: "YouTube Subtitles",
+            sub: "YouTube captions to any language.",
+            bullets: ["Paste URL, get SRT back", "40+ languages", "YouTube Studio upload-ready"],
+            href: "/platform/youtube",
+            visual: (
+              <div style={{ background: "#100808", border: "1px solid rgba(201,64,64,0.2)", borderRadius: "8px", padding: "20px", minHeight: "160px" }}>
+                <div style={{ background: "rgba(0,0,0,0.5)", borderRadius: "6px", padding: "10px 12px", fontFamily: "monospace", fontSize: "10px", color: "rgba(255,255,255,0.3)", marginBottom: "10px" }}>
+                  youtube.com/watch?v=dQw4w9WgXcQ
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "5px" }}>
+                  {["ZH","AR","FR","DE","ES","JA","PT","KO","HI","RU"].map(l => (
+                    <span key={l} style={{ fontSize: "9px", fontWeight: 700, padding: "3px 8px", borderRadius: "4px", background: "rgba(201,64,64,0.15)", color: "rgba(201,64,64,0.8)", border: "1px solid rgba(201,64,64,0.2)" }}>{l}</span>
+                  ))}
+                  <span style={{ fontSize: "9px", color: "rgba(255,255,255,0.3)", padding: "3px 0" }}>+30 more</span>
+                </div>
+              </div>
+            ),
+          },
+        ].map((p, i) => (
+          <div key={p.n} style={{
+            borderTop: `3px solid ${p.color}`,
+            background: i % 2 === 0 ? "rgba(255,255,255,0.01)" : "rgba(0,0,0,0.15)",
+            borderBottom: "1px solid rgba(255,255,255,0.04)",
+          }}>
+            <div className="mx-auto max-w-[1100px] px-8 lg:px-14" style={{
+              display: "grid",
+              gridTemplateColumns: i % 2 === 0 ? "1fr 1fr" : "1fr 1fr",
+              gap: "48px",
+              alignItems: "center",
+              padding: "40px 56px",
+            }}>
+              {/* Content side */}
+              <div style={{ order: i % 2 === 0 ? 0 : 1 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "12px" }}>
+                  <span className="font-pb-mono" style={{ fontSize: "11px", color: "rgba(255,255,255,0.3)" }}>{p.n}</span>
+                  {!p.live && <span className="font-pb-mono" style={{ fontSize: "8px", fontWeight: 700, letterSpacing: "0.1em", color: p.color, border: `1px solid ${p.color}40`, padding: "2px 8px", borderRadius: "4px" }}>SOON</span>}
+                  {p.live && <span className="font-pb-mono" style={{ fontSize: "8px", fontWeight: 700, letterSpacing: "0.1em", color: "#4ade80", border: "1px solid rgba(74,222,128,0.3)", padding: "2px 8px", borderRadius: "4px" }}>LIVE</span>}
+                </div>
+                <h3 style={{ fontSize: "22px", fontWeight: 700, color: "#f0ece3", marginBottom: "6px" }}>{p.title}</h3>
+                <p style={{ fontSize: "14px", color: "rgba(240,236,227,0.5)", marginBottom: "16px" }}>{p.sub}</p>
+                <ul style={{ listStyle: "none", padding: 0, margin: "0 0 20px" }}>
+                  {p.bullets.map(b => (
+                    <li key={b} style={{ fontSize: "13px", color: "rgba(240,236,227,0.55)", marginBottom: "6px", display: "flex", alignItems: "flex-start", gap: "8px" }}>
+                      <span style={{ color: p.color, marginTop: "1px", flexShrink: 0 }}>—</span>{b}
+                    </li>
+                  ))}
+                </ul>
+                <Link href={p.href} className="font-pb-mono" style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.1em", color: p.color, textDecoration: "none", textTransform: "uppercase" }}>
+                  Learn more →
+                </Link>
+              </div>
+              {/* Visual side */}
+              <div style={{ order: i % 2 === 0 ? 1 : 0 }}>
+                {p.visual}
+              </div>
+            </div>
+          </div>
+        ))}
+      </section>
+
+      {/* ─── AI ENGINE SECTION ─── */}
+      <section className="pb-glass-section" style={{ background: "#0a0908" }}>
+        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-28">
+          <div className="flex items-center gap-3 mb-6">
+            <span className="inline-block h-2 w-2 bg-pb-accent" />
+            <span className="font-pb-mono text-[11px] font-bold tracking-widest text-pb-accent uppercase">The Engine</span>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "60px", alignItems: "center" }}>
+            <div>
+              <h2 className="pb-stencil" style={{ fontSize: "clamp(2rem,3.5vw,3.2rem)", lineHeight: 1.05, marginBottom: "16px" }}>
+                Two AI engines.<br />One consensus.
+              </h2>
+              <p style={{ fontSize: "15px", color: "rgba(240,236,227,0.55)", lineHeight: 1.6, marginBottom: "28px" }}>
+                OpenAI and DeepL translate independently. When they disagree, the segment is flagged for human review — catching errors before they reach your client.
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                {["2 engines in consensus","Segment-level comparison","Human review queue for disagreements"].map((s,i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: i===0?"#e08a6f":i===1?"#4a70e0":"#4ade80", flexShrink: 0 }} />
+                    <span style={{ fontSize: "13px", color: "rgba(240,236,227,0.6)" }}>{s}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Flow diagram */}
+            <div style={{ fontFamily: "var(--font-space-mono), monospace" }}>
+              {/* Your file */}
+              <div style={{ textAlign: "center", marginBottom: "8px" }}>
+                <span style={{ display: "inline-block", padding: "6px 16px", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "6px", fontSize: "11px", color: "rgba(255,255,255,0.6)" }}>Your file</span>
+              </div>
+              <div style={{ textAlign: "center", color: "rgba(255,255,255,0.2)", fontSize: "16px", marginBottom: "8px" }}>↓</div>
+              <div style={{ textAlign: "center", marginBottom: "8px" }}>
+                <span style={{ display: "inline-block", padding: "6px 16px", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "6px", fontSize: "11px", color: "rgba(255,255,255,0.4)" }}>Text extraction</span>
+              </div>
+              {/* Split */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "8px" }}>
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ color: "rgba(255,255,255,0.2)", fontSize: "14px", marginBottom: "6px" }}>↓</div>
+                  <span style={{ display: "inline-block", padding: "8px 14px", border: "1px solid rgba(224,138,111,0.4)", borderRadius: "6px", fontSize: "10px", color: "#e08a6f", background: "rgba(224,138,111,0.08)" }}>OpenAI GPT</span>
+                </div>
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ color: "rgba(255,255,255,0.2)", fontSize: "14px", marginBottom: "6px" }}>↓</div>
+                  <span style={{ display: "inline-block", padding: "8px 14px", border: "1px solid rgba(74,112,224,0.4)", borderRadius: "6px", fontSize: "10px", color: "#4a70e0", background: "rgba(74,112,224,0.08)" }}>DeepL Neural</span>
+                </div>
+              </div>
+              {/* Consensus */}
+              <div style={{ textAlign: "center", marginBottom: "8px" }}>
+                <div style={{ color: "rgba(255,255,255,0.2)", fontSize: "14px", marginBottom: "6px" }}>↓</div>
+                <span style={{ display: "inline-block", padding: "8px 20px", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "6px", fontSize: "11px", color: "rgba(255,255,255,0.6)" }}>Consensus check</span>
+              </div>
+              {/* Outcomes */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ color: "rgba(255,255,255,0.2)", fontSize: "14px", marginBottom: "6px" }}>↓</div>
+                  <span style={{ display: "inline-block", padding: "6px 12px", border: "1px solid rgba(74,222,128,0.3)", borderRadius: "6px", fontSize: "10px", color: "#4ade80", background: "rgba(74,222,128,0.08)" }}>✓ Match → Output</span>
+                </div>
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ color: "rgba(255,255,255,0.2)", fontSize: "14px", marginBottom: "6px" }}>↓</div>
+                  <span style={{ display: "inline-block", padding: "6px 12px", border: "1px solid rgba(248,113,113,0.3)", borderRadius: "6px", fontSize: "10px", color: "#f87171", background: "rgba(248,113,113,0.08)" }}>⚠ Flagged</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ─── HOW IT WORKS ─── */}
       <section className="pb-glass-section" style={{ background: "#0e0d0b" }}>
         <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-32">
@@ -887,17 +1128,88 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ─── FORMATS ─── */}
-      <section className="pb-glass-section" style={{ background: "#0e0d0b", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-        <div className="mx-auto max-w-[1100px] px-8 py-8 lg:px-14">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="font-pb-mono mr-6 text-[10px] font-bold tracking-widest text-pb-text-muted uppercase">
-              Formats
+      {/* ─── FORMATS TICKER ─── */}
+      <section style={{ background: "#0a0908", borderTop: "1px solid rgba(255,255,255,0.04)", overflow: "hidden", padding: "14px 0" }}>
+        <style>{`
+          @keyframes pb-ticker {
+            from { transform: translateX(0); }
+            to { transform: translateX(-50%); }
+          }
+          .pb-ticker-track {
+            display: flex;
+            width: max-content;
+            animation: pb-ticker 28s linear infinite;
+          }
+          .pb-ticker-track:hover {
+            animation-play-state: paused;
+          }
+        `}</style>
+        <div className="pb-ticker-track">
+          {[...FORMATS_EXTENDED, ...FORMATS_EXTENDED].map((f, i) => (
+            <span key={i} style={{
+              fontFamily: "var(--font-space-mono), monospace",
+              fontSize: "11px",
+              color: f.soon ? "rgba(240,236,227,0.18)" : "rgba(240,236,227,0.38)",
+              letterSpacing: "0.08em",
+              padding: "0 28px",
+              whiteSpace: "nowrap",
+              borderRight: "1px solid rgba(255,255,255,0.06)",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "6px",
+            }}>
+              {f.label}
+              {f.soon && (
+                <span style={{ fontSize: "8px", letterSpacing: "0.1em", color: "rgba(240,236,227,0.2)", textTransform: "uppercase" }}>soon</span>
+              )}
             </span>
-            {FORMATS.map((f) => (
-              <span key={f} className="font-pb-mono border border-white/[0.06] px-4 py-1.5 text-[12px] text-pb-text-muted">
-                {f}
-              </span>
+          ))}
+        </div>
+      </section>
+
+      {/* ─── INTEGRATIONS ─── */}
+      <section className="pb-glass-section" style={{ background: "#0a0908", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-28">
+          <div className="flex items-center gap-3 mb-6">
+            <span className="inline-block h-2 w-2 bg-pb-accent" />
+            <span className="font-pb-mono text-[11px] font-bold tracking-widest text-pb-accent uppercase">Integrations</span>
+          </div>
+          <div className="flex flex-col justify-between gap-4 border-b border-white/[0.06] pb-12 md:flex-row md:items-end">
+            <div>
+              <h2 className="pb-stencil" style={{ fontSize: "clamp(2rem, 3.5vw, 3.2rem)", lineHeight: 1.05 }}>
+                Drop into your<br />existing workflow.
+              </h2>
+              <p className="mt-4 max-w-lg text-[15px] leading-relaxed text-pb-text-muted">
+                Pagebirdy reads and writes the same formats your tools already use. No export step, no conversion, no re-linking.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-10 grid grid-cols-1 gap-px md:grid-cols-3" style={{ background: "rgba(255,255,255,0.04)" }}>
+            {[
+              { name: "Adobe InDesign", desc: "Open translated IDML directly. No re-linking.", accent: "#e08a6f", soon: false },
+              { name: "Adobe Illustrator", desc: "Translated .ai files ready to edit.", accent: "#e08a6f", soon: false },
+              { name: "Adobe Photoshop", desc: "Text layers translated in place.", accent: "#e08a6f", soon: false },
+              { name: "YouTube Studio", desc: "Upload translated SRT directly to your video.", accent: "#c94040", soon: false },
+              { name: "Premiere Pro", desc: "Import .srt caption tracks into your timeline.", accent: "#c94040", soon: false },
+              { name: "WordPress", desc: "Paste translated HTML into any page builder.", accent: "#5a9e5a", soon: false },
+              { name: "Figma", desc: "Export frames, translate, re-import.", accent: "#8b6fbf", soon: true },
+              { name: "Notion", desc: "Translate docs and pages.", accent: "#8b6fbf", soon: true },
+              { name: "Slack", desc: "Trigger translations from your workspace.", accent: "#4a9e8a", soon: true },
+            ].map((item) => (
+              <div key={item.name} className="flex flex-col gap-2 p-6" style={{
+                background: "#0e0d0b",
+                opacity: item.soon ? 0.5 : 1,
+                borderLeft: `2px solid ${item.accent}`,
+              }}>
+                <div className="flex items-center justify-between">
+                  <span className="text-[15px] font-bold text-pb-text">{item.name}</span>
+                  {item.soon && (
+                    <span className="font-pb-mono rounded-full border border-white/10 px-2 py-0.5 text-[8px] tracking-widest text-pb-text-muted uppercase">Soon</span>
+                  )}
+                </div>
+                <p className="text-[12px] leading-relaxed text-pb-text-muted">{item.desc}</p>
+              </div>
             ))}
           </div>
         </div>
@@ -905,102 +1217,82 @@ export default function Home() {
 
       {/* ─── PRICING ─── */}
       <section id="pricing" className="pb-glass-section bg-pb-bg">
-        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-32">
+        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-28">
           <div className="flex items-center gap-3 mb-6">
             <span className="inline-block h-2 w-2 bg-pb-accent" />
-            <span className="font-pb-mono text-[11px] font-bold tracking-widest text-pb-accent uppercase">
-              Pricing
-            </span>
+            <span className="font-pb-mono text-[11px] font-bold tracking-widest text-pb-accent uppercase">Pricing</span>
           </div>
-          <div className="flex flex-col justify-between gap-8 border-b border-white/[0.06] pb-16 md:flex-row md:items-end">
-            <h2 className="font-pb-mono text-4xl font-bold text-pb-text md:text-5xl" style={{ letterSpacing: "-0.02em" }}>
-              Start free.<br />Scale when ready.
-            </h2>
-            <Link
-              href="/contact"
-              className="font-pb-mono inline-flex shrink-0 items-center rounded-full bg-pb-accent px-8 py-3.5 text-[12px] font-bold tracking-widest text-pb-bg uppercase transition-all hover:brightness-110"
-            >
-              Book a call
+          <div className="flex flex-col justify-between gap-4 border-b border-white/[0.06] pb-10 md:flex-row md:items-end">
+            <div>
+              <h2 className="pb-stencil" style={{ fontSize: "clamp(2rem, 3.5vw, 3.2rem)", lineHeight: 1.05 }}>
+                Translate more.<br />Pay for what you use.
+              </h2>
+              <p className="mt-3 text-[15px] text-pb-text-muted">No seat fees. No per-word pricing. Just pages.</p>
+            </div>
+            <Link href="/pricing" className="font-pb-mono shrink-0 border border-white/[0.1] px-6 py-2.5 text-[11px] font-bold tracking-widest text-pb-text uppercase transition-all hover:border-pb-text">
+              Full pricing →
             </Link>
           </div>
 
-          <div className="mt-0 grid grid-cols-1 divide-y divide-white/[0.06] md:grid-cols-3 md:divide-x md:divide-y-0">
+          {/* Pricing rows */}
+          <div>
             {[
               {
                 tier: "FREE",
-                price: "$0",
+                price: "$0 / mo",
                 tagline: "Try it out.",
                 features: ["5 pages free", "PDF + IDML", "All 40+ languages"],
                 cta: "Get started",
                 href: "/login",
-                accent: false,
+                highlight: false,
               },
               {
                 tier: "TEAM",
                 price: "Coming soon",
-                tagline: "For teams shipping in several languages.",
+                tagline: "For teams shipping in several languages at once.",
                 features: ["Volume page packs", "All formats + subtitles", "Shared glossary", "Side-by-side review"],
-                cta: "Coming soon",
-                href: null,
-                accent: true,
+                cta: "Notify me",
+                href: "/contact",
+                highlight: true,
               },
               {
                 tier: "ENTERPRISE",
                 price: "Custom",
-                tagline: "Volume, audit, and residency.",
-                features: ["Unlimited pages", "SSO + audit log", "Data residency"],
+                tagline: "Volume, audit, and data residency.",
+                features: ["Unlimited pages", "SSO + audit log", "EU/US data residency"],
                 cta: "Book a call",
                 href: "/contact",
-                accent: false,
+                highlight: false,
               },
-            ].map((plan, i) => (
-              <div key={plan.tier} className={`py-12 ${i > 0 ? "md:pl-12" : ""} ${i < 2 ? "md:pr-12" : ""}`}>
-                <span className="font-pb-mono text-[10px] font-bold tracking-widest text-pb-text-muted uppercase">{plan.tier}</span>
-                <p className="mt-4 text-[32px] font-bold text-pb-text">{plan.price}</p>
-                <p className="mt-2 text-[13px] text-pb-text-muted">{plan.tagline}</p>
-                <div className="mt-8 space-y-2.5">
+            ].map((plan) => (
+              <div
+                key={plan.tier}
+                className="grid items-center gap-6 border-b border-white/[0.06] py-7 md:grid-cols-[120px_160px_1fr_160px]"
+                style={{ background: plan.highlight ? "rgba(224,138,111,0.04)" : "transparent" }}
+              >
+                <span className="font-pb-mono text-[10px] font-bold tracking-[0.16em] text-pb-text-muted uppercase">{plan.tier}</span>
+                <span className="text-[22px] font-bold text-pb-text">{plan.price}</span>
+                <div className="flex flex-wrap gap-x-5 gap-y-1">
                   {plan.features.map((f) => (
-                    <span key={f} className="block text-[13px] text-pb-text-secondary">— {f}</span>
+                    <span key={f} className="text-[13px] text-pb-text-secondary">— {f}</span>
                   ))}
                 </div>
-                {plan.href ? (
-                  <Link
-                    href={plan.href}
-                    className={`font-pb-mono mt-10 block border py-3 text-center text-[11px] font-bold tracking-widest uppercase transition-all ${
-                      plan.accent
-                        ? "border-pb-accent/40 text-pb-accent hover:bg-pb-accent hover:text-pb-bg"
-                        : "border-white/[0.08] text-pb-text hover:border-pb-text"
-                    }`}
-                  >
-                    {plan.cta}
-                  </Link>
-                ) : (
-                  <span className="font-pb-mono mt-10 block cursor-not-allowed border border-white/[0.04] py-3 text-center text-[11px] font-bold tracking-widest text-pb-text-muted uppercase opacity-50">
-                    {plan.cta}
-                  </span>
-                )}
+                <Link
+                  href={plan.href}
+                  className="font-pb-mono border border-white/[0.1] px-5 py-2.5 text-center text-[10px] font-bold tracking-widest text-pb-text uppercase transition-all hover:border-pb-accent hover:text-pb-accent"
+                >
+                  {plan.cta} →
+                </Link>
               </div>
             ))}
           </div>
-        </div>
-      </section>
 
-      {/* ─── COMING SOON TEASER ─── */}
-      <section style={{ background: "#0a0908", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
-        <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "28px 56px", textAlign: "center" }}>
-          <p style={{ fontFamily: "var(--font-space-mono), monospace", fontSize: "11px", color: "rgba(240,236,227,0.3)", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "14px" }}>
-            More formats arriving soon
-          </p>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", flexWrap: "wrap" }}>
-            {[".docx", ".pptx", ".xlsx", ".xliff"].map((fmt) => (
-              <span key={fmt} style={{
-                fontFamily: "var(--font-space-mono), monospace",
-                fontSize: "11px", color: "rgba(240,236,227,0.25)",
-                border: "1px solid rgba(255,255,255,0.08)",
-                padding: "4px 12px", display: "inline-flex", alignItems: "center", gap: "8px",
-              }}>
-                {fmt}
-                <span style={{ fontSize: "8px", color: "rgba(240,236,227,0.2)", letterSpacing: "0.1em" }}>SOON</span>
+          {/* Trust signals */}
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-8">
+            {["No card required", "Cancel anytime", "Encrypted in transit"].map((s) => (
+              <span key={s} className="font-pb-mono flex items-center gap-2 text-[11px] text-pb-text-muted">
+                <span className="inline-block h-1 w-1 rounded-full bg-pb-accent" />
+                {s}
               </span>
             ))}
           </div>

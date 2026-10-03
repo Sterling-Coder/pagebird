@@ -274,6 +274,128 @@ export default function PlatformPage() {
         </div>
       </section>
 
+      {/* AI Engine section */}
+      <section className="pb-glass-section" style={{ background: "#0a0908" }}>
+        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-28">
+          <div className="flex items-center gap-3 mb-6">
+            <span className="inline-block h-2 w-2 bg-pb-accent" />
+            <span className="font-pb-mono text-[11px] font-bold tracking-widest text-pb-accent uppercase">The Engine</span>
+          </div>
+          <h2 className="pb-stencil mb-4" style={{ fontSize: "clamp(2rem, 3.5vw, 3rem)" }}>Two engines. One consensus.</h2>
+          <p className="mb-16 max-w-xl text-[15px] leading-relaxed text-pb-text-secondary">
+            OpenAI and DeepL translate every segment independently. When they agree, the output ships. When they disagree, the segment is flagged for human review.
+          </p>
+
+          {/* Pipeline visual */}
+          <div className="flex items-center justify-center gap-0 overflow-x-auto">
+            {/* Input */}
+            <div className="flex flex-col items-center gap-2 shrink-0">
+              <div style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", borderRadius: "8px", padding: "12px 20px", fontSize: "13px", color: "rgba(240,236,227,0.7)", fontFamily: "monospace" }}>
+                Your segment
+              </div>
+            </div>
+
+            <div style={{ width: "40px", height: "1px", background: "rgba(255,255,255,0.15)" }} />
+
+            {/* Split */}
+            <div className="flex flex-col items-center gap-3 shrink-0">
+              <div style={{ background: "rgba(224,138,111,0.15)", border: "1px solid rgba(224,138,111,0.3)", borderRadius: "8px", padding: "10px 16px", fontSize: "12px", fontWeight: 700, color: "#e08a6f", fontFamily: "monospace" }}>
+                OpenAI GPT
+              </div>
+              <div style={{ background: "rgba(74,112,224,0.15)", border: "1px solid rgba(74,112,224,0.3)", borderRadius: "8px", padding: "10px 16px", fontSize: "12px", fontWeight: 700, color: "#4a70e0", fontFamily: "monospace" }}>
+                DeepL Neural
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3 shrink-0" style={{ width: "40px" }}>
+              <div style={{ height: "1px", background: "rgba(224,138,111,0.4)" }} />
+              <div style={{ height: "1px", background: "rgba(74,112,224,0.4)" }} />
+            </div>
+
+            {/* Consensus */}
+            <div className="flex flex-col items-center gap-3 shrink-0">
+              <div style={{ background: "rgba(74,158,90,0.15)", border: "1px solid rgba(74,158,90,0.3)", borderRadius: "8px", padding: "10px 16px", fontSize: "12px", fontWeight: 700, color: "#4a9e5a", fontFamily: "monospace" }}>
+                ✓ Agreement
+              </div>
+              <div style={{ background: "rgba(224,138,111,0.1)", border: "1px solid rgba(224,138,111,0.25)", borderRadius: "8px", padding: "10px 16px", fontSize: "12px", fontWeight: 700, color: "#e08a6f", fontFamily: "monospace" }}>
+                ⚠ Flagged
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3 shrink-0" style={{ width: "40px" }}>
+              <div style={{ height: "1px", background: "rgba(74,158,90,0.4)" }} />
+              <div style={{ height: "1px", background: "rgba(201,64,64,0.4)" }} />
+            </div>
+
+            {/* Output */}
+            <div className="flex flex-col items-center gap-3 shrink-0">
+              <div style={{ background: "rgba(74,158,90,0.12)", border: "1px solid rgba(74,158,90,0.2)", borderRadius: "8px", padding: "10px 16px", fontSize: "12px", color: "#4a9e5a", fontFamily: "monospace" }}>
+                Ships to output
+              </div>
+              <div style={{ background: "rgba(201,64,64,0.12)", border: "1px solid rgba(201,64,64,0.2)", borderRadius: "8px", padding: "10px 16px", fontSize: "12px", color: "#c94040", fontFamily: "monospace" }}>
+                Review queue
+              </div>
+            </div>
+          </div>
+
+          {/* Stats */}
+          <div className="mt-16 grid grid-cols-3 gap-0" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+            {[
+              { n: "40+", label: "Languages" },
+              { n: "2", label: "AI engines in consensus" },
+              { n: "100%", label: "Segment-level accuracy check" },
+            ].map((s, i) => (
+              <div key={s.label} className="py-8" style={{ borderRight: i < 2 ? "1px solid rgba(255,255,255,0.06)" : "none", paddingLeft: i > 0 ? "32px" : "0", paddingRight: i < 2 ? "32px" : "0" }}>
+                <div className="pb-stencil" style={{ fontSize: "2.5rem" }}>{s.n}</div>
+                <div style={{ fontSize: "13px", color: "rgba(240,236,227,0.45)", marginTop: "6px" }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Integrations */}
+      <section className="pb-glass-section bg-pb-bg">
+        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-28">
+          <div className="flex items-center gap-3 mb-6">
+            <span className="inline-block h-2 w-2 bg-pb-accent" />
+            <span className="font-pb-mono text-[11px] font-bold tracking-widest text-pb-accent uppercase">Integrations</span>
+          </div>
+          <h2 className="pb-stencil mb-4" style={{ fontSize: "clamp(2rem, 3.5vw, 3rem)" }}>Works everywhere<br />you work.</h2>
+          <p className="mb-14 max-w-xl text-[15px] leading-relaxed text-pb-text-secondary">
+            Pagebirdy reads and writes the same formats your tools already use. No export step, no conversion, no new workflow to learn.
+          </p>
+
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
+            {[
+              { name: "Adobe InDesign", desc: "Open translated IDML directly. No re-linking.", soon: false, color: "#e08a6f" },
+              { name: "Adobe Illustrator", desc: "Translated .ai files ready to edit.", soon: false, color: "#e08a6f" },
+              { name: "Adobe Photoshop", desc: "Text layers translated in place.", soon: false, color: "#e08a6f" },
+              { name: "YouTube Studio", desc: "Upload translated SRT directly to your video.", soon: false, color: "#c94040" },
+              { name: "Premiere Pro", desc: "Import .srt caption tracks into your timeline.", soon: false, color: "#4a70e0" },
+              { name: "WordPress", desc: "Paste translated HTML into any page builder.", soon: false, color: "#5a9e5a" },
+              { name: "Figma", desc: "Export frames, translate, re-import.", soon: true, color: "#8b6fbf" },
+              { name: "Notion", desc: "Translate docs and pages.", soon: true, color: "#4a9e8a" },
+              { name: "Slack", desc: "Trigger translations from your workspace.", soon: true, color: "#4a70e0" },
+            ].map((item) => (
+              <div key={item.name} className="flex flex-col gap-2 p-5" style={{
+                background: "rgba(255,255,255,0.03)",
+                border: "1px solid rgba(255,255,255,0.07)",
+                borderLeft: `3px solid ${item.soon ? "rgba(255,255,255,0.1)" : item.color + "60"}`,
+                borderRadius: "8px",
+                opacity: item.soon ? 0.55 : 1,
+              }}>
+                <div className="flex items-center justify-between">
+                  <span style={{ fontSize: "14px", fontWeight: 700, color: item.soon ? "rgba(240,236,227,0.5)" : "#f0ece3" }}>{item.name}</span>
+                  {item.soon && <span className="font-pb-mono text-[8px] tracking-widest text-pb-text-muted uppercase" style={{ border: "1px solid rgba(255,255,255,0.1)", padding: "2px 6px", borderRadius: "4px" }}>Soon</span>}
+                </div>
+                <p style={{ fontSize: "12px", color: "rgba(240,236,227,0.38)", lineHeight: 1.5 }}>{item.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Capabilities strip */}
       <section className="pb-glass-section">
         <div className="mx-auto max-w-[1100px] px-8 py-12 lg:px-14">
