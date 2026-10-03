@@ -198,21 +198,6 @@ export default function Header() {
                     </div>
                   </div>
 
-                  {/* Footer row */}
-                  <div
-                    className="flex items-center justify-between px-6 py-3"
-                    style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}
-                  >
-                    <span className="text-[12px] text-pb-text-muted">
-                      Start with 5 free pages — no card required.
-                    </span>
-                    <Link
-                      href="/login"
-                      className="font-pb-mono rounded-full bg-pb-accent px-5 py-1.5 text-[11px] font-bold tracking-widest text-pb-bg uppercase transition-all hover:brightness-110"
-                    >
-                      Try free →
-                    </Link>
-                  </div>
                 </div>
               </div>
             )}
