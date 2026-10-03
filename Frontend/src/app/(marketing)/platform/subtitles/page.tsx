@@ -307,30 +307,43 @@ export default function SubtitlesPage() {
             className="mt-20 grid grid-cols-1 gap-0 md:grid-cols-3"
             style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}
           >
-            {[
-              { n: "01", title: "Upload", desc: "Drop an .srt or .vtt file. We parse every cue — timecode, speaker label, formatting mark." },
-              { n: "02", title: "Pick a language", desc: "Choose from 40+ target languages. We translate the text, leave every timestamp exactly as it was." },
-              { n: "03", title: "Download", desc: "Same format, same cue count, same timecodes. Upload straight to YouTube, Vimeo or your editor." },
-            ].map((s, i) => (
-              <div
-                key={s.n}
-                className="py-10"
-                style={{
-                  borderRight: i < 2 ? "1px solid rgba(255,255,255,0.05)" : undefined,
-                  paddingRight: i < 2 ? "2.5rem" : undefined,
-                  paddingLeft: i > 0 ? "2.5rem" : undefined,
-                }}
-              >
-                <span
-                  className="font-pb-mono block text-[80px] font-bold leading-none"
-                  style={{ color: "rgba(139,111,191,0.08)" }}
-                >
-                  {s.n}
-                </span>
-                <h3 className="mt-4 text-[22px] font-bold text-pb-text">{s.title}</h3>
-                <p className="mt-3 text-[14px] leading-relaxed text-pb-text-muted">{s.desc}</p>
+            {/* 01 Upload */}
+            <div className="py-10" style={{ borderRight: "1px solid rgba(255,255,255,0.05)", paddingRight: "2.5rem" }}>
+              <span className="font-pb-mono block text-[80px] font-bold leading-none" style={{ color: "rgba(139,111,191,0.08)" }}>01</span>
+              <div className="mt-3 mb-4 flex items-center gap-2 opacity-60" style={{ border: "1px dashed rgba(139,111,191,0.35)", borderRadius: "6px", padding: "8px 12px", display: "inline-flex" }}>
+                <span className="font-pb-mono text-[10px]" style={{ color: "#8b6fbf" }}>episode_01.srt</span>
+                <span className="font-pb-mono text-[9px] text-pb-text-muted">· 48 cues</span>
               </div>
-            ))}
+              <h3 className="mt-2 text-[22px] font-bold text-pb-text">Upload</h3>
+              <p className="mt-3 text-[14px] leading-relaxed text-pb-text-muted">Drop an .srt or .vtt file. We parse every cue — timecode, speaker label, formatting mark.</p>
+            </div>
+
+            {/* 02 Pick a language */}
+            <div className="py-10" style={{ borderRight: "1px solid rgba(255,255,255,0.05)", paddingLeft: "2.5rem", paddingRight: "2.5rem" }}>
+              <span className="font-pb-mono block text-[80px] font-bold leading-none" style={{ color: "rgba(139,111,191,0.08)" }}>02</span>
+              <div className="mt-3 mb-4 flex flex-wrap gap-1.5 opacity-60">
+                {["French", "Spanish", "German", "Japanese"].map((l) => (
+                  <span key={l} className="font-pb-mono rounded-full border border-white/15 px-2 py-0.5 text-[9px] text-pb-text-muted">{l}</span>
+                ))}
+                <span className="font-pb-mono rounded-full border px-2 py-0.5 text-[9px]" style={{ borderColor: "rgba(139,111,191,0.3)", color: "#8b6fbf", background: "rgba(139,111,191,0.1)" }}>+36</span>
+              </div>
+              <h3 className="mt-2 text-[22px] font-bold text-pb-text">Pick a language</h3>
+              <p className="mt-3 text-[14px] leading-relaxed text-pb-text-muted">Choose from 40+ targets. We translate the text, leave every timestamp exactly as it was.</p>
+            </div>
+
+            {/* 03 Download */}
+            <div className="py-10" style={{ paddingLeft: "2.5rem" }}>
+              <span className="font-pb-mono block text-[80px] font-bold leading-none" style={{ color: "rgba(139,111,191,0.08)" }}>03</span>
+              <div className="mt-3 mb-4 opacity-60">
+                <div className="flex items-center gap-2">
+                  <span style={{ color: "#4ade80", fontSize: "14px" }}>✓</span>
+                  <span className="font-pb-mono text-[11px] text-pb-text">episode_01.fr.srt</span>
+                </div>
+                <div className="mt-1.5 font-pb-mono text-[9px] text-pb-text-muted">00:00:01,000 → 00:00:04,000 · intact</div>
+              </div>
+              <h3 className="mt-2 text-[22px] font-bold text-pb-text">Download</h3>
+              <p className="mt-3 text-[14px] leading-relaxed text-pb-text-muted">Same format, same cue count, same timecodes. Upload straight to YouTube, Vimeo or your editor.</p>
+            </div>
           </div>
         </div>
       </section>

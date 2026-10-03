@@ -57,67 +57,48 @@ export default function ImagesPage() {
           }}
         />
 
-        <div className="relative mx-auto max-w-7xl px-6 pt-36 pb-20 lg:px-10 lg:pt-44 lg:pb-32">
+        <div className="relative mx-auto max-w-[1100px] px-8 pt-36 pb-20 lg:px-14 lg:pt-44 lg:pb-32">
           {/* Label row */}
-          <div className="mb-8 flex items-center gap-4">
+          <div className="pb-enter-label mb-10 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <span className="inline-block h-2 w-2" style={{ background: ACCENT }} />
-              <span
-                className="font-pb-mono text-[11px] font-bold tracking-widest uppercase"
-                style={{ color: ACCENT }}
-              >
+              <span className="font-pb-mono text-[11px] font-bold tracking-widest uppercase" style={{ color: ACCENT }}>
                 Image Translator
               </span>
             </div>
-            <span
-              className="font-pb-mono rounded-full border px-3 py-0.5 text-[9px] font-bold tracking-widest uppercase"
-              style={{ borderColor: "rgba(74,158,138,0.3)", color: ACCENT, background: ACCENT_DIM }}
-            >
+            <span className="font-pb-mono rounded-full border px-3 py-0.5 text-[9px] font-bold tracking-widest uppercase"
+              style={{ borderColor: "rgba(74,158,138,0.3)", color: ACCENT, background: ACCENT_DIM }}>
               Coming soon
             </span>
           </div>
 
-          {/* Headline */}
-          <h1
-            className="font-pb-mono max-w-5xl"
-            style={{
-              fontSize: "clamp(3.5rem, 9vw, 8rem)",
-              lineHeight: 0.92,
-              letterSpacing: "-0.02em",
-              color: "rgba(240,236,227,0.22)",
-            }}
-          >
-            Text in images.
-            <br />
-            <span style={{ color: "#f0ece3" }}>Translated</span>
-            <br />
-            in place.
-          </h1>
-
-          <div className="mt-12 flex max-w-5xl flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-            <p className="max-w-lg text-[16px] leading-relaxed text-pb-text-secondary lg:text-[17px]">
-              Detect text embedded in any image — signs, labels, infographics, product
-              packaging — and render it back translated, matching the original style.
-            </p>
-            <div className="flex shrink-0 items-center gap-5">
-              <Link
-                href="/contact"
-                className="font-pb-mono rounded-full px-7 py-3 text-[12px] font-bold tracking-widest uppercase transition-all hover:brightness-110"
-                style={{ background: ACCENT, color: "#0a0c0b" }}
-              >
-                Join waitlist
-              </Link>
-              <span className="font-pb-mono text-[12px] tracking-widest text-pb-text-muted uppercase">
-                · No card required
-              </span>
+          <div className="grid grid-cols-1 items-end gap-12 lg:grid-cols-[55fr_45fr] lg:gap-16">
+            <h1
+              className="pb-enter pb-enter-delay-1 pb-stencil"
+              style={{ fontSize: "clamp(2.8rem, 4.5vw, 4.5rem)" }}
+            >
+              Text in images.<br />Translated<br />in place.
+            </h1>
+            <div className="pb-enter pb-enter-delay-2 flex flex-col gap-8">
+              <p className="text-[16px] leading-relaxed text-pb-text-secondary lg:text-[17px]">
+                Detect text embedded in any image — signs, labels, infographics, product
+                packaging — and render it back translated, matching the original style.
+              </p>
+              <div className="pb-enter pb-enter-delay-3 flex items-center gap-5">
+                <Link href="/contact" className="font-pb-mono rounded-full px-7 py-3 text-[12px] font-bold tracking-widest uppercase transition-all hover:brightness-110"
+                  style={{ background: ACCENT, color: "#0a0c0b" }}>
+                  Join waitlist
+                </Link>
+                <span className="font-pb-mono text-[12px] tracking-widest text-pb-text-muted uppercase">· No card required</span>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* ─── IMAGE MOCK ─── */}
-      <section className="bg-pb-bg" style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
-        <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
+      <section className="pb-glass-section bg-pb-bg" style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-28">
           <div className="overflow-hidden" style={{ border: "1px solid rgba(255,255,255,0.08)", borderRadius: "2px" }}>
             <div className="grid grid-cols-2">
               {/* Source image mock — a street sign in English */}
@@ -189,7 +170,7 @@ export default function ImagesPage() {
 
       {/* ─── SIGN BEFORE / AFTER ─── */}
       <section style={{ background: "#060d0c", borderTop: "1px solid rgba(74,158,138,0.08)" }}>
-        <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
+        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-28">
           <div className="flex flex-col items-start gap-10 lg:flex-row lg:items-center lg:gap-16">
             {/* Before */}
             <div className="flex-1">
@@ -256,8 +237,8 @@ export default function ImagesPage() {
       </section>
 
       {/* ─── PIPELINE DIAGRAM ─── */}
-      <section className="bg-pb-bg" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-        <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-32">
+      <section className="pb-glass-section bg-pb-bg" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-32">
           <div className="flex items-center gap-3 mb-6">
             <span className="inline-block h-2 w-2" style={{ background: ACCENT }} />
             <span className="font-pb-mono text-[11px] font-bold tracking-widest uppercase" style={{ color: ACCENT }}>
@@ -307,7 +288,7 @@ export default function ImagesPage() {
 
       {/* ─── HOW IT WORKS ─── */}
       <section style={{ background: "#070908", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-        <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-32">
+        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-32">
           <div className="flex items-center gap-3 mb-6">
             <span className="inline-block h-2 w-2" style={{ background: ACCENT }} />
             <span className="font-pb-mono text-[11px] font-bold tracking-widest uppercase" style={{ color: ACCENT }}>
@@ -346,8 +327,8 @@ export default function ImagesPage() {
       </section>
 
       {/* ─── FEATURES ─── numbered rows */}
-      <section className="bg-pb-bg" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-        <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-32">
+      <section className="pb-glass-section bg-pb-bg" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-32">
           <div className="flex flex-col justify-between gap-4 border-b pb-12 md:flex-row md:items-end" style={{ borderColor: "rgba(255,255,255,0.05)" }}>
             <div>
               <div className="flex items-center gap-3 mb-6">
@@ -390,7 +371,7 @@ export default function ImagesPage() {
 
       {/* ─── USE CASES ─── */}
       <section style={{ background: "#070908", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-        <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
+        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-28">
           <div className="flex items-center gap-3 mb-12">
             <span className="inline-block h-2 w-2" style={{ background: ACCENT }} />
             <span className="font-pb-mono text-[11px] font-bold tracking-widest uppercase" style={{ color: ACCENT }}>
@@ -421,8 +402,8 @@ export default function ImagesPage() {
       </section>
 
       {/* ─── FORMATS ─── */}
-      <section className="bg-pb-bg" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-        <div className="mx-auto max-w-7xl px-6 py-8 lg:px-10">
+      <section className="pb-glass-section bg-pb-bg" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+        <div className="mx-auto max-w-[1100px] px-8 py-8 lg:px-14">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-pb-mono mr-6 text-[10px] font-bold tracking-widest text-pb-text-muted uppercase">
               Formats
@@ -442,7 +423,7 @@ export default function ImagesPage() {
 
       {/* ─── CTA ─── */}
       <section style={{ background: ACCENT }}>
-        <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-8 px-6 py-20 md:flex-row md:items-center lg:px-10 lg:py-24">
+        <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-8 px-6 py-20 md:flex-row md:items-center lg:px-14 lg:py-24">
           <div>
             <h2
               className="font-pb-mono max-w-xl text-3xl font-bold md:text-4xl lg:text-5xl"

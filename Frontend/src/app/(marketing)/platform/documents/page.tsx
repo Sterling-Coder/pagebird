@@ -546,38 +546,43 @@ export default function DocumentsPage() {
           </div>
 
           <div className="grid grid-cols-1 gap-0 md:grid-cols-3">
-            {[
-              {
-                n: "01",
-                title: "Upload your file",
-                desc: "Drop an IDML or PDF. We read the full layout tree — text frames, linked graphics, master pages — not a flattened text dump.",
-              },
-              {
-                n: "02",
-                title: "Pick language + glossary",
-                desc: "Choose from 40+ targets. Import a TBX or CSV to lock terms that must never be translated — product names, legal phrases, brand terms.",
-              },
-              {
-                n: "03",
-                title: "Download the result",
-                desc: "Same file extension, same styles, same page count. Open it in InDesign or Acrobat and keep editing as if nothing happened.",
-              },
-            ].map((s, i) => (
-              <div
-                key={s.n}
-                className={`py-10 ${i < 2 ? "md:border-r md:pr-10" : ""} ${i > 0 ? "md:pl-10" : ""} border-b md:border-b-0`}
-                style={{ borderColor: "rgba(255,255,255,0.06)" }}
-              >
-                <span
-                  className="font-pb-mono block text-[72px] font-bold leading-none"
-                  style={{ color: "rgba(224,138,111,0.12)" }}
-                >
-                  {s.n}
-                </span>
-                <h3 className="mt-4 text-[20px] font-bold text-pb-text">{s.title}</h3>
-                <p className="mt-3 text-[14px] leading-relaxed text-pb-text-muted">{s.desc}</p>
+            {/* 01 Upload */}
+            <div className="border-b py-10 md:border-b-0 md:border-r md:pr-10" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+              <span className="font-pb-mono block text-[72px] font-bold leading-none" style={{ color: "rgba(224,138,111,0.12)" }}>01</span>
+              <div className="mt-3 mb-4 flex items-center gap-2 opacity-60" style={{ border: "1px dashed rgba(224,138,111,0.3)", borderRadius: "6px", padding: "8px 12px", display: "inline-flex" }}>
+                <span className="font-pb-mono text-[10px] text-pb-accent/80">annual_report.idml</span>
+                <span className="font-pb-mono text-[9px] text-pb-text-muted">· 8.1 MB</span>
               </div>
-            ))}
+              <h3 className="mt-2 text-[20px] font-bold text-pb-text">Upload your file</h3>
+              <p className="mt-3 text-[14px] leading-relaxed text-pb-text-muted">Drop an IDML or PDF. We read the full layout tree — text frames, linked graphics, master pages — not a flattened text dump.</p>
+            </div>
+
+            {/* 02 Pick language */}
+            <div className="border-b py-10 md:border-b-0 md:border-r md:px-10" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+              <span className="font-pb-mono block text-[72px] font-bold leading-none" style={{ color: "rgba(224,138,111,0.12)" }}>02</span>
+              <div className="mt-3 mb-4 flex flex-wrap gap-1.5 opacity-60">
+                {["Arabic", "Chinese", "French", "German", "Japanese"].map((l) => (
+                  <span key={l} className="font-pb-mono rounded-full border border-white/15 px-2 py-0.5 text-[9px] text-pb-text-muted">{l}</span>
+                ))}
+                <span className="font-pb-mono rounded-full border border-pb-accent/30 bg-pb-accent/10 px-2 py-0.5 text-[9px] text-pb-accent">+35</span>
+              </div>
+              <h3 className="mt-2 text-[20px] font-bold text-pb-text">Pick language + glossary</h3>
+              <p className="mt-3 text-[14px] leading-relaxed text-pb-text-muted">Choose from 40+ targets. Import a TBX or CSV to lock terms — product names, legal phrases, brand terms.</p>
+            </div>
+
+            {/* 03 Download */}
+            <div className="py-10 md:pl-10">
+              <span className="font-pb-mono block text-[72px] font-bold leading-none" style={{ color: "rgba(224,138,111,0.12)" }}>03</span>
+              <div className="mt-3 mb-4 flex items-center gap-3 opacity-60">
+                <span style={{ color: "#4ade80", fontSize: "16px" }}>✓</span>
+                <div>
+                  <div className="font-pb-mono text-[11px] text-pb-text">annual_report.ar.idml</div>
+                  <div className="font-pb-mono text-[9px] text-pb-text-muted">Arabic · same layout</div>
+                </div>
+              </div>
+              <h3 className="mt-2 text-[20px] font-bold text-pb-text">Download the result</h3>
+              <p className="mt-3 text-[14px] leading-relaxed text-pb-text-muted">Same file extension, same styles, same page count. Open it in InDesign or Acrobat and keep editing.</p>
+            </div>
           </div>
         </div>
       </section>

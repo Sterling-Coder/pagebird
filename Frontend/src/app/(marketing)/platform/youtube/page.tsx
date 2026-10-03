@@ -50,68 +50,50 @@ export default function YouTubePage() {
           }}
         />
 
-        <div className="relative mx-auto max-w-7xl px-6 pt-36 pb-20 lg:px-10 lg:pt-44 lg:pb-32">
+        <div className="relative mx-auto max-w-[1100px] px-8 pt-36 pb-20 lg:px-14 lg:pt-44 lg:pb-32">
           {/* Badge row */}
-          <div className="mb-8 flex items-center gap-4">
+          <div className="pb-enter-label mb-10 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <span className="inline-block h-2 w-2" style={{ background: "#c94040" }} />
-              <span className="font-pb-mono text-[11px] font-bold tracking-widest text-pb-accent uppercase">
+              <span className="font-pb-mono text-[11px] font-bold tracking-widest uppercase" style={{ color: "#c94040" }}>
                 YouTube Subtitle Translator
               </span>
             </div>
-            <span
-              className="font-pb-mono rounded-full border px-3 py-1 text-[9px] font-bold tracking-widest uppercase"
-              style={{ borderColor: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.4)" }}
-            >
+            <span className="font-pb-mono rounded-full border px-3 py-1 text-[9px] font-bold tracking-widest uppercase"
+              style={{ borderColor: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.4)" }}>
               Coming soon
             </span>
           </div>
 
-          {/* Headline */}
-          <h1
-            className="pb-enter font-pb-mono max-w-5xl"
-            style={{
-              fontSize: "clamp(3.5rem, 10vw, 9rem)",
-              lineHeight: 0.9,
-              letterSpacing: "-0.02em",
-              color: "rgba(240,236,227,0.22)",
-              fontWeight: 700,
-            }}
-          >
-            YouTube
-            <br />
-            <span style={{ color: "#f0ece3" }}>captions.</span>
-            <br />
-            Any language.
-          </h1>
-
-          <div className="pb-enter pb-enter-delay-2 mt-12 flex max-w-5xl flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-            <p className="max-w-lg text-[16px] leading-relaxed text-pb-text-secondary lg:text-[17px]">
-              Paste a YouTube link. We pull the captions, translate them into 40+
-              languages, and hand back a ready-to-upload SRT file. No account needed.
-            </p>
-            <div className="flex shrink-0 items-center gap-5">
-              <Link
-                href="/contact"
-                className="font-pb-mono rounded-full px-7 py-3 text-[12px] font-bold tracking-widest text-pb-bg uppercase transition-all hover:brightness-110"
-                style={{ background: "#c94040" }}
-              >
-                Join waitlist
-              </Link>
-              <Link
-                href="/platform"
-                className="font-pb-mono text-[12px] tracking-widest text-pb-text-secondary uppercase transition-colors hover:text-pb-text"
-              >
-                All products →
-              </Link>
+          <div className="grid grid-cols-1 items-end gap-12 lg:grid-cols-[55fr_45fr] lg:gap-16">
+            <h1
+              className="pb-enter pb-enter-delay-1 pb-stencil"
+              style={{ fontSize: "clamp(2.8rem, 4.5vw, 4.5rem)" }}
+            >
+              YouTube<br />captions.<br />Any language.
+            </h1>
+            <div className="pb-enter pb-enter-delay-2 flex flex-col gap-8">
+              <p className="text-[16px] leading-relaxed text-pb-text-secondary lg:text-[17px]">
+                Paste a YouTube link. We pull the captions, translate them into 40+
+                languages, and hand back a ready-to-upload SRT file. No account needed.
+              </p>
+              <div className="pb-enter pb-enter-delay-3 flex items-center gap-5">
+                <Link href="/contact" className="font-pb-mono rounded-full px-7 py-3 text-[12px] font-bold tracking-widest text-pb-bg uppercase transition-all hover:brightness-110"
+                  style={{ background: "#c94040" }}>
+                  Join waitlist
+                </Link>
+                <Link href="/platform" className="font-pb-mono text-[12px] tracking-widest text-pb-text-secondary uppercase transition-colors hover:text-pb-text">
+                  All products →
+                </Link>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* ─── URL MOCK ─── */}
-      <section style={{ background: "#0c0a09", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-        <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
+      <section className="pb-glass-section" style={{ background: "#0c0a09", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-28">
           <div className="mb-10">
             <span className="font-pb-mono text-[10px] font-bold tracking-widest text-pb-text-muted uppercase">
               How it looks
@@ -226,8 +208,8 @@ and desert you`}
       </section>
 
       {/* ─── PIPELINE DIAGRAM ─── */}
-      <section style={{ background: "#100808", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-        <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
+      <section className="pb-glass-section" style={{ background: "#100808", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-28">
           <div className="flex items-center gap-3 mb-6">
             <span className="inline-block h-2 w-2" style={{ background: "#c94040" }} />
             <span className="font-pb-mono text-[11px] font-bold tracking-widest uppercase" style={{ color: "#c94040" }}>
@@ -372,7 +354,7 @@ and desert you`}
 
       {/* ─── HOW IT WORKS ─── */}
       <section className="bg-pb-bg" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-        <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
+        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-28">
           <div className="flex items-center gap-3 mb-6">
             <span className="inline-block h-2 w-2" style={{ background: "#c94040" }} />
             <span className="font-pb-mono text-[11px] font-bold tracking-widest uppercase" style={{ color: "#c94040" }}>
@@ -411,8 +393,8 @@ and desert you`}
       </section>
 
       {/* ─── FEATURES — horizontal rows ─── */}
-      <section style={{ background: "#0c0a09", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-        <div className="mx-auto max-w-7xl px-6 lg:px-10">
+      <section className="pb-glass-section" style={{ background: "#0c0a09", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+        <div className="mx-auto max-w-[1100px] px-8 lg:px-14">
           <div className="border-b border-white/[0.04] py-16">
             <h2
               className="font-pb-mono text-4xl font-bold text-pb-text md:text-5xl"
@@ -440,7 +422,7 @@ and desert you`}
 
       {/* ─── CREATOR STAT SECTION ─── */}
       <section className="bg-pb-bg" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-        <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-32">
+        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-32">
           <div className="grid grid-cols-1 gap-16 md:grid-cols-2">
             <div>
               <p
@@ -473,8 +455,8 @@ and desert you`}
       </section>
 
       {/* ─── USE CASES ─── */}
-      <section style={{ background: "#0c0a09", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-        <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
+      <section className="pb-glass-section" style={{ background: "#0c0a09", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-28">
           <div className="flex items-center gap-3 mb-12">
             <span className="inline-block h-2 w-2" style={{ background: "#c94040" }} />
             <span className="font-pb-mono text-[11px] font-bold tracking-widest uppercase" style={{ color: "#c94040" }}>
@@ -496,8 +478,8 @@ and desert you`}
       </section>
 
       {/* ─── CTA ─── */}
-      <section style={{ background: "#c94040" }}>
-        <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-8 px-6 py-20 md:flex-row md:items-center lg:px-10 lg:py-24">
+      <section className="pb-glass-section" style={{ background: "#c94040" }}>
+        <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-8 px-6 py-20 md:flex-row md:items-center lg:px-14 lg:py-24">
           <h2
             className="font-pb-mono max-w-2xl text-3xl font-bold text-white md:text-5xl"
             style={{ letterSpacing: "-0.02em" }}

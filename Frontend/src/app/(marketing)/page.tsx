@@ -121,43 +121,60 @@ export default function Home() {
             </div>
           </div>
 
-          {/* ── Before / After mock — full width ── */}
-          <div className="pb-enter pb-enter-delay-4 mt-16 overflow-hidden border border-white/10" style={{ borderRadius: "2px" }}>
+          {/* ── Before / After mock — full width, bottom-to-top fade ── */}
+          <div className="pb-enter pb-enter-delay-4 relative mt-16 overflow-hidden border border-white/10" style={{ borderRadius: "2px" }}>
             <div className="grid grid-cols-2">
               {/* Source */}
-              <div className="border-r border-white/10 bg-[#0e0d0b] p-8 lg:p-12">
-                <div className="flex items-center justify-between mb-8">
+              <div className="border-r border-white/10 bg-[#0e0d0b] p-8 lg:p-14">
+                <div className="flex items-center justify-between mb-10">
                   <span className="font-pb-mono text-[11px] tracking-widest text-pb-text-muted uppercase">Source · English</span>
                   <span className="font-pb-mono text-[10px] text-pb-text-muted/50">.idml</span>
                 </div>
-                <div className="space-y-3">
+                <div className="space-y-4">
                   <div className="h-[3px] w-[88%] bg-white/10" />
                   <div className="h-[3px] w-[96%] bg-white/10" />
                   <div className="h-[3px] w-[70%] bg-white/10" />
-                  <div className="mt-6 h-20 w-full bg-white/5" />
+                  <div className="mt-6 h-28 w-full bg-white/5" />
                   <div className="mt-6 h-[3px] w-[92%] bg-white/10" />
                   <div className="h-[3px] w-[64%] bg-white/10" />
                   <div className="h-[3px] w-[80%] bg-white/10" />
+                  <div className="h-[3px] w-[55%] bg-white/10" />
+                  <div className="mt-4 h-[3px] w-[75%] bg-white/10" />
+                  <div className="h-[3px] w-[90%] bg-white/10" />
                 </div>
               </div>
               {/* Output */}
-              <div className="bg-[#f5f0e6] p-8 lg:p-12">
-                <div className="flex items-center justify-between mb-8">
+              <div className="bg-[#f5f0e6] p-8 lg:p-14">
+                <div className="flex items-center justify-between mb-10">
                   <span className="font-pb-mono text-[11px] tracking-widest text-[#a09a88] uppercase">Translated · Chinese</span>
                   <span className="font-pb-mono text-[10px] text-[#a09a88]/50">.zh.idml</span>
                 </div>
-                <div className="space-y-3">
+                <div className="space-y-4">
                   <div className="h-[3px] w-[76%] bg-[#1a1914]/15" />
                   <div className="h-[3px] w-[88%] bg-[#1a1914]/15" />
                   <div className="h-[3px] w-[58%] bg-[#1a1914]/15" />
-                  <div className="mt-6 h-20 w-full bg-[#1a1914]/8" />
+                  <div className="mt-6 h-28 w-full bg-[#1a1914]/8" />
                   <div className="mt-6 h-[3px] w-[82%] bg-[#1a1914]/15" />
                   <div className="h-[3px] w-[50%] bg-[#1a1914]/15" />
                   <div className="h-[3px] w-[72%] bg-[#1a1914]/15" />
+                  <div className="h-[3px] w-[45%] bg-[#1a1914]/15" />
+                  <div className="mt-4 h-[3px] w-[68%] bg-[#1a1914]/15" />
+                  <div className="h-[3px] w-[85%] bg-[#1a1914]/15" />
                 </div>
               </div>
             </div>
-            <div className="border-t border-white/10 bg-pb-bg px-8 py-3 lg:px-12">
+
+            {/* Bottom-to-top fade overlay */}
+            <div
+              className="pointer-events-none absolute bottom-0 left-0 right-0"
+              style={{
+                height: "55%",
+                background: "linear-gradient(to top, #0c0810 0%, #0c0810 15%, rgba(12,8,16,0.8) 50%, transparent 100%)",
+              }}
+            />
+
+            {/* Label pinned at bottom over fade */}
+            <div className="relative z-10 px-8 pb-6 pt-0 lg:px-14">
               <span className="font-pb-mono text-[10px] tracking-widest text-pb-text-muted uppercase">
                 Identical layout · same page count · same styles
               </span>
@@ -379,19 +396,46 @@ export default function Home() {
           </h2>
 
           <div className="mt-20 grid grid-cols-1 gap-0 md:grid-cols-3">
-            {[
-              { n: "01", title: "Upload", desc: "Drop an IDML, PDF, or subtitle file. We read the layout tree — not a flattened text dump." },
-              { n: "02", title: "Pick a language", desc: "Choose from 40+ targets. Attach a glossary to lock terms that must never be translated." },
-              { n: "03", title: "Download", desc: "Same extension, same styles, same page count. Open it and keep editing as if nothing happened." },
-            ].map((s, i) => (
-              <div key={s.n} className={`border-white/[0.06] py-10 ${i < 2 ? "md:border-r md:pr-10" : ""} ${i > 0 ? "md:pl-10" : ""} ${i < 2 ? "border-b md:border-b-0" : ""}`}>
-                <span className="font-pb-mono block text-[80px] font-bold leading-none" style={{ color: "rgba(240,236,227,0.06)" }}>
-                  {s.n}
-                </span>
-                <h3 className="mt-4 text-[22px] font-bold text-pb-text">{s.title}</h3>
-                <p className="mt-3 text-[14px] leading-relaxed text-pb-text-muted">{s.desc}</p>
+            {/* Step 01 — Upload */}
+            <div className="border-white/[0.06] py-10 border-b md:border-b-0 md:border-r md:pr-10">
+              <span className="font-pb-mono block text-[80px] font-bold leading-none" style={{ color: "rgba(240,236,227,0.06)" }}>01</span>
+              {/* Upload zone visual */}
+              <div className="mt-3 mb-4 opacity-60" style={{ border: "1px dashed rgba(224,138,111,0.35)", borderRadius: "6px", padding: "10px 14px" }}>
+                <span className="font-pb-mono text-[11px] text-pb-accent/70">product_magazine.idml</span>
+                <div className="mt-1 font-pb-mono text-[9px] text-pb-text-muted">4.2 MB — ready to translate</div>
               </div>
-            ))}
+              <h3 className="text-[22px] font-bold text-pb-text">Upload</h3>
+              <p className="mt-3 text-[14px] leading-relaxed text-pb-text-muted">Drop an IDML, PDF, or subtitle file. We read the layout tree — not a flattened text dump.</p>
+            </div>
+
+            {/* Step 02 — Pick a language */}
+            <div className="border-white/[0.06] py-10 border-b md:border-b-0 md:border-r md:px-10">
+              <span className="font-pb-mono block text-[80px] font-bold leading-none" style={{ color: "rgba(240,236,227,0.06)" }}>02</span>
+              {/* Language pills */}
+              <div className="mt-3 mb-4 flex flex-wrap gap-1.5 opacity-60">
+                {["Chinese", "Arabic", "French", "German", "Japanese", "Spanish"].map((l) => (
+                  <span key={l} className="font-pb-mono rounded-full border border-white/15 px-2.5 py-0.5 text-[9px] text-pb-text-muted">{l}</span>
+                ))}
+                <span className="font-pb-mono rounded-full border border-pb-accent/30 bg-pb-accent/10 px-2.5 py-0.5 text-[9px] text-pb-accent">+34 more</span>
+              </div>
+              <h3 className="text-[22px] font-bold text-pb-text">Pick a language</h3>
+              <p className="mt-3 text-[14px] leading-relaxed text-pb-text-muted">Choose from 40+ targets. Attach a glossary to lock terms that must never be translated.</p>
+            </div>
+
+            {/* Step 03 — Download */}
+            <div className="border-white/[0.06] py-10 md:pl-10">
+              <span className="font-pb-mono block text-[80px] font-bold leading-none" style={{ color: "rgba(240,236,227,0.06)" }}>03</span>
+              {/* Download ready visual */}
+              <div className="mt-3 mb-4 flex items-center gap-3 opacity-60">
+                <span style={{ color: "#4ade80", fontSize: "18px" }}>✓</span>
+                <div>
+                  <div className="font-pb-mono text-[11px] text-pb-text">product_magazine.zh.idml</div>
+                  <div className="font-pb-mono text-[9px] text-pb-text-muted">Translated · ready to open</div>
+                </div>
+              </div>
+              <h3 className="text-[22px] font-bold text-pb-text">Download</h3>
+              <p className="mt-3 text-[14px] leading-relaxed text-pb-text-muted">Same extension, same styles, same page count. Open it and keep editing as if nothing happened.</p>
+            </div>
           </div>
         </div>
       </section>

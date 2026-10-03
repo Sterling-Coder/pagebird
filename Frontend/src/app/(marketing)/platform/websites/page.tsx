@@ -97,60 +97,41 @@ export default function WebsitesPage() {
           }}
         />
 
-        <div className="relative mx-auto max-w-7xl px-6 pt-36 pb-20 lg:px-10 lg:pt-44 lg:pb-32">
+        <div className="relative mx-auto max-w-[1100px] px-8 pt-36 pb-20 lg:px-14 lg:pt-44 lg:pb-32">
           {/* Label row */}
-          <div className="mb-8 flex items-center gap-4">
+          <div className="pb-enter-label mb-10 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <span className="inline-block h-2 w-2" style={{ background: accent }} />
-              <span
-                className="font-pb-mono text-[11px] font-bold tracking-widest uppercase"
-                style={{ color: accent }}
-              >
+              <span className="font-pb-mono text-[11px] font-bold tracking-widest uppercase" style={{ color: accent }}>
                 Website Translator
               </span>
             </div>
-            <span
-              className="font-pb-mono rounded-full border px-3 py-1 text-[9px] font-bold tracking-widest text-pb-text-muted uppercase"
-              style={{ borderColor: "rgba(255,255,255,0.12)" }}
-            >
+            <span className="font-pb-mono rounded-full border px-3 py-1 text-[9px] font-bold tracking-widest text-pb-text-muted uppercase"
+              style={{ borderColor: "rgba(255,255,255,0.12)" }}>
               Coming soon
             </span>
           </div>
 
-          {/* Headline */}
-          <h1
-            className="font-pb-mono max-w-5xl"
-            style={{
-              fontSize: "clamp(3.5rem, 9vw, 8rem)",
-              lineHeight: 0.92,
-              letterSpacing: "-0.02em",
-              color: "rgba(240,236,227,0.22)",
-            }}
-          >
-            Translate
-            <br />
-            <span style={{ color: "#f0ece3" }}>your entire</span>
-            <br />
-            website.
-          </h1>
-
-          <div className="mt-12 flex max-w-5xl flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-            <p className="max-w-lg text-[16px] leading-relaxed text-pb-text-secondary lg:text-[17px]">
-              Point Pagebirdy at any URL. Every page, navigation link, footer and
-              dynamic content comes back translated — without touching your CSS or
-              breaking your layout.
-            </p>
-            <div className="flex shrink-0 items-center gap-5">
-              <Link
-                href="/contact"
-                className="font-pb-mono rounded-full px-7 py-3 text-[12px] font-bold tracking-widest text-pb-bg uppercase transition-all hover:brightness-110"
-                style={{ background: accent }}
-              >
-                Join the waitlist
-              </Link>
-              <span className="font-pb-mono text-[12px] tracking-widest text-pb-text-muted uppercase">
-                Coming 2025 →
-              </span>
+          <div className="grid grid-cols-1 items-end gap-12 lg:grid-cols-[55fr_45fr] lg:gap-16">
+            <h1
+              className="pb-enter pb-enter-delay-1 pb-stencil"
+              style={{ fontSize: "clamp(2.8rem, 4.5vw, 4.5rem)" }}
+            >
+              Translate<br />your entire<br />website.
+            </h1>
+            <div className="pb-enter pb-enter-delay-2 flex flex-col gap-8">
+              <p className="text-[16px] leading-relaxed text-pb-text-secondary lg:text-[17px]">
+                Point Pagebirdy at any URL. Every page, navigation link, footer and
+                dynamic content comes back translated — without touching your CSS or
+                breaking your layout.
+              </p>
+              <div className="pb-enter pb-enter-delay-3 flex items-center gap-5">
+                <Link href="/contact" className="font-pb-mono rounded-full px-7 py-3 text-[12px] font-bold tracking-widest text-pb-bg uppercase transition-all hover:brightness-110"
+                  style={{ background: accent }}>
+                  Join the waitlist
+                </Link>
+                <span className="font-pb-mono text-[12px] tracking-widest text-pb-text-muted uppercase">Coming 2025 →</span>
+              </div>
             </div>
           </div>
 
@@ -231,8 +212,8 @@ export default function WebsitesPage() {
       </section>
 
       {/* ─── PIPELINE DIAGRAM ─── */}
-      <section style={{ background: "#080f08" }}>
-        <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-32">
+      <section className="pb-glass-section" style={{ background: "#080f08" }}>
+        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-32">
           <div className="flex items-center gap-3 mb-6">
             <span className="inline-block h-2 w-2" style={{ background: accent }} />
             <span className="font-pb-mono text-[11px] font-bold tracking-widest uppercase" style={{ color: accent }}>
@@ -355,8 +336,8 @@ export default function WebsitesPage() {
       </section>
 
       {/* ─── HOW IT WORKS ─── */}
-      <section style={{ background: "#0a0c0a" }}>
-        <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-32">
+      <section className="pb-glass-section" style={{ background: "#0a0c0a" }}>
+        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-32">
           <div className="flex items-center gap-3 mb-6">
             <span className="inline-block h-2 w-2" style={{ background: accent }} />
             <span className="font-pb-mono text-[11px] font-bold tracking-widest uppercase" style={{ color: accent }}>
@@ -392,8 +373,8 @@ export default function WebsitesPage() {
       </section>
 
       {/* ─── FEATURES ─── */}
-      <section style={{ background: "#0c0f0c" }}>
-        <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-32">
+      <section className="pb-glass-section" style={{ background: "#0c0f0c" }}>
+        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-32">
           <div className="flex flex-col justify-between gap-4 pb-12 md:flex-row md:items-end" style={{ borderBottom: "1px solid rgba(90,158,90,0.1)" }}>
             <div>
               <div className="flex items-center gap-3 mb-6">
@@ -436,7 +417,7 @@ export default function WebsitesPage() {
 
       {/* ─── BIG NUMBER ─── */}
       <section style={{ background: "#0a0c0a", borderTop: "1px solid rgba(90,158,90,0.08)" }}>
-        <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-32">
+        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-32">
           <div className="flex flex-col items-start gap-8 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p
@@ -476,7 +457,7 @@ export default function WebsitesPage() {
 
       {/* ─── CTA ─── */}
       <section style={{ background: accent }}>
-        <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-8 px-6 py-20 md:flex-row md:items-center lg:px-10 lg:py-24">
+        <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-8 px-6 py-20 md:flex-row md:items-center lg:px-14 lg:py-24">
           <h2
             className="font-pb-mono max-w-2xl text-3xl font-bold md:text-5xl"
             style={{ letterSpacing: "-0.02em", color: "#050f05" }}
