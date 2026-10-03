@@ -230,6 +230,130 @@ export default function WebsitesPage() {
         </div>
       </section>
 
+      {/* ─── PIPELINE DIAGRAM ─── */}
+      <section style={{ background: "#080f08" }}>
+        <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-32">
+          <div className="flex items-center gap-3 mb-6">
+            <span className="inline-block h-2 w-2" style={{ background: accent }} />
+            <span className="font-pb-mono text-[11px] font-bold tracking-widest uppercase" style={{ color: accent }}>
+              The Pipeline
+            </span>
+          </div>
+          <h2
+            className="font-pb-mono text-4xl font-bold text-pb-text md:text-5xl"
+            style={{ letterSpacing: "-0.02em" }}
+          >
+            Six steps. Entire site.
+          </h2>
+
+          {/* Pipeline steps — horizontal flow */}
+          <div className="mt-16 relative">
+            {/* Connecting line */}
+            <div
+              className="absolute top-8 left-0 right-0 hidden h-px md:block"
+              style={{ background: `linear-gradient(90deg, transparent, ${accent}40, ${accent}40, transparent)` }}
+            />
+            <div className="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-6">
+              {[
+                { n: "01", title: "Point", desc: "Enter your site URL" },
+                { n: "02", title: "Crawl", desc: "Every page discovered" },
+                { n: "03", title: "Extract", desc: "Text separated from code" },
+                { n: "04", title: "Translate", desc: "Content in 40+ languages" },
+                { n: "05", title: "Rebuild", desc: "HTML reconstructed" },
+                { n: "06", title: "Deploy", desc: "Live at /[lang]/ paths" },
+              ].map((step, i) => (
+                <div key={step.n} className="relative flex flex-col items-start gap-3">
+                  {/* Node circle */}
+                  <div
+                    className="relative z-10 flex h-16 w-16 items-center justify-center"
+                    style={{
+                      border: `1px solid ${accent}50`,
+                      background: `rgba(90,158,90,${0.04 + i * 0.03})`,
+                    }}
+                  >
+                    <span className="font-pb-mono text-[11px] font-bold tracking-widest" style={{ color: `${accent}cc` }}>
+                      {step.n}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-[15px] font-bold text-pb-text">{step.title}</p>
+                    <p className="mt-1 text-[12px] leading-snug text-pb-text-muted">{step.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* URL structure visual */}
+          <div
+            className="mt-20 overflow-hidden"
+            style={{ border: `1px solid ${accent}20`, background: "rgba(10,20,10,0.6)" }}
+          >
+            <div className="border-b px-8 py-4" style={{ borderColor: `${accent}15` }}>
+              <h3
+                className="font-pb-mono text-[18px] font-bold text-pb-text md:text-[22px]"
+                style={{ letterSpacing: "-0.02em" }}
+              >
+                SEO-friendly paths. Automatically.
+              </h3>
+            </div>
+            <div className="grid grid-cols-1 gap-0 md:grid-cols-[1fr_auto_1fr]">
+              {/* Original URLs */}
+              <div className="p-8">
+                <p className="font-pb-mono mb-5 text-[10px] font-bold tracking-widest text-pb-text-muted uppercase">Original</p>
+                <div className="space-y-3">
+                  {["yoursite.com/about", "yoursite.com/pricing", "yoursite.com/contact"].map((url) => (
+                    <div
+                      key={url}
+                      className="font-pb-mono rounded px-4 py-2.5 text-[13px] text-pb-text-secondary"
+                      style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.06)" }}
+                    >
+                      {url}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Arrow column */}
+              <div className="hidden flex-col items-center justify-center gap-8 px-4 md:flex">
+                {["fr", "de", "es"].map((lang) => (
+                  <div key={lang} className="flex items-center gap-2">
+                    <div className="h-px w-6" style={{ background: `${accent}60` }} />
+                    <span className="font-pb-mono text-[10px] font-bold tracking-widest uppercase" style={{ color: accent }}>
+                      →
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Translated URLs */}
+              <div className="border-t p-8 md:border-l md:border-t-0" style={{ borderColor: `${accent}15` }}>
+                <p className="font-pb-mono mb-5 text-[10px] font-bold tracking-widest uppercase" style={{ color: accent }}>
+                  Translated
+                </p>
+                <div className="space-y-3">
+                  {[
+                    { lang: "fr", path: "about" },
+                    { lang: "de", path: "pricing" },
+                    { lang: "es", path: "contact" },
+                  ].map(({ lang, path }) => (
+                    <div
+                      key={`${lang}-${path}`}
+                      className="font-pb-mono rounded px-4 py-2.5 text-[13px]"
+                      style={{ background: `${accent}08`, border: `1px solid ${accent}20` }}
+                    >
+                      <span className="text-pb-text-secondary">yoursite.com/</span>
+                      <span style={{ color: accent }}>{lang}</span>
+                      <span className="text-pb-text-secondary">/{path}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ─── HOW IT WORKS ─── */}
       <section style={{ background: "#0a0c0a" }}>
         <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-32">

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Fraunces, Space_Mono, Inter } from "next/font/google";
+import { Fraunces, Space_Mono, Inter, Share_Tech_Mono } from "next/font/google";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { DemoVideoButton } from "@/components/DemoVideoButton";
@@ -23,6 +23,12 @@ const spaceMono = Space_Mono({
   weight: ["400", "700"],
 });
 
+const shareTechMono = Share_Tech_Mono({
+  variable: "--font-share-tech-mono",
+  subsets: ["latin"],
+  weight: ["400"],
+});
+
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
@@ -32,11 +38,11 @@ const inter = Inter({
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
   return (
     <div
-      className={`${fraunces.variable} ${spaceMono.variable} ${inter.variable} relative flex min-h-screen shrink-0 flex-col bg-pb-bg text-pb-text antialiased`}
+      className={`${fraunces.variable} ${spaceMono.variable} ${shareTechMono.variable} ${inter.variable} relative flex min-h-screen shrink-0 flex-col bg-pb-bg text-pb-text antialiased`}
     >
       {/* Full-page vertical grid lines — fixed overlay like giga.ai */}
       <div className="pointer-events-none fixed inset-0 z-10" aria-hidden="true">
-        <div className="mx-auto grid h-full max-w-7xl grid-cols-4 px-6 lg:grid-cols-8 lg:px-10">
+        <div className="mx-auto grid h-full max-w-[1100px] grid-cols-4 px-8 lg:grid-cols-8 lg:px-14">
           {Array.from({ length: 8 }).map((_, i) => (
             <div
               key={i}

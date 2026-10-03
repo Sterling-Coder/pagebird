@@ -189,6 +189,108 @@ export default function SubtitlesPage() {
         </div>
       </section>
 
+      {/* ─── PIPELINE DIAGRAM ─── */}
+      <section style={{ background: "#0d0b14" }}>
+        <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-32">
+          <div className="mb-6 flex items-center gap-2">
+            <span className="inline-block h-2 w-2" style={{ background: "#8b6fbf" }} />
+            <span className="font-pb-mono text-[11px] font-bold tracking-widest uppercase" style={{ color: "#8b6fbf" }}>
+              The Pipeline
+            </span>
+          </div>
+          <h2
+            className="font-pb-mono mb-16 text-4xl font-bold text-pb-text md:text-5xl"
+            style={{ letterSpacing: "-0.02em" }}
+          >
+            Six steps.
+            <br />
+            Zero re-timing.
+          </h2>
+
+          {/* Horizontal flow — scrollable on mobile */}
+          <div className="overflow-x-auto pb-4">
+            <div className="flex min-w-max items-stretch gap-0">
+              {[
+                { n: "01", title: "Upload", desc: ".srt or .vtt file in", color: "#8b6fbf" },
+                { n: "02", title: "Parse", desc: "Timecodes and cue text separated", color: "#7a5cb0" },
+                { n: "03", title: "Extract", desc: "Text isolated, tags preserved", color: "#694da0" },
+                { n: "04", title: "Translate", desc: "Cue text translated (40+ languages)", color: "#5a3e90" },
+                { n: "05", title: "Rebuild", desc: "Timecodes reattached exactly", color: "#4b2f80" },
+                { n: "06", title: "Export", desc: "Ready-to-upload .srt back", color: "#8b6fbf" },
+              ].map((stage, i) => (
+                <div key={stage.n} className="flex items-center">
+                  <div
+                    className="flex flex-col gap-3 p-6"
+                    style={{
+                      minWidth: "160px",
+                      background: "rgba(255,255,255,0.02)",
+                      borderLeft: `3px solid ${stage.color}`,
+                      border: "1px solid rgba(255,255,255,0.06)",
+                      borderLeftWidth: "3px",
+                      borderLeftColor: stage.color,
+                    }}
+                  >
+                    <span className="font-pb-mono text-[11px]" style={{ color: "rgba(139,111,191,0.5)" }}>{stage.n}</span>
+                    <span className="text-[15px] font-bold text-pb-text">{stage.title}</span>
+                    <span className="text-[12px] leading-snug text-pb-text-muted">{stage.desc}</span>
+                  </div>
+                  {i < 5 && (
+                    <span className="font-pb-mono mx-3 shrink-0 text-[18px]" style={{ color: "rgba(139,111,191,0.35)" }}>→</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Timecode preservation visual */}
+          <div className="mt-20">
+            <div className="mb-8 flex items-center gap-3">
+              <h3 className="font-pb-mono text-[22px] font-bold text-pb-text">Timecodes: untouched.</h3>
+              <span className="font-pb-mono text-[11px] tracking-widest text-pb-text-muted uppercase">
+                Before → After
+              </span>
+            </div>
+            <div className="grid grid-cols-1 gap-0 overflow-hidden md:grid-cols-2" style={{ border: "1px solid rgba(139,111,191,0.15)", borderRadius: "2px" }}>
+              {/* English source */}
+              <div className="p-8" style={{ background: "#0a090e", borderRight: "1px solid rgba(139,111,191,0.1)" }}>
+                <span className="font-pb-mono mb-5 block text-[10px] tracking-widest text-pb-text-muted uppercase">Source · English</span>
+                <div className="space-y-5">
+                  {[
+                    { tc: "00:00:01,000 --> 00:00:04,200", text: "[Host] Welcome back to the channel." },
+                    { tc: "00:00:04,800 --> 00:00:08,400", text: "First: why layout preservation matters." },
+                    { tc: "00:00:09,000 --> 00:00:12,600", text: "<i>Every cue — exactly on time.</i>" },
+                  ].map((cue, i) => (
+                    <div key={i}>
+                      <span className="font-pb-mono block text-[12px]" style={{ color: "#8b6fbf" }}>{cue.tc}</span>
+                      <span className="font-pb-mono block mt-1 text-[13px]" style={{ color: "rgba(240,236,227,0.6)" }}>{cue.text}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {/* French translated */}
+              <div className="p-8" style={{ background: "#0d0b14" }}>
+                <span className="font-pb-mono mb-5 block text-[10px] tracking-widest text-pb-text-muted uppercase">Translated · French</span>
+                <div className="space-y-5">
+                  {[
+                    { tc: "00:00:01,000 --> 00:00:04,200", text: "[Hôte] Bienvenue sur la chaîne." },
+                    { tc: "00:00:04,800 --> 00:00:08,400", text: "D'abord : pourquoi la mise en page compte." },
+                    { tc: "00:00:09,000 --> 00:00:12,600", text: "<i>Chaque sous-titre — exactement à l'heure.</i>" },
+                  ].map((cue, i) => (
+                    <div key={i}>
+                      <span className="font-pb-mono block text-[12px]" style={{ color: "#4ade80" }}>{cue.tc}</span>
+                      <span className="font-pb-mono block mt-1 text-[13px]" style={{ color: "rgba(240,236,227,0.85)" }}>{cue.text}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <p className="font-pb-mono mt-3 text-[11px] tracking-widest text-pb-text-muted uppercase">
+              Purple = source timecodes · Green = same timecodes after translation · Text changes, timing never does.
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* ─── HOW IT WORKS ─── */}
       <section style={{ background: "#0a090f" }}>
         <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-32">

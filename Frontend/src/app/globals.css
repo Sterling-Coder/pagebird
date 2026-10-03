@@ -93,6 +93,7 @@ body {
   --color-pb-glass-border: rgba(255, 255, 255, 0.08);
   --font-pb-display: var(--font-fraunces);
   --font-pb-mono: var(--font-space-mono);
+  --font-pb-headline: var(--font-share-tech-mono);
   --font-pb-sans: var(--font-inter);
   /* Legacy aliases so old components still compile during migration */
   --color-pb-paper: #131210;

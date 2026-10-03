@@ -69,7 +69,7 @@ export default function DocumentsPage() {
         className="relative min-h-screen overflow-hidden"
         style={{
           background:
-            "radial-gradient(ellipse 110% 75% at 68% 28%, #c85c14 0%, #952810 18%, #621018 38%, #2e0a14 58%, #0f0c0a 80%)",
+            "linear-gradient(180deg, #c8a820 0%, #c86018 8%, #b03010 18%, #8a1c10 32%, #5a1018 50%, #2e0a20 68%, #180818 82%, #0c0810 100%)",
         }}
       >
         {/* Vertical scan lines */}
@@ -250,6 +250,178 @@ export default function DocumentsPage() {
             >
               Identical layout · same page count · same styles · same master pages
             </span>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── PIPELINE DIAGRAM ─── */}
+      <section style={{ background: "#0e0d0b" }}>
+        <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
+          {/* Label + headline */}
+          <div className="mb-4 flex items-center gap-3">
+            <span className="inline-block h-2 w-2 bg-pb-accent" />
+            <span className="font-pb-mono text-[11px] font-bold tracking-widest text-pb-accent uppercase">
+              How it works
+            </span>
+          </div>
+          <div className="mb-3 flex flex-col justify-between gap-4 md:flex-row md:items-end">
+            <h2
+              className="font-pb-mono text-pb-text"
+              style={{ fontSize: "clamp(2rem, 5vw, 4rem)", lineHeight: 1, letterSpacing: "-0.025em" }}
+            >
+              Under the hood.
+            </h2>
+            <span
+              className="font-pb-mono text-[11px] tracking-widest uppercase"
+              style={{ color: "rgba(240,236,227,0.25)" }}
+            >
+              Six stages. Every one automated.
+            </span>
+          </div>
+
+          {/* Pipeline — horizontal scroll on mobile */}
+          <div className="mt-14 overflow-x-auto pb-4">
+            <div className="flex min-w-[900px] items-stretch gap-0">
+              {[
+                { n: "01", name: "Upload",    desc: "IDML or PDF dropped in",        color: "#e08a6f" },
+                { n: "02", name: "Parse",     desc: "Layout tree read, frames mapped", color: "#c4a862" },
+                { n: "03", name: "Extract",   desc: "Text pulled with position data", color: "#8a9e5a" },
+                { n: "04", name: "Translate", desc: "OpenAI + DeepL in consensus",    color: "#5a8ab0" },
+                { n: "05", name: "Reflow",    desc: "Text replaced, reflow checked",  color: "#8a5ab0" },
+                { n: "06", name: "Export",    desc: "Original format, translated",    color: "#e08a6f" },
+              ].map((stage, i) => (
+                <div key={stage.n} className="flex items-center">
+                  {/* Stage box */}
+                  <div
+                    className="flex h-full min-h-[140px] w-[140px] flex-col justify-between p-4"
+                    style={{
+                      borderLeft: `2px solid ${stage.color}`,
+                      borderTop: "1px solid rgba(255,255,255,0.07)",
+                      borderRight: "1px solid rgba(255,255,255,0.07)",
+                      borderBottom: "1px solid rgba(255,255,255,0.07)",
+                      background: "rgba(255,255,255,0.02)",
+                    }}
+                  >
+                    <span
+                      className="font-pb-mono text-[11px]"
+                      style={{ color: "rgba(240,236,227,0.18)" }}
+                    >
+                      {stage.n}
+                    </span>
+                    <div>
+                      <span className="block text-[14px] font-bold text-pb-text">{stage.name}</span>
+                      <span
+                        className="mt-1 block text-[11px] leading-snug"
+                        style={{ color: "rgba(240,236,227,0.4)" }}
+                      >
+                        {stage.desc}
+                      </span>
+                    </div>
+                  </div>
+                  {/* Arrow (not after last) */}
+                  {i < 5 && (
+                    <span
+                      className="mx-2 shrink-0 text-[18px]"
+                      style={{ color: "rgba(240,236,227,0.2)" }}
+                    >
+                      →
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* LTR → RTL page comparison */}
+          <div className="mt-20">
+            <p
+              className="font-pb-mono mb-8 text-[11px] font-bold tracking-widest uppercase"
+              style={{ color: "rgba(240,236,227,0.3)" }}
+            >
+              Full page mirror, not just text direction.
+            </p>
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-[1fr_auto_1fr]">
+              {/* LTR page */}
+              <div
+                className="overflow-hidden p-6"
+                style={{ border: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.02)" }}
+              >
+                <span
+                  className="font-pb-mono mb-4 block text-[10px] tracking-widest uppercase"
+                  style={{ color: "rgba(240,236,227,0.3)" }}
+                >
+                  English · LTR
+                </span>
+                {/* Simulated LTR page layout */}
+                <div className="grid grid-cols-[2fr_1fr] gap-3">
+                  <div className="space-y-2">
+                    <div className="h-[3px] w-full" style={{ background: "rgba(255,255,255,0.15)" }} />
+                    <div className="h-[3px] w-[85%]" style={{ background: "rgba(255,255,255,0.1)" }} />
+                    <div className="h-[3px] w-[90%]" style={{ background: "rgba(255,255,255,0.1)" }} />
+                    <div className="mt-3 h-12" style={{ background: "rgba(255,255,255,0.05)" }} />
+                    <div className="h-[3px] w-[80%]" style={{ background: "rgba(255,255,255,0.08)" }} />
+                    <div className="h-[3px] w-[70%]" style={{ background: "rgba(255,255,255,0.08)" }} />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="h-[3px] w-full" style={{ background: "rgba(255,255,255,0.08)" }} />
+                    <div className="h-[3px] w-[75%]" style={{ background: "rgba(255,255,255,0.06)" }} />
+                    <div className="h-16" style={{ background: "rgba(255,255,255,0.04)" }} />
+                  </div>
+                </div>
+                {/* LTR bullets */}
+                <div className="mt-3 space-y-1.5">
+                  {[65, 78, 55].map((w, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <div className="h-1.5 w-1.5 shrink-0" style={{ background: "rgba(224,138,111,0.5)", borderRadius: "50%" }} />
+                      <div className="h-[2px]" style={{ width: `${w}%`, background: "rgba(255,255,255,0.1)" }} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Arrow */}
+              <div className="flex items-center justify-center">
+                <span className="font-pb-mono text-[28px]" style={{ color: "rgba(224,138,111,0.4)" }}>→</span>
+              </div>
+
+              {/* RTL page */}
+              <div
+                className="overflow-hidden p-6"
+                style={{ border: "1px solid rgba(167,139,250,0.2)", background: "rgba(167,139,250,0.03)" }}
+              >
+                <span
+                  className="font-pb-mono mb-4 block text-right text-[10px] tracking-widest uppercase"
+                  style={{ color: "rgba(167,139,250,0.5)" }}
+                >
+                  Arabic · RTL ✓
+                </span>
+                {/* Simulated RTL page layout — mirrored */}
+                <div className="grid grid-cols-[1fr_2fr] gap-3" style={{ direction: "rtl" }}>
+                  <div className="space-y-2">
+                    <div className="h-[3px] w-full" style={{ background: "rgba(167,139,250,0.15)" }} />
+                    <div className="h-[3px] w-[75%]" style={{ background: "rgba(167,139,250,0.1)" }} />
+                    <div className="h-16" style={{ background: "rgba(167,139,250,0.05)" }} />
+                  </div>
+                  <div className="space-y-2">
+                    <div className="h-[3px] w-full" style={{ background: "rgba(167,139,250,0.2)" }} />
+                    <div className="h-[3px] w-[85%]" style={{ background: "rgba(167,139,250,0.15)" }} />
+                    <div className="h-[3px] w-[90%]" style={{ background: "rgba(167,139,250,0.15)" }} />
+                    <div className="mt-3 h-12" style={{ background: "rgba(167,139,250,0.07)" }} />
+                    <div className="h-[3px] w-[80%]" style={{ background: "rgba(167,139,250,0.1)" }} />
+                    <div className="h-[3px] w-[70%]" style={{ background: "rgba(167,139,250,0.1)" }} />
+                  </div>
+                </div>
+                {/* RTL bullets */}
+                <div className="mt-3 space-y-1.5">
+                  {[65, 78, 55].map((w, i) => (
+                    <div key={i} className="flex items-center justify-end gap-2">
+                      <div className="h-[2px]" style={{ width: `${w}%`, background: "rgba(167,139,250,0.15)" }} />
+                      <div className="h-1.5 w-1.5 shrink-0" style={{ background: "rgba(167,139,250,0.5)", borderRadius: "50%" }} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>

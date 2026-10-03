@@ -67,15 +67,15 @@ export default function Home() {
     <>
       {/* ─── HERO ─── */}
       <section className="relative min-h-screen overflow-hidden" style={{
-        background: "radial-gradient(ellipse 110% 75% at 68% 28%, #c85c14 0%, #952810 18%, #621018 38%, #2e0a14 58%, #0f0c0a 80%)",
+        background: "linear-gradient(180deg, #c8a820 0%, #c86018 8%, #b03010 18%, #8a1c10 32%, #5a1018 50%, #2e0a20 68%, #180818 82%, #0c0810 100%)",
       }}>
-        {/* Vertical scan lines — like giga.ai */}
+        {/* Thick vertical bands — the giga.ai signature look */}
         <div className="pointer-events-none absolute inset-0" style={{
-          backgroundImage: "repeating-linear-gradient(90deg, rgba(255,140,60,0.07) 0px, rgba(255,140,60,0.07) 1px, transparent 1px, transparent 170px)",
+          backgroundImage: "repeating-linear-gradient(90deg, rgba(0,0,0,0.18) 0px, rgba(0,0,0,0.18) 1px, transparent 1px, transparent 80px)",
         }} />
-        {/* Subtle horizontal noise */}
+        {/* Subtle horizontal scan lines */}
         <div className="pointer-events-none absolute inset-0" style={{
-          backgroundImage: "repeating-linear-gradient(180deg, transparent 0px, transparent 3px, rgba(0,0,0,0.04) 3px, rgba(0,0,0,0.04) 4px)",
+          backgroundImage: "repeating-linear-gradient(180deg, transparent 0px, transparent 2px, rgba(0,0,0,0.06) 2px, rgba(0,0,0,0.06) 3px)",
         }} />
 
         <div className="relative mx-auto max-w-7xl px-6 pt-36 pb-20 lg:px-10 lg:pt-44 lg:pb-32">

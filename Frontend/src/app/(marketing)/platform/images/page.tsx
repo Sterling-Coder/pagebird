@@ -187,6 +187,124 @@ export default function ImagesPage() {
         </div>
       </section>
 
+      {/* ─── SIGN BEFORE / AFTER ─── */}
+      <section style={{ background: "#060d0c", borderTop: "1px solid rgba(74,158,138,0.08)" }}>
+        <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
+          <div className="flex flex-col items-start gap-10 lg:flex-row lg:items-center lg:gap-16">
+            {/* Before */}
+            <div className="flex-1">
+              <span className="font-pb-mono mb-4 block text-[10px] font-bold tracking-widest text-pb-text-muted uppercase">Before</span>
+              <div
+                className="flex flex-col items-center justify-center gap-4 p-10"
+                style={{ background: "#0e1a15", border: "2px solid rgba(255,255,255,0.08)", borderRadius: "4px" }}
+              >
+                {/* Fake sign */}
+                <div
+                  className="w-full max-w-[260px] px-6 py-5 text-center"
+                  style={{ background: "#1a3828", border: "3px solid #2a5840" }}
+                >
+                  <div className="font-pb-mono text-[13px] font-bold tracking-widest text-white">OPEN DAILY</div>
+                  <div className="font-pb-mono mt-1 text-[11px] tracking-widest" style={{ color: "rgba(255,255,255,0.6)" }}>9AM – 5PM</div>
+                  <div className="mt-3 h-px w-full" style={{ background: "rgba(255,255,255,0.15)" }} />
+                  <div className="font-pb-mono mt-3 text-[10px] tracking-widest" style={{ color: "rgba(255,255,255,0.4)" }}>PARKING AVAILABLE</div>
+                </div>
+                <div
+                  className="rounded-full px-3 py-1 font-pb-mono text-[10px] tracking-widest uppercase"
+                  style={{ background: "rgba(255,80,80,0.15)", color: "#ff6060", border: "1px solid rgba(255,80,80,0.25)" }}
+                >
+                  English text detected
+                </div>
+              </div>
+            </div>
+
+            {/* Arrow */}
+            <div className="flex items-center justify-center lg:flex-col">
+              <span className="font-pb-mono text-[28px] font-bold" style={{ color: ACCENT }}>→</span>
+            </div>
+
+            {/* After */}
+            <div className="flex-1">
+              <span className="font-pb-mono mb-4 block text-[10px] font-bold tracking-widest uppercase" style={{ color: ACCENT }}>After · Arabic</span>
+              <div
+                className="flex flex-col items-center justify-center gap-4 p-10"
+                style={{ background: "#0a1f1a", border: `2px solid rgba(74,158,138,0.25)`, borderRadius: "4px" }}
+              >
+                {/* Same sign, Arabic */}
+                <div
+                  className="w-full max-w-[260px] px-6 py-5 text-center"
+                  style={{ background: "#1a3828", border: `3px solid rgba(74,158,138,0.4)` }}
+                >
+                  <div className="font-pb-mono text-[13px] font-bold tracking-widest" style={{ color: ACCENT }}>مفتوح يومياً</div>
+                  <div className="font-pb-mono mt-1 text-[11px] tracking-widest" style={{ color: `${ACCENT}80` }}>٩ص – ٥م</div>
+                  <div className="mt-3 h-px w-full" style={{ background: `${ACCENT}20` }} />
+                  <div className="font-pb-mono mt-3 text-[10px] tracking-widest" style={{ color: `${ACCENT}50` }}>مواقف متاحة</div>
+                </div>
+                <div
+                  className="rounded-full px-3 py-1 font-pb-mono text-[10px] tracking-widest uppercase"
+                  style={{ background: "rgba(74,158,138,0.15)", color: ACCENT, border: `1px solid rgba(74,158,138,0.3)` }}
+                >
+                  Rendered back in place
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <p className="mt-8 text-center font-pb-mono text-[11px] tracking-widest text-pb-text-muted uppercase">
+            Same position. Same style. Translated.
+          </p>
+        </div>
+      </section>
+
+      {/* ─── PIPELINE DIAGRAM ─── */}
+      <section className="bg-pb-bg" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+        <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-32">
+          <div className="flex items-center gap-3 mb-6">
+            <span className="inline-block h-2 w-2" style={{ background: ACCENT }} />
+            <span className="font-pb-mono text-[11px] font-bold tracking-widest uppercase" style={{ color: ACCENT }}>
+              The Pipeline
+            </span>
+          </div>
+          <h2
+            className="font-pb-mono text-4xl font-bold text-pb-text md:text-5xl"
+            style={{ letterSpacing: "-0.02em" }}
+          >
+            Six steps.<br />Same pixels.
+          </h2>
+
+          <div className="mt-16 grid grid-cols-1 gap-0 md:grid-cols-2 lg:grid-cols-3">
+            {[
+              { n: "01", title: "Upload", desc: "AI, PSD, PNG, JPG accepted", color: ACCENT },
+              { n: "02", title: "Detect", desc: "OCR finds every text region", color: "#3a9e82" },
+              { n: "03", title: "Map", desc: "Position, size, font style captured", color: "#2a8e72" },
+              { n: "04", title: "Translate", desc: "Text translated, length matched", color: "#1a7e62" },
+              { n: "05", title: "Match", desc: "Font style identified and matched", color: "#0a6e52" },
+              { n: "06", title: "Render", desc: "Translated text drawn back in place", color: "#005e42" },
+            ].map((stage, i) => (
+              <div
+                key={stage.n}
+                className="flex gap-5 py-8"
+                style={{
+                  borderBottom: i < 3 ? "1px solid rgba(255,255,255,0.04)" : undefined,
+                  borderRight: i % 3 !== 2 ? "1px solid rgba(255,255,255,0.04)" : undefined,
+                  paddingLeft: i % 3 === 0 ? "0" : "2rem",
+                  paddingRight: i % 3 === 2 ? "0" : "2rem",
+                }}
+              >
+                <div
+                  className="mt-1 h-full w-[3px] shrink-0 self-stretch"
+                  style={{ background: stage.color, minHeight: "48px" }}
+                />
+                <div>
+                  <span className="font-pb-mono text-[11px]" style={{ color: stage.color }}>{stage.n}</span>
+                  <h3 className="mt-1 text-[17px] font-bold text-pb-text">{stage.title}</h3>
+                  <p className="mt-1 text-[13px] text-pb-text-muted">{stage.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ─── HOW IT WORKS ─── */}
       <section style={{ background: "#070908", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
         <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-32">

@@ -225,6 +225,151 @@ and desert you`}
         </div>
       </section>
 
+      {/* ─── PIPELINE DIAGRAM ─── */}
+      <section style={{ background: "#100808", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+        <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
+          <div className="flex items-center gap-3 mb-6">
+            <span className="inline-block h-2 w-2" style={{ background: "#c94040" }} />
+            <span className="font-pb-mono text-[11px] font-bold tracking-widest uppercase" style={{ color: "#c94040" }}>
+              The Pipeline
+            </span>
+          </div>
+          <h2
+            className="font-pb-mono mb-16 text-4xl font-bold text-pb-text md:text-5xl"
+            style={{ letterSpacing: "-0.02em" }}
+          >
+            Six steps. Upload-ready.
+          </h2>
+
+          {/* 6-stage pipeline */}
+          <div className="relative">
+            {/* Connecting line */}
+            <div
+              className="absolute top-8 left-0 right-0 hidden h-px md:block"
+              style={{ background: "linear-gradient(90deg, transparent, rgba(201,64,64,0.3) 10%, rgba(201,64,64,0.3) 90%, transparent)" }}
+            />
+            <div className="grid grid-cols-2 gap-px md:grid-cols-3 lg:grid-cols-6">
+              {[
+                { n: "01", title: "Paste", desc: "YouTube URL pasted in" },
+                { n: "02", title: "Fetch", desc: "Captions pulled via YouTube API" },
+                { n: "03", title: "Parse", desc: "Cues and timecodes split" },
+                { n: "04", title: "Translate", desc: "Each cue translated (40+ languages)" },
+                { n: "05", title: "Format", desc: "YouTube-spec SRT assembled" },
+                { n: "06", title: "Download", desc: "Ready to upload to YouTube Studio" },
+              ].map((stage, i) => (
+                <div
+                  key={stage.n}
+                  className="relative flex flex-col gap-4 p-6"
+                  style={{
+                    background: `rgba(201,64,64,${0.03 + i * 0.015})`,
+                    border: "1px solid rgba(201,64,64,0.12)",
+                  }}
+                >
+                  <span
+                    className="font-pb-mono text-[11px] font-bold tracking-widest"
+                    style={{ color: `rgba(201,64,64,${0.4 + i * 0.1})` }}
+                  >
+                    {stage.n}
+                  </span>
+                  <h3 className="text-[16px] font-bold text-pb-text">{stage.title}</h3>
+                  <p className="text-[12px] leading-relaxed text-pb-text-muted">{stage.desc}</p>
+                  {/* Arrow between stages */}
+                  {i < 5 && (
+                    <span
+                      className="absolute -right-3 top-1/2 z-10 hidden -translate-y-1/2 text-[18px] lg:block"
+                      style={{ color: "rgba(201,64,64,0.4)" }}
+                    >
+                      →
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* YouTube Studio upload visual */}
+          <div className="mt-16 grid grid-cols-1 gap-8 lg:grid-cols-2">
+            {/* Studio mock */}
+            <div
+              className="overflow-hidden"
+              style={{ borderRadius: "12px", border: "1px solid rgba(255,255,255,0.06)", background: "#0e0c0b" }}
+            >
+              {/* Top bar */}
+              <div
+                className="flex items-center gap-3 px-5 py-3"
+                style={{ borderBottom: "1px solid rgba(255,255,255,0.05)", background: "#161412" }}
+              >
+                <div className="flex gap-1.5">
+                  <span className="inline-block h-2.5 w-2.5 rounded-full bg-white/10" />
+                  <span className="inline-block h-2.5 w-2.5 rounded-full bg-white/10" />
+                  <span className="inline-block h-2.5 w-2.5 rounded-full bg-white/10" />
+                </div>
+                <span className="font-pb-mono text-[11px] text-pb-text-muted">YouTube Studio · Subtitles</span>
+              </div>
+
+              <div className="p-6">
+                <p className="font-pb-mono mb-5 text-[10px] font-bold tracking-widest text-pb-text-muted uppercase">
+                  Subtitles
+                </p>
+
+                {/* Uploaded file row */}
+                <div
+                  className="mb-3 flex items-center justify-between rounded-lg px-4 py-3"
+                  style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.05)" }}
+                >
+                  <div className="flex items-center gap-3">
+                    <span
+                      className="flex h-5 w-5 items-center justify-center rounded-full text-[10px]"
+                      style={{ background: "rgba(34,197,94,0.15)", color: "#22c55e" }}
+                    >
+                      ✓
+                    </span>
+                    <span className="font-pb-mono text-[12px] text-pb-text">video_title.zh.srt</span>
+                  </div>
+                  <span className="font-pb-mono text-[10px] text-pb-text-muted">Uploaded</span>
+                </div>
+
+                {/* Language badges */}
+                <p className="font-pb-mono mb-3 text-[10px] tracking-widest text-pb-text-muted uppercase">
+                  Languages
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {["EN → ZH", "EN → FR", "EN → DE", "EN → ES", "EN → JA", "EN → AR"].map((lang) => (
+                    <span
+                      key={lang}
+                      className="font-pb-mono rounded-full px-3 py-1 text-[10px] font-bold"
+                      style={{
+                        background: "rgba(201,64,64,0.12)",
+                        border: "1px solid rgba(201,64,64,0.25)",
+                        color: "#c94040",
+                      }}
+                    >
+                      {lang}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Caption */}
+            <div className="flex flex-col justify-center">
+              <h3
+                className="font-pb-mono text-2xl font-bold text-pb-text md:text-3xl"
+                style={{ letterSpacing: "-0.02em" }}
+              >
+                Drop it straight into<br />YouTube Studio.
+              </h3>
+              <p className="mt-4 text-[15px] leading-relaxed text-pb-text-muted">
+                No editing. No reformatting. Our SRT output is spec-compliant with YouTube&apos;s subtitle upload tool — upload it directly and you&apos;re done.
+              </p>
+              <p className="mt-6 text-[13px] text-pb-text-muted">
+                Supports SRT, VTT, and YouTube&apos;s own caption format.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ─── HOW IT WORKS ─── */}
       <section className="bg-pb-bg" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
         <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
