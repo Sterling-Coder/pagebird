@@ -577,41 +577,312 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ─── CAPABILITIES ─── */}
-      <section className="pb-glass-section bg-pb-bg">
-        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-32">
-          <div className="flex flex-col justify-between gap-4 border-b border-white/[0.06] pb-12 md:flex-row md:items-end">
-            <div>
-              <div className="flex items-center gap-3 mb-6">
-                <span className="inline-block h-2 w-2 bg-pb-accent" />
-                <span className="font-pb-mono text-[11px] font-bold tracking-widest text-pb-accent uppercase">
-                  Capabilities
-                </span>
-              </div>
-              <h2 className="font-pb-mono text-4xl font-bold text-pb-text md:text-5xl" style={{ letterSpacing: "-0.02em" }}>
-                Everything the file<br />carried, carried across.
-              </h2>
+      {/* ─── TRANSLATION ENGINE FLOW DIAGRAM ─── */}
+      <section className="pb-glass-section" style={{ background: "#0a0908" }}>
+        <style>{`
+          @keyframes pbFlowDash {
+            from { stroke-dashoffset: 300; }
+            to   { stroke-dashoffset: 0; }
+          }
+          .pb-flow-anim { animation: pbFlowDash 2.4s linear infinite; }
+          .pb-flow-anim-d1 { animation: pbFlowDash 2.4s linear infinite; animation-delay: 0s; }
+          .pb-flow-anim-d2 { animation: pbFlowDash 2.4s linear infinite; animation-delay: 0.48s; }
+          .pb-flow-anim-d3 { animation: pbFlowDash 2.4s linear infinite; animation-delay: 0.96s; }
+          .pb-flow-anim-d4 { animation: pbFlowDash 2.4s linear infinite; animation-delay: 1.44s; }
+          .pb-flow-anim-d5 { animation: pbFlowDash 2.4s linear infinite; animation-delay: 1.92s; }
+          .pb-flow-out-d1 { animation: pbFlowDash 2.4s linear infinite; animation-delay: 0.24s; }
+          .pb-flow-out-d2 { animation: pbFlowDash 2.4s linear infinite; animation-delay: 0.6s; }
+          .pb-flow-out-d3 { animation: pbFlowDash 2.4s linear infinite; animation-delay: 1.0s; }
+        `}</style>
+        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-28">
+          {/* Header */}
+          <div className="mb-14 flex flex-col items-center text-center">
+            <div className="mb-4 flex items-center gap-2">
+              <span className="inline-block h-2 w-2 bg-pb-accent" />
+              <span className="font-pb-mono text-[11px] font-bold tracking-widest text-pb-accent uppercase">The Translation Engine</span>
             </div>
-            <span className="font-pb-mono text-[11px] tracking-widest text-pb-text-muted uppercase">
-              08 features
-            </span>
+            <h2 className="pb-stencil max-w-2xl" style={{ fontSize: "clamp(2rem, 3.5vw, 3.2rem)", lineHeight: 1.05 }}>
+              Every file format. One engine.
+            </h2>
+            <p className="mt-5 max-w-lg text-[15px] leading-relaxed text-pb-text-muted">
+              Upload anything. Our engine reads the layout tree, translates through AI consensus, and rebuilds the output exactly as you left it.
+            </p>
           </div>
 
-          <div className="mt-0 grid grid-cols-1 divide-y divide-white/[0.04] md:grid-cols-2 md:divide-y-0">
-            {FEATURES.map((f, i) => (
-              <div
-                key={f.title}
-                className={`flex gap-6 py-8 ${i % 2 === 0 ? "md:border-r md:border-white/[0.04] md:pr-12" : "md:pl-12"}`}
-              >
-                <span className="font-pb-mono mt-0.5 shrink-0 text-[11px] text-pb-accent/50">
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <div>
-                  <h3 className="text-[15px] font-bold text-pb-text">{f.title}</h3>
-                  <p className="mt-1 text-[13px] leading-relaxed text-pb-text-muted">{f.desc}</p>
-                </div>
+          {/* SVG Flow Diagram */}
+          <div className="overflow-x-auto">
+            <svg viewBox="0 0 900 400" width="100%" style={{ maxWidth: "900px", display: "block", margin: "0 auto" }} aria-hidden="true">
+              {/* ── Input nodes ── */}
+              {/* .idml  y=60 */}
+              <circle cx="60" cy="60"  r="7" fill="#e08a6f" />
+              <text x="75" y="65" fill="rgba(240,236,227,0.7)" fontSize="12" fontFamily="monospace">.idml</text>
+              {/* .pdf   y=130 */}
+              <circle cx="60" cy="130" r="7" fill="#d4785a" />
+              <text x="75" y="135" fill="rgba(240,236,227,0.7)" fontSize="12" fontFamily="monospace">.pdf</text>
+              {/* .srt   y=200 */}
+              <circle cx="60" cy="200" r="7" fill="#8b6fbf" />
+              <text x="75" y="205" fill="rgba(240,236,227,0.7)" fontSize="12" fontFamily="monospace">.srt / .vtt</text>
+              {/* .ai    y=270 */}
+              <circle cx="60" cy="270" r="7" fill="#4a9e8a" />
+              <text x="75" y="275" fill="rgba(240,236,227,0.7)" fontSize="12" fontFamily="monospace">.ai / .psd</text>
+              {/* .html  y=340 */}
+              <circle cx="60" cy="340" r="7" fill="#5a9e5a" />
+              <text x="75" y="345" fill="rgba(240,236,227,0.7)" fontSize="12" fontFamily="monospace">.html</text>
+
+              {/* ── Input paths (dim base) ── */}
+              <path d="M67,60  C280,60  280,200 430,200" stroke="#e08a6f" strokeWidth="1.5" fill="none" opacity="0.18" />
+              <path d="M67,130 C280,130 280,200 430,200" stroke="#d4785a" strokeWidth="1.5" fill="none" opacity="0.18" />
+              <path d="M67,200 C200,200 200,200 430,200" stroke="#8b6fbf" strokeWidth="1.5" fill="none" opacity="0.18" />
+              <path d="M67,270 C280,270 280,200 430,200" stroke="#4a9e8a" strokeWidth="1.5" fill="none" opacity="0.18" />
+              <path d="M67,340 C280,340 280,200 430,200" stroke="#5a9e5a" strokeWidth="1.5" fill="none" opacity="0.18" />
+
+              {/* ── Animated overlay paths ── */}
+              <path className="pb-flow-anim-d1" d="M67,60  C280,60  280,200 430,200" stroke="#e08a6f" strokeWidth="1.5" fill="none" opacity="0.7" strokeDasharray="40 260" />
+              <path className="pb-flow-anim-d2" d="M67,130 C280,130 280,200 430,200" stroke="#d4785a" strokeWidth="1.5" fill="none" opacity="0.7" strokeDasharray="40 260" />
+              <path className="pb-flow-anim-d3" d="M67,200 C200,200 200,200 430,200" stroke="#8b6fbf" strokeWidth="1.5" fill="none" opacity="0.7" strokeDasharray="40 260" />
+              <path className="pb-flow-anim-d4" d="M67,270 C280,270 280,200 430,200" stroke="#4a9e8a" strokeWidth="1.5" fill="none" opacity="0.7" strokeDasharray="40 260" />
+              <path className="pb-flow-anim-d5" d="M67,340 C280,340 280,200 430,200" stroke="#5a9e5a" strokeWidth="1.5" fill="none" opacity="0.7" strokeDasharray="40 260" />
+
+              {/* ── Central node ── */}
+              <circle cx="450" cy="200" r="52" fill="rgba(224,138,111,0.06)" stroke="rgba(224,138,111,0.25)" strokeWidth="1" />
+              <circle cx="450" cy="200" r="38" fill="rgba(224,138,111,0.1)" stroke="rgba(224,138,111,0.35)" strokeWidth="1" />
+              <circle cx="450" cy="200" r="22" fill="rgba(224,138,111,0.18)" />
+              <text x="450" y="192" textAnchor="middle" fill="rgba(240,236,227,0.9)" fontSize="9" fontFamily="monospace" fontWeight="bold" letterSpacing="1">AI ENGINE</text>
+              <text x="450" y="206" textAnchor="middle" fill="rgba(224,138,111,0.8)" fontSize="8" fontFamily="monospace">consensus</text>
+
+              {/* ── Output paths (dim base) ── */}
+              <path d="M470,200 C600,200 700,100 840,80"  stroke="rgba(240,236,227,0.15)" strokeWidth="1.5" fill="none" />
+              <path d="M470,200 C600,200 700,200 840,200" stroke="rgba(240,236,227,0.15)" strokeWidth="1.5" fill="none" />
+              <path d="M470,200 C600,200 700,300 840,320" stroke="rgba(240,236,227,0.15)" strokeWidth="1.5" fill="none" />
+
+              {/* ── Animated output paths ── */}
+              <path className="pb-flow-out-d1" d="M470,200 C600,200 700,100 840,80"  stroke="rgba(240,236,227,0.6)" strokeWidth="1.5" fill="none" strokeDasharray="40 200" />
+              <path className="pb-flow-out-d2" d="M470,200 C600,200 700,200 840,200" stroke="rgba(240,236,227,0.6)" strokeWidth="1.5" fill="none" strokeDasharray="40 200" />
+              <path className="pb-flow-out-d3" d="M470,200 C600,200 700,300 840,320" stroke="rgba(240,236,227,0.6)" strokeWidth="1.5" fill="none" strokeDasharray="40 200" />
+
+              {/* ── Output nodes ── */}
+              <circle cx="845" cy="80"  r="6" fill="rgba(240,236,227,0.5)" />
+              <text x="858" y="85"  fill="rgba(240,236,227,0.5)" fontSize="11" fontFamily="monospace">Chinese</text>
+              <circle cx="845" cy="200" r="6" fill="rgba(240,236,227,0.8)" />
+              <text x="858" y="205" fill="rgba(240,236,227,0.8)" fontSize="11" fontFamily="monospace" fontWeight="bold">Arabic</text>
+              <circle cx="845" cy="320" r="6" fill="rgba(240,236,227,0.5)" />
+              <text x="858" y="325" fill="rgba(240,236,227,0.5)" fontSize="11" fontFamily="monospace">French</text>
+
+              {/* ── Labels alongside ── */}
+              <text x="450" y="268" textAnchor="middle" fill="rgba(240,236,227,0.3)" fontSize="9" fontFamily="monospace">OpenAI + DeepL</text>
+              <text x="450" y="280" textAnchor="middle" fill="rgba(240,236,227,0.3)" fontSize="9" fontFamily="monospace">Layout preserved · RTL · 40+ langs</text>
+            </svg>
+          </div>
+
+          {/* Stat pills */}
+          <div className="mt-12 flex flex-wrap items-center justify-center gap-4">
+            {[
+              { n: "40+", label: "languages" },
+              { n: "6", label: "file formats" },
+              { n: "2", label: "AI engines in consensus" },
+            ].map((s) => (
+              <div key={s.label} className="flex items-center gap-3 rounded-full border border-white/10 px-6 py-3" style={{ background: "rgba(255,255,255,0.04)" }}>
+                <span className="font-pb-mono text-[22px] font-bold text-pb-accent">{s.n}</span>
+                <span className="text-[13px] text-pb-text-muted">{s.label}</span>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── CAPABILITIES — 3 visual feature panels ─── */}
+
+      {/* Panel 1: Layout preservation */}
+      <section className="pb-glass-section bg-pb-bg">
+        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-28">
+          <div className="grid grid-cols-1 gap-16 items-center lg:grid-cols-2">
+            {/* Left: text */}
+            <div>
+              <div className="flex items-center gap-3 mb-6">
+                <span className="inline-block h-2 w-2" style={{ background: "#e08a6f" }} />
+                <span className="font-pb-mono text-[11px] font-bold tracking-widest uppercase" style={{ color: "#e08a6f" }}>Capabilities</span>
+              </div>
+              <h2 className="pb-stencil text-4xl md:text-5xl" style={{ fontSize: "clamp(2rem,3.5vw,3rem)", lineHeight: 1.05 }}>
+                Layout preserved.<br />Pixel-perfect.
+              </h2>
+              <p className="mt-6 text-[15px] leading-relaxed text-pb-text-muted max-w-md">
+                Every font, frame, column and table in your InDesign or PDF file stays exactly where it was. Not approximate — exact. Text expands? We reflow inside the original frame.
+              </p>
+              <div className="mt-8 flex flex-wrap gap-2">
+                {["40+ languages", "Zero cleanup", "Same file format"].map(pill => (
+                  <span key={pill} className="font-pb-mono text-[11px] tracking-wide" style={{
+                    border: "1px solid rgba(224,138,111,0.3)", borderRadius: "20px",
+                    padding: "5px 14px", color: "#e08a6f",
+                  }}>{pill}</span>
+                ))}
+              </div>
+            </div>
+            {/* Right: document layout mock */}
+            <div style={{ position: "relative" }}>
+              <div style={{
+                background: "#f5f0e6", borderRadius: "8px", padding: "24px",
+                border: "1px solid rgba(224,138,111,0.2)",
+                boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
+              }}>
+                {/* Ruler marks */}
+                <div style={{ display: "flex", gap: "2px", marginBottom: "12px" }}>
+                  {Array.from({ length: 20 }).map((_, i) => (
+                    <div key={i} style={{ flex: 1, height: i % 5 === 0 ? "8px" : "4px", background: "rgba(224,138,111,0.3)" }} />
+                  ))}
+                </div>
+                {/* Two columns with orange frame borders */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                  <div style={{ border: "1.5px solid rgba(224,138,111,0.5)", borderRadius: "3px", padding: "10px" }}>
+                    <div style={{ height: "3px", background: "#1a1914", opacity: 0.5, marginBottom: "6px", width: "90%" }} />
+                    <div style={{ height: "3px", background: "#1a1914", opacity: 0.5, marginBottom: "6px", width: "75%" }} />
+                    <div style={{ height: "3px", background: "#1a1914", opacity: 0.5, marginBottom: "6px", width: "85%" }} />
+                    <div style={{ height: "40px", background: "rgba(224,138,111,0.12)", marginTop: "8px", borderRadius: "2px" }} />
+                    <div style={{ height: "3px", background: "#1a1914", opacity: 0.5, marginTop: "8px", marginBottom: "6px", width: "80%" }} />
+                    <div style={{ height: "3px", background: "#1a1914", opacity: 0.5, width: "60%" }} />
+                  </div>
+                  <div style={{ border: "1.5px solid rgba(224,138,111,0.5)", borderRadius: "3px", padding: "10px" }}>
+                    <div style={{ height: "60px", background: "rgba(224,138,111,0.08)", borderRadius: "2px", marginBottom: "8px" }} />
+                    <div style={{ height: "3px", background: "#1a1914", opacity: 0.5, marginBottom: "6px", width: "95%" }} />
+                    <div style={{ height: "3px", background: "#1a1914", opacity: 0.5, marginBottom: "6px", width: "70%" }} />
+                    <div style={{ height: "3px", background: "#1a1914", opacity: 0.5, width: "88%" }} />
+                  </div>
+                </div>
+                {/* Bottom frame annotation */}
+                <div style={{ marginTop: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
+                  <div style={{ flex: 1, height: "1px", background: "rgba(224,138,111,0.3)" }} />
+                  <span style={{ fontSize: "9px", fontFamily: "monospace", color: "#e08a6f", whiteSpace: "nowrap" }}>FRAME PRESERVED</span>
+                  <div style={{ flex: 1, height: "1px", background: "rgba(224,138,111,0.3)" }} />
+                </div>
+              </div>
+              {/* Translated version — offset card */}
+              <div style={{
+                position: "absolute", bottom: "-20px", right: "-20px",
+                background: "#1a1812", borderRadius: "8px", padding: "16px",
+                border: "1px solid rgba(224,138,111,0.15)", width: "160px",
+                boxShadow: "0 12px 40px rgba(0,0,0,0.4)",
+              }}>
+                <div style={{ fontSize: "9px", fontFamily: "monospace", color: "#e08a6f", marginBottom: "8px", letterSpacing: "0.08em" }}>中文 OUTPUT</div>
+                <div style={{ height: "2px", background: "rgba(255,255,255,0.15)", marginBottom: "5px", width: "85%" }} />
+                <div style={{ height: "2px", background: "rgba(255,255,255,0.15)", marginBottom: "5px", width: "70%" }} />
+                <div style={{ height: "2px", background: "rgba(255,255,255,0.15)", width: "90%" }} />
+                <div style={{ height: "28px", background: "rgba(224,138,111,0.08)", marginTop: "6px", borderRadius: "2px" }} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Panel 2: RTL */}
+      <section className="pb-glass-section" style={{ borderTop: "1px solid rgba(255,255,255,0.05)", background: "rgba(139,111,191,0.04)" }}>
+        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-28">
+          <div className="grid grid-cols-1 gap-16 items-center lg:grid-cols-2">
+            {/* Left: LTR → RTL page mock */}
+            <div className="flex items-center gap-6">
+              {/* LTR page */}
+              <div style={{ flex: 1, background: "#f5f0e6", borderRadius: "6px", padding: "16px", border: "1px solid rgba(255,255,255,0.1)" }}>
+                <div style={{ fontSize: "8px", fontFamily: "monospace", color: "#a09a88", marginBottom: "8px" }}>ENGLISH</div>
+                {[90, 75, 95, 60].map((w, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: "4px", marginBottom: "5px" }}>
+                    <div style={{ width: "8px", height: "8px", background: "rgba(26,25,20,0.2)", borderRadius: "1px", flexShrink: 0 }} />
+                    <div style={{ height: "3px", background: "rgba(26,25,20,0.25)", width: `${w}%` }} />
+                  </div>
+                ))}
+                <div style={{ height: "30px", background: "rgba(26,25,20,0.07)", marginTop: "8px", borderRadius: "2px" }} />
+              </div>
+              {/* Arrow */}
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" }}>
+                <div style={{ fontSize: "18px", color: "#8b6fbf" }}>→</div>
+                <div style={{ fontSize: "8px", fontFamily: "monospace", color: "#8b6fbf", letterSpacing: "0.06em" }}>mirror</div>
+              </div>
+              {/* RTL page */}
+              <div style={{ flex: 1, background: "#1a1020", borderRadius: "6px", padding: "16px", border: "1px solid rgba(139,111,191,0.3)" }}>
+                <div style={{ fontSize: "8px", fontFamily: "monospace", color: "#8b6fbf", marginBottom: "8px", textAlign: "right" }}>عربي</div>
+                {[85, 70, 90, 55].map((w, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "4px", marginBottom: "5px" }}>
+                    <div style={{ height: "3px", background: "rgba(139,111,191,0.4)", width: `${w}%` }} />
+                    <div style={{ width: "8px", height: "8px", background: "rgba(139,111,191,0.3)", borderRadius: "1px", flexShrink: 0 }} />
+                  </div>
+                ))}
+                <div style={{ height: "30px", background: "rgba(139,111,191,0.08)", marginTop: "8px", borderRadius: "2px" }} />
+              </div>
+            </div>
+            {/* Right: text */}
+            <div>
+              <div className="flex items-center gap-3 mb-6">
+                <span className="inline-block h-2 w-2" style={{ background: "#8b6fbf" }} />
+                <span className="font-pb-mono text-[11px] font-bold tracking-widest uppercase" style={{ color: "#8b6fbf" }}>RTL Support</span>
+              </div>
+              <h2 className="pb-stencil text-4xl" style={{ fontSize: "clamp(2rem,3.5vw,3rem)", lineHeight: 1.05 }}>
+                Right-to-left.<br />First class.
+              </h2>
+              <p className="mt-6 text-[15px] leading-relaxed text-pb-text-muted max-w-md">
+                Arabic and Hebrew don&apos;t just get translated — the entire page mirrors. Margins swap, gutters invert, bullets point the right way. 22 RTL languages supported.
+              </p>
+              <div className="mt-8 flex flex-wrap gap-2">
+                {["Arabic", "Hebrew", "Urdu", "Farsi", "+18 more"].map(lang => (
+                  <span key={lang} className="font-pb-mono text-[11px] tracking-wide" style={{
+                    border: "1px solid rgba(139,111,191,0.3)", borderRadius: "20px",
+                    padding: "5px 14px", color: "#8b6fbf",
+                  }}>{lang}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Panel 3: QA */}
+      <section className="pb-glass-section" style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-28">
+          <div className="grid grid-cols-1 gap-16 items-center lg:grid-cols-2">
+            {/* Left: text */}
+            <div>
+              <div className="flex items-center gap-3 mb-6">
+                <span className="inline-block h-2 w-2" style={{ background: "#4a9e8a" }} />
+                <span className="font-pb-mono text-[11px] font-bold tracking-widest uppercase" style={{ color: "#4a9e8a" }}>Quality Assurance</span>
+              </div>
+              <h2 className="pb-stencil text-4xl" style={{ fontSize: "clamp(2rem,3.5vw,3rem)", lineHeight: 1.05 }}>
+                QA before<br />it ships.
+              </h2>
+              <p className="mt-6 text-[15px] leading-relaxed text-pb-text-muted max-w-md">
+                Every translation gets a layout-integrity score. Catch overflow, reflow, and broken tables before your client does. Side-by-side review lets your translators edit against the source.
+              </p>
+              <div className="mt-8 flex flex-wrap gap-2">
+                {["Layout scoring", "Side-by-side review", "Segment editing"].map(pill => (
+                  <span key={pill} className="font-pb-mono text-[11px] tracking-wide" style={{
+                    border: "1px solid rgba(74,158,138,0.3)", borderRadius: "20px",
+                    padding: "5px 14px", color: "#4a9e8a",
+                  }}>{pill}</span>
+                ))}
+              </div>
+            </div>
+            {/* Right: QA score mock */}
+            <div style={{
+              background: "#0e0d0b", borderRadius: "12px", padding: "28px",
+              border: "1px solid rgba(74,158,138,0.2)",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.4)",
+            }}>
+              <div style={{ display: "flex", alignItems: "baseline", gap: "8px", marginBottom: "20px" }}>
+                <span style={{ fontSize: "64px", fontWeight: 800, color: "#4a9e8a", lineHeight: 1, fontFamily: "monospace" }}>94%</span>
+                <span style={{ fontSize: "13px", color: "rgba(255,255,255,0.4)" }}>integrity score</span>
+              </div>
+              <div style={{ height: "1px", background: "rgba(255,255,255,0.08)", marginBottom: "16px" }} />
+              {[
+                { label: "Layout integrity", ok: true },
+                { label: "Text overflow", ok: true },
+                { label: "Font coverage", ok: true },
+                { label: "RTL mirroring", ok: true },
+                { label: "2 segments flagged for review", ok: false },
+              ].map(item => (
+                <div key={item.label} style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "10px" }}>
+                  <span style={{ fontSize: "14px", color: item.ok ? "#4a9e8a" : "#e08a6f", flexShrink: 0 }}>{item.ok ? "✓" : "⚠"}</span>
+                  <span style={{ fontSize: "13px", color: item.ok ? "rgba(240,236,227,0.7)" : "#e08a6f" }}>{item.label}</span>
+                </div>
+              ))}
+              <div style={{ marginTop: "16px", background: "rgba(74,158,138,0.08)", borderRadius: "6px", padding: "10px 14px", border: "1px solid rgba(74,158,138,0.2)" }}>
+                <span style={{ fontSize: "11px", fontFamily: "monospace", color: "#4a9e8a" }}>→ Open review editor</span>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -714,17 +985,57 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ─── CTA ─── */}
+      {/* ─── COMING SOON TEASER ─── */}
+      <section style={{ background: "#0a0908", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+        <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "28px 56px", textAlign: "center" }}>
+          <p style={{ fontFamily: "var(--font-space-mono), monospace", fontSize: "11px", color: "rgba(240,236,227,0.3)", letterSpacing: "0.12em", textTransform: "uppercase", marginBottom: "14px" }}>
+            More formats arriving soon
+          </p>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", flexWrap: "wrap" }}>
+            {[".docx", ".pptx", ".xlsx", ".xliff"].map((fmt) => (
+              <span key={fmt} style={{
+                fontFamily: "var(--font-space-mono), monospace",
+                fontSize: "11px", color: "rgba(240,236,227,0.25)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                padding: "4px 12px", display: "inline-flex", alignItems: "center", gap: "8px",
+              }}>
+                {fmt}
+                <span style={{ fontSize: "8px", color: "rgba(240,236,227,0.2)", letterSpacing: "0.1em" }}>SOON</span>
+              </span>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── CTA ─── lean narrow bar like Image #39 */}
       <section style={{ background: "#e08a6f" }}>
-        <div className="mx-auto flex max-w-[1100px] flex-col items-start justify-between gap-8 px-8 py-20 md:flex-row md:items-center lg:px-14 lg:py-24">
-          <h2 className="font-pb-mono max-w-2xl text-3xl font-bold text-pb-bg md:text-5xl" style={{ letterSpacing: "-0.02em" }}>
+        <div style={{
+          maxWidth: "1100px", margin: "0 auto",
+          padding: "40px 56px",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          gap: "40px",
+        }}>
+          <h2 style={{
+            fontFamily: "var(--font-inter), sans-serif",
+            fontSize: "clamp(1.5rem, 3vw, 2.5rem)",
+            fontWeight: 800,
+            color: "#15130f",
+            lineHeight: 1.15,
+            maxWidth: "600px",
+            letterSpacing: "-0.02em",
+            margin: 0,
+          }}>
             Send us the document<br />you dread translating.
           </h2>
-          <Link
-            href="/login"
-            className="font-pb-mono shrink-0 border-2 border-pb-bg bg-pb-bg px-8 py-3.5 text-[12px] font-bold tracking-widest text-pb-accent uppercase transition-all hover:bg-transparent hover:text-pb-bg"
-          >
-            Translate free →
+          <Link href="/login" style={{
+            fontFamily: "var(--font-space-mono), monospace",
+            fontSize: "11px", fontWeight: 700, letterSpacing: "0.1em",
+            color: "#f0ece3", background: "#15130f",
+            padding: "14px 28px", whiteSpace: "nowrap",
+            textDecoration: "none", textTransform: "uppercase",
+            flexShrink: 0,
+          }}>
+            TRANSLATE FREE →
           </Link>
         </div>
       </section>

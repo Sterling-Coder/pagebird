@@ -211,6 +211,117 @@ export default function WebsitesPage() {
         </div>
       </section>
 
+      {/* ─── SITE ARCHITECTURE ─── */}
+      <section className="pb-glass-section" style={{ background: "#0a100a", borderTop: "1px solid rgba(90,158,90,0.07)" }}>
+        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-32">
+          <div className="grid grid-cols-1 items-start gap-16 lg:grid-cols-2">
+            <div>
+              <div className="flex items-center gap-3 mb-6">
+                <span className="inline-block h-2 w-2" style={{ background: accent }} />
+                <span className="font-pb-mono text-[11px] font-bold tracking-widest uppercase" style={{ color: accent }}>Site structure</span>
+              </div>
+              <h2 className="font-pb-mono text-4xl font-bold text-pb-text md:text-5xl" style={{ letterSpacing: "-0.02em" }}>
+                Every page.<br />Every route.<br />Every language.
+              </h2>
+              <p className="mt-6 text-[15px] leading-relaxed text-pb-text-muted max-w-md">
+                The URL structure, navigation links, canonical tags and hreflang attributes all update automatically. Your SEO doesn't suffer — it improves.
+              </p>
+              <div className="mt-8 flex flex-col gap-3">
+                {[
+                  "Navigation and footer links rewritten per locale",
+                  "Hreflang tags injected for every language",
+                  "Sitemap updated with all translated routes",
+                  "Canonical tags point to the right language version",
+                ].map((item) => (
+                  <div key={item} className="flex items-start gap-3">
+                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: accent }} />
+                    <span className="text-[14px] text-pb-text-secondary">{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* URL tree visual */}
+            <div className="font-pb-mono rounded-xl p-8 text-[12px] leading-loose" style={{ background: "rgba(10,20,10,0.8)", border: "1px solid rgba(90,158,90,0.15)" }}>
+              <div className="mb-4 text-[10px] font-bold tracking-widest text-pb-text-muted uppercase">URL Structure</div>
+              <div style={{ color: "rgba(240,236,227,0.5)" }}>yoursite.com/</div>
+              {[
+                { path: "/about", langs: ["fr", "de", "es"] },
+                { path: "/pricing", langs: ["fr", "de", "es"] },
+                { path: "/blog/", langs: ["fr", "de", "es"] },
+                { path: "/contact", langs: ["fr", "de", "es"] },
+              ].map((row, i) => (
+                <div key={row.path} className="mt-2 flex flex-wrap items-center gap-2">
+                  <span style={{ color: "rgba(255,255,255,0.25)", marginLeft: "12px" }}>{i < 3 ? "├──" : "└──"}</span>
+                  <span style={{ color: "rgba(240,236,227,0.55)" }}>{row.path}</span>
+                  <span style={{ color: "rgba(255,255,255,0.2)" }}>→</span>
+                  {row.langs.map((l) => (
+                    <span key={l} className="rounded px-2 py-0.5 text-[10px]" style={{ background: "rgba(90,158,90,0.12)", color: accent }}>
+                      /{l}{row.path}
+                    </span>
+                  ))}
+                </div>
+              ))}
+              <div className="mt-6 border-t pt-4" style={{ borderColor: "rgba(90,158,90,0.1)" }}>
+                <span style={{ color: accent, fontSize: "10px", letterSpacing: "0.1em" }}>+ hreflang tags injected automatically</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── WHAT MOVES / WHAT STAYS ─── */}
+      <section className="pb-glass-section" style={{ background: "#080d08", borderTop: "1px solid rgba(90,158,90,0.06)" }}>
+        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-28">
+          <h2 className="font-pb-mono text-4xl font-bold text-pb-text mb-3 md:text-5xl" style={{ letterSpacing: "-0.02em" }}>
+            The content moves.<br />The code doesn't.
+          </h2>
+          <p className="mb-14 text-[15px] text-pb-text-muted max-w-xl">Your engineers touch nothing. Your design stays yours. Only the words change.</p>
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+            <div className="rounded-xl p-8" style={{ background: "rgba(90,158,90,0.06)", border: "1px solid rgba(90,158,90,0.15)" }}>
+              <div className="font-pb-mono mb-5 text-[10px] font-bold tracking-widest uppercase" style={{ color: accent }}>What gets translated</div>
+              <div className="space-y-3">
+                {["Body text and headings", "Button labels and CTAs", "Form placeholders and error messages", "Meta titles and descriptions", "Image alt text", "Navigation and footer links"].map((item) => (
+                  <div key={item} className="flex items-center gap-3">
+                    <span className="text-[11px]" style={{ color: accent }}>✓</span>
+                    <span className="text-[14px] text-pb-text-secondary">{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="rounded-xl p-8" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+              <div className="font-pb-mono mb-5 text-[10px] font-bold tracking-widest uppercase text-pb-text-muted">What stays untouched</div>
+              <div className="space-y-3">
+                {["CSS and visual styles", "Images and media", "Layout and grid structure", "Animations and interactions", "Custom code and scripts", "CMS schema and data models"].map((item) => (
+                  <div key={item} className="flex items-center gap-3">
+                    <span className="text-[11px] text-pb-text-muted">—</span>
+                    <span className="text-[14px] text-pb-text-muted">{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── STAT CALLOUT ─── */}
+      <section style={{ background: "#060c06", borderTop: "1px solid rgba(90,158,90,0.06)" }}>
+        <div className="mx-auto max-w-[1100px] px-8 py-16 lg:px-14 lg:py-20">
+          <div className="grid grid-cols-1 items-center gap-10 lg:grid-cols-[1fr_auto]">
+            <div>
+              <p className="font-pb-mono mb-3 text-[11px] font-bold tracking-widest text-pb-text-muted uppercase">The opportunity</p>
+              <h3 className="text-[22px] font-bold text-pb-text md:text-[28px]" style={{ lineHeight: 1.3 }}>
+                The average SaaS company leaves <span style={{ color: accent }}>73%</span> of website visitors without a page in their language.
+              </h3>
+              <p className="mt-4 text-[14px] text-pb-text-muted">Every untranslated page is a customer who bounces before they understand what you do.</p>
+            </div>
+            <Link href="/contact" className="font-pb-mono shrink-0 rounded-full px-8 py-3.5 text-[12px] font-bold tracking-widest text-white uppercase transition-all hover:brightness-110" style={{ background: accent }}>
+              Get early access →
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* ─── PIPELINE DIAGRAM ─── */}
       <section className="pb-glass-section" style={{ background: "#080f08" }}>
         <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-32">
@@ -472,7 +583,6 @@ export default function WebsitesPage() {
               background: "#050f05",
               color: accent,
             }}
-            onMouseEnter={undefined}
           >
             Get early access →
           </Link>

@@ -274,3 +274,5 @@ body {
     transform: none;
   }
 }
+
+.footer-link:hover { color: rgba(240,236,227,0.75) !important; }

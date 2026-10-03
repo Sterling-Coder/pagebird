@@ -96,6 +96,84 @@ export default function ImagesPage() {
         </div>
       </section>
 
+      {/* ─── OCR DETECTION DIAGRAM ─── */}
+      <section style={{ background: "#080f0e", borderTop: "1px solid rgba(74,158,138,0.08)" }}>
+        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-28">
+          <div className="grid grid-cols-1 gap-16 lg:grid-cols-2 lg:items-center">
+            {/* Left: text */}
+            <div>
+              <div className="flex items-center gap-3 mb-6">
+                <span className="inline-block h-2 w-2" style={{ background: ACCENT }} />
+                <span className="font-pb-mono text-[11px] font-bold tracking-widest uppercase" style={{ color: ACCENT }}>
+                  Detection
+                </span>
+              </div>
+              <h2 className="font-pb-mono text-3xl font-bold text-pb-text md:text-4xl" style={{ letterSpacing: "-0.02em" }}>
+                Found 14 text regions.
+              </h2>
+              <p className="mt-5 text-[15px] leading-relaxed text-pb-text-secondary">
+                Google Cloud Vision scans every pixel. Text in signs, labels, infographics, product packaging, street signs — all detected, all translatable. Nothing is missed because nothing is a text layer — it&apos;s all pixels.
+              </p>
+              <p className="mt-6 font-pb-mono text-[11px] tracking-widest text-pb-text-muted uppercase">
+                Supported: .ai · .psd · .eps · .png · .jpg · .svg
+              </p>
+            </div>
+
+            {/* Right: CSS OCR detection diagram */}
+            <div className="relative" style={{
+              background: "#0a1a14",
+              border: "1px solid rgba(74,158,138,0.15)",
+              borderRadius: "8px",
+              padding: "32px",
+              minHeight: "320px",
+            }}>
+              <div className="font-pb-mono mb-4 text-[10px] tracking-widest text-pb-text-muted uppercase">Source image</div>
+
+              {/* Mock image background */}
+              <div className="relative overflow-hidden" style={{
+                background: "repeating-linear-gradient(45deg, rgba(255,255,255,0.02) 0px, rgba(255,255,255,0.02) 1px, transparent 1px, transparent 12px)",
+                border: "1px dashed rgba(255,255,255,0.15)",
+                borderRadius: "4px",
+                height: "220px",
+                padding: "12px",
+              }}>
+                {/* Simulated detected bounding boxes at various positions */}
+                {[
+                  { top: "8%", left: "5%", w: "45%", label: "Heading", color: "#e08a6f" },
+                  { top: "8%", left: "55%", w: "35%", label: "Price tag", color: "#8b6fbf" },
+                  { top: "35%", left: "5%", w: "60%", label: "Sign text", color: ACCENT },
+                  { top: "55%", left: "5%", w: "40%", label: "Caption", color: "#c8a820" },
+                  { top: "55%", left: "50%", w: "45%", label: "Label", color: "#c94040" },
+                  { top: "78%", left: "5%", w: "85%", label: "Footer text", color: ACCENT },
+                ].map((box, i) => (
+                  <div key={i} style={{
+                    position: "absolute",
+                    top: box.top, left: box.left, width: box.w,
+                    height: "16%",
+                    border: `1.5px dashed ${box.color}`,
+                    borderRadius: "2px",
+                  }}>
+                    <span style={{
+                      position: "absolute", top: "-16px", left: "0",
+                      fontFamily: "var(--font-space-mono), monospace",
+                      fontSize: "8px", color: box.color, whiteSpace: "nowrap",
+                      background: "#0a1a14", padding: "0 3px",
+                    }}>{box.label}</span>
+                  </div>
+                ))}
+                {/* Detection count badge */}
+                <div style={{
+                  position: "absolute", bottom: "8px", right: "8px",
+                  background: `rgba(74,158,138,0.9)`, color: "#0a1a14",
+                  fontFamily: "var(--font-space-mono), monospace",
+                  fontSize: "10px", fontWeight: 700, padding: "3px 10px", borderRadius: "4px",
+                }}>14 regions detected</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ─── IMAGE MOCK ─── */}
       <section className="pb-glass-section bg-pb-bg" style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
         <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-28">
@@ -286,6 +364,82 @@ export default function ImagesPage() {
         </div>
       </section>
 
+      {/* ─── LAYERS PRESERVED ─── */}
+      <section style={{ background: "rgba(74,158,138,0.04)", borderTop: "1px solid rgba(74,158,138,0.1)" }}>
+        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-28">
+          <div className="grid grid-cols-1 gap-16 lg:grid-cols-2 lg:items-center">
+            {/* Left: layer panel mock */}
+            <div style={{
+              background: "#0c1a14",
+              border: "1px solid rgba(74,158,138,0.2)",
+              borderRadius: "8px",
+              overflow: "hidden",
+            }}>
+              {/* Panel header */}
+              <div className="flex items-center gap-2 px-5 py-3" style={{ borderBottom: "1px solid rgba(74,158,138,0.12)", background: "#0a1510" }}>
+                <span className="font-pb-mono text-[10px] font-bold tracking-widest text-pb-text-muted uppercase">Layers</span>
+                <span className="font-pb-mono text-[10px] text-pb-text-muted">— product_label.psd</span>
+              </div>
+              {/* Layers */}
+              {[
+                { name: "Heading text", type: "Text layer", action: "Translated in place", changed: true },
+                { name: "Body copy", type: "Text layer", action: "Translated in place", changed: true },
+                { name: "Price / quantity", type: "Text layer", action: "Translated in place", changed: true },
+                { name: "Product photo", type: "Image layer", action: "Untouched", changed: false },
+                { name: "Background", type: "Solid color", action: "Untouched", changed: false },
+                { name: "Logo", type: "Smart object", action: "Untouched", changed: false },
+              ].map((layer, i) => (
+                <div key={i} className="flex items-center justify-between px-5 py-3" style={{
+                  borderBottom: i < 5 ? "1px solid rgba(255,255,255,0.04)" : "none",
+                  background: layer.changed ? "rgba(74,158,138,0.05)" : "transparent",
+                }}>
+                  <div className="flex items-center gap-3">
+                    <span style={{
+                      display: "inline-block", width: "8px", height: "8px", borderRadius: "2px",
+                      background: layer.changed ? ACCENT : "rgba(255,255,255,0.2)",
+                      flexShrink: 0,
+                    }} />
+                    <div>
+                      <div className="font-pb-mono text-[12px] text-pb-text">{layer.name}</div>
+                      <div className="font-pb-mono text-[10px] text-pb-text-muted">{layer.type}</div>
+                    </div>
+                  </div>
+                  <span className="font-pb-mono text-[10px] tracking-wider" style={{
+                    color: layer.changed ? ACCENT : "rgba(255,255,255,0.25)",
+                  }}>{layer.action}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Right: text */}
+            <div>
+              <h2 className="font-pb-mono text-3xl font-bold text-pb-text md:text-4xl" style={{ letterSpacing: "-0.02em" }}>
+                Your PSD layers<br />stay intact.
+              </h2>
+              <p className="mt-5 text-[15px] leading-relaxed text-pb-text-secondary">
+                Text layers get translated. Image layers, masks, blend modes, effects — untouched. Open the translated PSD in Photoshop and keep editing exactly where you left off.
+              </p>
+              <p className="mt-5 text-[15px] leading-relaxed text-pb-text-secondary">
+                Same for Illustrator .ai files — text objects are translated, artwork paths are preserved. The structure is identical.
+              </p>
+              <div className="mt-8 flex flex-col gap-3">
+                {[
+                  "Text layers → translated",
+                  "Image layers → preserved",
+                  "Masks & effects → preserved",
+                  "Smart objects → preserved",
+                ].map(item => (
+                  <div key={item} className="flex items-center gap-3 font-pb-mono text-[13px]">
+                    <span style={{ color: ACCENT }}>✓</span>
+                    <span style={{ color: item.includes("translated") ? "rgba(240,236,227,0.8)" : "rgba(240,236,227,0.4)" }}>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ─── HOW IT WORKS ─── */}
       <section style={{ background: "#070908", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
         <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-32">
@@ -369,32 +523,71 @@ export default function ImagesPage() {
         </div>
       </section>
 
-      {/* ─── USE CASES ─── */}
+      {/* ─── USE CASES ─── rich version */}
       <section style={{ background: "#070908", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
         <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-28">
-          <div className="flex items-center gap-3 mb-12">
-            <span className="inline-block h-2 w-2" style={{ background: ACCENT }} />
-            <span className="font-pb-mono text-[11px] font-bold tracking-widest uppercase" style={{ color: ACCENT }}>
-              Use cases
-            </span>
+          <div className="mb-16 flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
+            <div>
+              <div className="flex items-center gap-3 mb-6">
+                <span className="inline-block h-2 w-2" style={{ background: ACCENT }} />
+                <span className="font-pb-mono text-[11px] font-bold tracking-widest uppercase" style={{ color: ACCENT }}>
+                  Use cases
+                </span>
+              </div>
+              <h2 className="font-pb-mono text-3xl font-bold text-pb-text md:text-4xl" style={{ letterSpacing: "-0.02em" }}>
+                Where image translation<br />actually ships.
+              </h2>
+            </div>
+            <p className="max-w-xs text-[14px] leading-relaxed text-pb-text-muted">
+              Any industry that ships visual assets across markets needs image translation. Here&apos;s where it matters most.
+            </p>
           </div>
-          <div className="grid grid-cols-2 gap-0 md:grid-cols-3" style={{ border: "1px solid rgba(255,255,255,0.05)" }}>
-            {USE_CASES.map((u, i) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+            {[
+              {
+                title: "Product packaging",
+                desc: "Translate ingredient lists, instructions, legal copy, and nutritional info on packaging artwork — without rebuilding from scratch.",
+                formats: ".ai .psd",
+              },
+              {
+                title: "Infographics",
+                desc: "Charts, diagrams, explainer graphics, step-by-step visuals — all text translated in its original position.",
+                formats: ".ai .svg .png",
+              },
+              {
+                title: "Signage & wayfinding",
+                desc: "Retail signage, venue directories, airport wayfinding, event graphics — adapted for each market.",
+                formats: ".ai .psd .eps",
+              },
+              {
+                title: "Social & ad creatives",
+                desc: "Adapt social posts, story graphics, banner ads, and display creatives for different language markets.",
+                formats: ".psd .png",
+              },
+              {
+                title: "Training materials",
+                desc: "Illustrated how-to guides, visual job aids, safety posters, onboarding decks — translated with graphics intact.",
+                formats: ".psd .ai .png",
+              },
+              {
+                title: "Menus & hospitality",
+                desc: "Restaurant menus, hotel directories, venue guides, room service cards — in any language, same design.",
+                formats: ".ai .psd .pdf",
+              },
+            ].map((u, i) => (
               <div
-                key={u}
-                className="p-8 lg:p-10"
+                key={u.title}
+                className="flex flex-col gap-3 p-8"
                 style={{
-                  borderRight: i % 3 !== 2 ? "1px solid rgba(255,255,255,0.05)" : undefined,
-                  borderBottom: i < 3 ? "1px solid rgba(255,255,255,0.05)" : undefined,
+                  borderLeft: `3px solid rgba(74,158,138,${i === 0 ? "0.7" : "0.2"})`,
+                  borderBottom: i < 3 ? "1px solid rgba(255,255,255,0.04)" : "none",
+                  borderRight: i % 3 !== 2 ? "1px solid rgba(255,255,255,0.04)" : "none",
+                  background: i === 0 ? "rgba(74,158,138,0.04)" : "transparent",
                 }}
               >
-                <span
-                  className="font-pb-mono block text-[10px] font-bold tracking-widest uppercase mb-3"
-                  style={{ color: `${ACCENT}80` }}
-                >
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <h3 className="text-[16px] font-bold text-pb-text">{u}</h3>
+                <h3 className="text-[16px] font-bold text-pb-text">{u.title}</h3>
+                <p className="text-[13px] leading-relaxed text-pb-text-muted flex-1">{u.desc}</p>
+                <span className="font-pb-mono text-[10px] tracking-widest text-pb-text-muted">{u.formats}</span>
               </div>
             ))}
           </div>

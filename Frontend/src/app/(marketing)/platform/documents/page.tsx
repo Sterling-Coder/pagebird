@@ -243,6 +243,96 @@ export default function DocumentsPage() {
         </div>
       </section>
 
+      {/* ─── LAYOUT TREE ─── */}
+      <section className="pb-glass-section" style={{ background: "#0a0908" }}>
+        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-28">
+          <div className="grid grid-cols-1 gap-16 lg:grid-cols-2 lg:items-center">
+            {/* Copy */}
+            <div>
+              <div className="mb-6 flex items-center gap-3">
+                <span className="inline-block h-2 w-2" style={{ background: "#e08a6f" }} />
+                <span className="font-pb-mono text-[11px] font-bold tracking-widest uppercase" style={{ color: "#e08a6f" }}>
+                  How it reads your file
+                </span>
+              </div>
+              <h2 className="font-pb-mono text-pb-text" style={{ fontSize: "clamp(2rem, 4vw, 3.5rem)", lineHeight: 1.0, letterSpacing: "-0.02em" }}>
+                We read the structure,<br />not the pixels.
+              </h2>
+              <p className="mt-6 max-w-md text-[15px] leading-relaxed text-pb-text-secondary">
+                InDesign stores documents as a tree of frames, styles and links. Pagebirdy parses that tree directly — not a flattened export. Every text frame, master page and style sheet survives intact, with its properties, position and relationships preserved.
+              </p>
+              <div className="mt-10 flex gap-10">
+                {["Frame-level precision", "Style inheritance", "Linked assets"].map((s) => (
+                  <div key={s}>
+                    <div className="h-0.5 w-8 mb-3" style={{ background: "#e08a6f" }} />
+                    <span className="font-pb-mono text-[11px] text-pb-text-muted uppercase tracking-widest">{s}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* CSS tree diagram */}
+            <div className="overflow-hidden rounded-xl p-8" style={{ background: "#111009", border: "1px solid rgba(255,255,255,0.07)" }}>
+              <div className="font-pb-mono text-[12px] leading-7" style={{ color: "rgba(240,236,227,0.5)" }}>
+                {/* Root */}
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="rounded px-2 py-0.5 text-[11px] font-bold" style={{ background: "rgba(224,138,111,0.15)", color: "#e08a6f", border: "1px solid rgba(224,138,111,0.3)" }}>Document</span>
+                  <span style={{ color: "rgba(255,255,255,0.2)" }}>annual_report_2026.idml</span>
+                </div>
+                {/* Page 1 */}
+                <div className="ml-4 border-l pl-4" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span style={{ color: "rgba(255,255,255,0.3)" }}>├─</span>
+                    <span className="rounded px-2 py-0.5 text-[11px]" style={{ background: "rgba(255,255,255,0.05)", color: "rgba(240,236,227,0.7)", border: "1px solid rgba(255,255,255,0.1)" }}>Page 1</span>
+                  </div>
+                  <div className="ml-6 border-l pl-4 space-y-1" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+                    {[
+                      { label: "Text Frame", note: '"Heading — Helvetica Neue 24pt"', accent: true },
+                      { label: "Text Frame", note: '"Body — Times New Roman 10pt"', accent: false },
+                      { label: "Image Frame", note: "figure_01.png · linked", accent: false },
+                    ].map((n, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <span style={{ color: "rgba(255,255,255,0.2)" }}>{i < 2 ? "├─" : "└─"}</span>
+                        <span className="rounded px-1.5 py-0.5 text-[10px]" style={{
+                          background: n.accent ? "rgba(224,138,111,0.12)" : "rgba(255,255,255,0.04)",
+                          color: n.accent ? "#e08a6f" : "rgba(240,236,227,0.5)",
+                          border: `1px solid ${n.accent ? "rgba(224,138,111,0.25)" : "rgba(255,255,255,0.07)"}`,
+                        }}>{n.label}</span>
+                        <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.2)" }}>{n.note}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                {/* Page 2 */}
+                <div className="ml-4 border-l pl-4 mt-1" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span style={{ color: "rgba(255,255,255,0.3)" }}>└─</span>
+                    <span className="rounded px-2 py-0.5 text-[11px]" style={{ background: "rgba(255,255,255,0.05)", color: "rgba(240,236,227,0.7)", border: "1px solid rgba(255,255,255,0.1)" }}>Page 2</span>
+                  </div>
+                  <div className="ml-6 border-l pl-4 space-y-1" style={{ borderColor: "rgba(255,255,255,0.06)" }}>
+                    {[
+                      { label: "Table", note: "4 cols · 12 rows", accent: false },
+                      { label: "Text Frame", note: '"Caption — 8pt italic"', accent: false },
+                    ].map((n, i) => (
+                      <div key={i} className="flex items-center gap-2">
+                        <span style={{ color: "rgba(255,255,255,0.2)" }}>{i === 0 ? "├─" : "└─"}</span>
+                        <span className="rounded px-1.5 py-0.5 text-[10px]" style={{ background: "rgba(255,255,255,0.04)", color: "rgba(240,236,227,0.5)", border: "1px solid rgba(255,255,255,0.07)" }}>{n.label}</span>
+                        <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.2)" }}>{n.note}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="mt-6 pt-5" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                <span className="font-pb-mono text-[10px] tracking-widest uppercase" style={{ color: "rgba(224,138,111,0.5)" }}>
+                  Every node read, translated, rebuilt in place
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ─── PIPELINE DIAGRAM ─── */}
       <section className="pb-glass-section" style={{ background: "#0e0d0b" }}>
         <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-28">
@@ -529,6 +619,90 @@ export default function DocumentsPage() {
                     Arabic · mirrored layout ✓
                   </span>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── FONT SUBSTITUTION ─── */}
+      <section className="pb-glass-section" style={{ background: "#0c0b09" }}>
+        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-28">
+          <div className="grid grid-cols-1 gap-16 lg:grid-cols-2 lg:items-center">
+            {/* Font panels */}
+            <div className="space-y-4">
+              {/* English font panel */}
+              <div className="overflow-hidden rounded-xl p-6" style={{ background: "#111009", border: "1px solid rgba(255,255,255,0.08)" }}>
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="font-pb-mono text-[10px] uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.3)" }}>Original typeface</span>
+                  <span className="font-pb-mono text-[10px]" style={{ color: "#e08a6f" }}>Helvetica Neue</span>
+                </div>
+                <div className="text-[32px] font-bold leading-tight" style={{ color: "rgba(240,236,227,0.85)", fontFamily: "var(--font-inter), sans-serif" }}>
+                  AaBbCcDd
+                </div>
+                <div className="mt-3 text-[13px] leading-relaxed" style={{ color: "rgba(240,236,227,0.4)", fontFamily: "var(--font-inter), sans-serif" }}>
+                  The quick brown fox jumps over the lazy dog.
+                </div>
+                {/* Metrics guides */}
+                <div className="relative mt-4 h-10 overflow-hidden rounded" style={{ background: "rgba(255,255,255,0.03)" }}>
+                  <div className="absolute inset-x-0" style={{ top: "20%", height: "1px", background: "rgba(224,138,111,0.4)" }} />
+                  <div className="absolute inset-x-0" style={{ top: "60%", height: "1px", background: "rgba(224,138,111,0.25)" }} />
+                  <div className="absolute inset-x-0" style={{ top: "85%", height: "1px", background: "rgba(224,138,111,0.15)" }} />
+                  <span className="absolute right-2 top-0 font-pb-mono text-[8px]" style={{ color: "rgba(224,138,111,0.5)" }}>cap height</span>
+                  <span className="absolute right-2" style={{ top: "55%", fontFamily: "var(--font-space-mono)", fontSize: "8px", color: "rgba(224,138,111,0.4)" }}>x-height</span>
+                  <span className="absolute right-2" style={{ top: "80%", fontFamily: "var(--font-space-mono)", fontSize: "8px", color: "rgba(224,138,111,0.3)" }}>baseline</span>
+                </div>
+              </div>
+
+              {/* Japanese substitution */}
+              <div className="overflow-hidden rounded-xl p-6" style={{ background: "#111009", border: "1px solid rgba(74,158,138,0.25)" }}>
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="font-pb-mono text-[10px] uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.3)" }}>Substituted — metrically matched</span>
+                  <span className="font-pb-mono text-[10px]" style={{ color: "#4a9e8a" }}>Noto Sans JP ✓</span>
+                </div>
+                <div className="text-[32px] font-bold leading-tight" style={{ color: "rgba(240,236,227,0.85)" }}>
+                  速さと正確さ
+                </div>
+                <div className="mt-3 text-[13px] leading-relaxed" style={{ color: "rgba(240,236,227,0.4)" }}>
+                  同じ行間・同じ列幅・同じページ数
+                </div>
+                {/* Matching metrics guides */}
+                <div className="relative mt-4 h-10 overflow-hidden rounded" style={{ background: "rgba(255,255,255,0.03)" }}>
+                  <div className="absolute inset-x-0" style={{ top: "20%", height: "1px", background: "rgba(74,158,138,0.4)" }} />
+                  <div className="absolute inset-x-0" style={{ top: "60%", height: "1px", background: "rgba(74,158,138,0.25)" }} />
+                  <div className="absolute inset-x-0" style={{ top: "85%", height: "1px", background: "rgba(74,158,138,0.15)" }} />
+                  <span className="absolute right-2 top-0 font-pb-mono text-[8px]" style={{ color: "rgba(74,158,138,0.6)" }}>cap height ✓</span>
+                  <span className="absolute right-2 font-pb-mono text-[8px]" style={{ top: "55%", color: "rgba(74,158,138,0.5)" }}>x-height ✓</span>
+                  <span className="absolute right-2 font-pb-mono text-[8px]" style={{ top: "80%", color: "rgba(74,158,138,0.4)" }}>baseline ✓</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Copy */}
+            <div>
+              <div className="mb-6 flex items-center gap-3">
+                <span className="inline-block h-2 w-2" style={{ background: "#4a9e8a" }} />
+                <span className="font-pb-mono text-[11px] font-bold tracking-widest uppercase" style={{ color: "#4a9e8a" }}>
+                  Font substitution
+                </span>
+              </div>
+              <h2 className="font-pb-mono text-pb-text" style={{ fontSize: "clamp(1.8rem, 3.5vw, 3rem)", lineHeight: 1.05, letterSpacing: "-0.02em" }}>
+                No Japanese in your typeface?<br />We find one that fits.
+              </h2>
+              <p className="mt-6 max-w-md text-[15px] leading-relaxed text-pb-text-secondary">
+                When translated text requires a character set your document's font doesn't cover, Pagebirdy substitutes from its bundled Noto library — matching cap height, x-height and baseline so column widths and line counts stay identical. No manual font work after download.
+              </p>
+              <div className="mt-8 space-y-3">
+                {[
+                  "Same line spacing — no reflow",
+                  "Same column math — no overflow",
+                  "Bundled Noto faces for 100+ scripts",
+                ].map((s) => (
+                  <div key={s} className="flex items-center gap-3">
+                    <span style={{ color: "#4a9e8a", fontSize: "14px" }}>✓</span>
+                    <span className="text-[14px] text-pb-text-muted">{s}</span>
+                  </div>
+                ))}
               </div>
             </div>
           </div>

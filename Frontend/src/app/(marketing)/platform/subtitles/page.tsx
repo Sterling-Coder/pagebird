@@ -180,6 +180,81 @@ export default function SubtitlesPage() {
         </div>
       </section>
 
+      {/* ─── SECTION A: SRT FORMAT DEMYSTIFIED ─── */}
+      <section className="pb-glass-section" style={{ background: "#0a090e" }}>
+        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-28">
+          <div className="mb-6 flex items-center gap-2">
+            <span className="inline-block h-2 w-2" style={{ background: "#8b6fbf" }} />
+            <span className="font-pb-mono text-[11px] font-bold tracking-widest uppercase" style={{ color: "#8b6fbf" }}>
+              How it works
+            </span>
+          </div>
+          <div className="grid grid-cols-1 gap-16 lg:grid-cols-[55fr_45fr] lg:items-start">
+            <div>
+              <h2 className="font-pb-mono text-4xl font-bold text-pb-text md:text-5xl" style={{ letterSpacing: "-0.02em" }}>
+                Timecodes. Text.<br />That&rsquo;s it.
+              </h2>
+              <p className="mt-6 text-[16px] leading-relaxed text-pb-text-secondary">
+                An SRT file is two things: a timecode and a line of text. We translate the text. The timecodes? We never touch them. Every cue lands exactly where your video editor expects it.
+              </p>
+              <p className="mt-5 font-pb-mono text-[13px] tracking-wide text-pb-text-muted">
+                <span style={{ color: "#8b6fbf" }}>Purple</span> = timecode &nbsp;·&nbsp; <span style={{ color: "rgba(240,236,227,0.85)" }}>White</span> = translated text
+              </p>
+              <div className="mt-8 inline-flex items-center gap-3 rounded-md px-5 py-3" style={{ background: "rgba(139,111,191,0.12)", border: "1px solid rgba(139,111,191,0.2)" }}>
+                <span style={{ fontSize: "20px", color: "#4ade80" }}>✓</span>
+                <span className="font-pb-mono text-[12px] font-bold text-pb-text">The numbers never change. Ever.</span>
+              </div>
+            </div>
+
+            {/* Annotated SRT visual */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {/* English */}
+              <div className="rounded-lg p-5" style={{ background: "#0e0c1a", border: "1px solid rgba(139,111,191,0.15)" }}>
+                <div className="font-pb-mono mb-4 text-[9px] tracking-widest text-pb-text-muted uppercase">English · source</div>
+                <div className="space-y-4 font-pb-mono text-[12px]">
+                  <div>
+                    <div style={{ color: "#8b6fbf" }}>1</div>
+                    <div style={{ color: "#8b6fbf" }}>00:00:01,000 → 00:00:04,200</div>
+                    <div className="mt-0.5" style={{ color: "rgba(240,236,227,0.7)" }}>[Host] Welcome back.</div>
+                  </div>
+                  <div>
+                    <div style={{ color: "#8b6fbf" }}>2</div>
+                    <div style={{ color: "#8b6fbf" }}>00:00:04,800 → 00:00:08,400</div>
+                    <div className="mt-0.5" style={{ color: "rgba(240,236,227,0.7)" }}>Today&apos;s topic: layout.</div>
+                  </div>
+                  <div>
+                    <div style={{ color: "#8b6fbf" }}>3</div>
+                    <div style={{ color: "#8b6fbf" }}>00:00:09,000 → 00:00:12,600</div>
+                    <div className="mt-0.5" style={{ color: "rgba(240,236,227,0.7)" }}>&lt;i&gt;Every cue on time.&lt;/i&gt;</div>
+                  </div>
+                </div>
+              </div>
+              {/* French */}
+              <div className="rounded-lg p-5" style={{ background: "#0e0c1a", border: "1px solid rgba(139,111,191,0.25)" }}>
+                <div className="font-pb-mono mb-4 text-[9px] tracking-widest text-pb-text-muted uppercase">French · translated</div>
+                <div className="space-y-4 font-pb-mono text-[12px]">
+                  <div>
+                    <div style={{ color: "#8b6fbf" }}>1</div>
+                    <div style={{ color: "#8b6fbf" }}>00:00:01,000 → 00:00:04,200</div>
+                    <div className="mt-0.5" style={{ color: "rgba(240,236,227,0.9)" }}>[Hôte] Bienvenue.</div>
+                  </div>
+                  <div>
+                    <div style={{ color: "#8b6fbf" }}>2</div>
+                    <div style={{ color: "#8b6fbf" }}>00:00:04,800 → 00:00:08,400</div>
+                    <div className="mt-0.5" style={{ color: "rgba(240,236,227,0.9)" }}>Sujet du jour : mise en page.</div>
+                  </div>
+                  <div>
+                    <div style={{ color: "#8b6fbf" }}>3</div>
+                    <div style={{ color: "#8b6fbf" }}>00:00:09,000 → 00:00:12,600</div>
+                    <div className="mt-0.5" style={{ color: "rgba(240,236,227,0.9)" }}>&lt;i&gt;Chaque sous-titre à l&apos;heure.&lt;/i&gt;</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ─── PIPELINE DIAGRAM ─── */}
       <section className="pb-glass-section" style={{ background: "#0d0b14" }}>
         <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-32">
@@ -278,6 +353,60 @@ export default function SubtitlesPage() {
             <p className="font-pb-mono mt-3 text-[11px] tracking-widest text-pb-text-muted uppercase">
               Purple = source timecodes · Green = same timecodes after translation · Text changes, timing never does.
             </p>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── SECTION B: MULTI-LANGUAGE FROM ONE UPLOAD ─── */}
+      <section className="pb-glass-section" style={{ background: "#0d0b18" }}>
+        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-28">
+          <div className="mb-6 flex items-center gap-2">
+            <span className="inline-block h-2 w-2" style={{ background: "#8b6fbf" }} />
+            <span className="font-pb-mono text-[11px] font-bold tracking-widest uppercase" style={{ color: "#8b6fbf" }}>
+              Scale
+            </span>
+          </div>
+          <div className="grid grid-cols-1 gap-16 lg:grid-cols-2 lg:items-center">
+            <div>
+              <h2 className="font-pb-mono text-4xl font-bold text-pb-text md:text-5xl" style={{ letterSpacing: "-0.02em" }}>
+                One upload.<br />Forty languages.
+              </h2>
+              <p className="mt-6 text-[16px] leading-relaxed text-pb-text-secondary">
+                Translate once, get every language back as a separate ready-to-upload file. 80% of YouTube&rsquo;s audience watches in a language other than the upload language — reach all of them.
+              </p>
+              <p className="mt-4 text-[14px] leading-relaxed text-pb-text-muted">
+                Perfect for YouTube creators going global, streaming localisation, corporate training, online courses, and podcast transcripts.
+              </p>
+              <div className="mt-8 flex flex-wrap gap-2">
+                {["YouTube", "Netflix subs", "Corporate training", "Online courses", "Podcast transcripts"].map((u) => (
+                  <span key={u} className="font-pb-mono rounded-full px-3 py-1 text-[11px] text-pb-text-muted" style={{ border: "1px solid rgba(139,111,191,0.2)" }}>{u}</span>
+                ))}
+              </div>
+            </div>
+
+            {/* Language explosion visual */}
+            <div className="relative flex flex-col items-center">
+              {/* Center node */}
+              <div className="relative z-10 mb-6 flex flex-col items-center gap-2">
+                <div className="rounded-lg px-4 py-2" style={{ background: "rgba(139,111,191,0.2)", border: "1px solid rgba(139,111,191,0.4)" }}>
+                  <span className="font-pb-mono text-[13px] font-bold" style={{ color: "#8b6fbf" }}>episode.srt</span>
+                </div>
+                <span className="font-pb-mono text-[10px] text-pb-text-muted">↓ translate ↓</span>
+              </div>
+              {/* Language grid */}
+              <div className="flex flex-wrap justify-center gap-2">
+                {["ZH", "AR", "FR", "DE", "ES", "JA", "PT", "KO", "HI", "RU", "IT", "NL", "TR", "PL", "SV", "DA", "FI", "NO", "CS", "HU", "RO", "UK", "HE", "FA", "TH", "VI", "ID", "MS", "BN", "EL"].map((lang) => (
+                  <span
+                    key={lang}
+                    className="font-pb-mono rounded px-2 py-1 text-[10px] font-bold"
+                    style={{ background: "rgba(139,111,191,0.1)", border: "1px solid rgba(139,111,191,0.2)", color: "rgba(240,236,227,0.7)" }}
+                  >
+                    {lang}
+                  </span>
+                ))}
+                <span className="font-pb-mono rounded px-2 py-1 text-[10px] font-bold" style={{ background: "rgba(139,111,191,0.2)", border: "1px solid rgba(139,111,191,0.35)", color: "#8b6fbf" }}>+10</span>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -452,6 +581,39 @@ export default function SubtitlesPage() {
                 {f}
               </span>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── SECTION C: PLATFORM SUPPORT ─── */}
+      <section className="pb-glass-section" style={{ background: "#0a090e" }}>
+        <div className="mx-auto max-w-[1100px] px-8 py-16 lg:px-14 lg:py-20">
+          <div className="mb-8 flex items-center gap-2">
+            <span className="inline-block h-2 w-2" style={{ background: "#8b6fbf" }} />
+            <span className="font-pb-mono text-[11px] font-bold tracking-widest uppercase" style={{ color: "#8b6fbf" }}>
+              Platform support
+            </span>
+          </div>
+          <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h2 className="font-pb-mono text-3xl font-bold text-pb-text md:text-4xl" style={{ letterSpacing: "-0.02em" }}>
+                Drops straight into<br />your workflow.
+              </h2>
+              <p className="mt-4 max-w-md text-[14px] leading-relaxed text-pb-text-muted">
+                The translated SRT is a standard file — no conversion, no plugin. Upload it directly to any platform that accepts subtitles.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3 lg:max-w-sm">
+              {["YouTube Studio", "Vimeo", "DaVinci Resolve", "Final Cut Pro", "Premiere Pro", "Amara", "Rev", "3Play Media", "Kapwing"].map((p) => (
+                <span
+                  key={p}
+                  className="font-pb-mono rounded-md px-4 py-2 text-[12px] text-pb-text-secondary"
+                  style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}
+                >
+                  {p}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
       </section>

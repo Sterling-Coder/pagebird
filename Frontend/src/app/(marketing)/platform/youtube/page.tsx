@@ -352,6 +352,137 @@ and desert you`}
         </div>
       </section>
 
+      {/* ─── CREATOR STATS ─── */}
+      <section style={{ background: "#0a0606", borderTop: "1px solid rgba(201,64,64,0.08)" }}>
+        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-28">
+          <h2 className="font-pb-mono mb-14 text-3xl font-bold text-pb-text md:text-4xl" style={{ letterSpacing: "-0.02em" }}>
+            Your next million views<br />are in another language.
+          </h2>
+          <div className="grid grid-cols-1 gap-0 md:grid-cols-3">
+            {[
+              { num: "2.7B", label: "YouTube users worldwide", sub: "Most don't speak English" },
+              { num: "80%", label: "Watch in a non-English language", sub: "If subtitles are available" },
+              { num: "3×", label: "More views with subtitles", sub: "Per YouTube's own research" },
+            ].map((stat, i) => (
+              <div key={stat.num} className={`py-10 ${i < 2 ? "md:border-r md:pr-12" : ""} ${i > 0 ? "md:pl-12" : ""} ${i < 2 ? "border-b border-white/[0.04] md:border-b-0" : ""}`}>
+                <p className="font-pb-mono font-bold leading-none" style={{ fontSize: "clamp(3rem,6vw,4.5rem)", color: "#c94040", letterSpacing: "-0.04em" }}>
+                  {stat.num}
+                </p>
+                <p className="mt-3 text-[16px] font-semibold text-pb-text">{stat.label}</p>
+                <p className="mt-1 text-[13px] text-pb-text-muted">{stat.sub}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── YOUTUBE CAPTION ECOSYSTEM ─── */}
+      <section className="pb-glass-section" style={{ background: "#0d0808", borderTop: "1px solid rgba(201,64,64,0.06)" }}>
+        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-28">
+          <div className="grid grid-cols-1 items-center gap-16 lg:grid-cols-2">
+            {/* Video player mock */}
+            <div>
+              <div className="overflow-hidden" style={{ borderRadius: "12px", border: "1px solid rgba(255,255,255,0.08)", background: "#0a0806" }}>
+                {/* Video area */}
+                <div className="relative flex items-center justify-center" style={{ background: "#1a1614", height: "160px" }}>
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full" style={{ background: "rgba(201,64,64,0.9)" }}>
+                    <svg viewBox="0 0 24 24" fill="white" style={{ width: "20px", height: "20px", marginLeft: "3px" }}>
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                  </div>
+                  {/* Captions overlay */}
+                  <div className="absolute bottom-3 left-1/2 -translate-x-1/2 rounded px-3 py-1 text-center text-[11px] text-white" style={{ background: "rgba(0,0,0,0.75)", maxWidth: "80%" }}>
+                    永远不会放弃你，永远不会让你失望
+                  </div>
+                </div>
+                {/* Controls bar */}
+                <div className="flex items-center gap-3 px-4 py-2.5" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                  <div className="h-1 flex-1 rounded-full" style={{ background: "rgba(255,255,255,0.1)" }}>
+                    <div className="h-full w-[40%] rounded-full" style={{ background: "#c94040" }} />
+                  </div>
+                  <span className="font-pb-mono text-[10px] text-pb-text-muted">CC</span>
+                </div>
+                {/* Subtitle tracks */}
+                <div className="p-4" style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+                  <p className="font-pb-mono mb-3 text-[9px] font-bold tracking-widest text-pb-text-muted uppercase">Subtitle tracks</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {["English (original)", "Chinese", "Arabic", "French", "German", "Spanish"].map((lang, i) => (
+                      <div key={lang} className="rounded px-2 py-1.5 text-center" style={{
+                        background: i === 0 ? "rgba(255,255,255,0.06)" : "rgba(201,64,64,0.1)",
+                        border: `1px solid ${i === 0 ? "rgba(255,255,255,0.08)" : "rgba(201,64,64,0.2)"}`,
+                      }}>
+                        <span className="font-pb-mono text-[9px]" style={{ color: i === 0 ? "rgba(240,236,227,0.5)" : "#c94040" }}>{lang}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div>
+              <div className="flex items-center gap-3 mb-6">
+                <span className="inline-block h-2 w-2" style={{ background: "#c94040" }} />
+                <span className="font-pb-mono text-[11px] font-bold tracking-widest uppercase" style={{ color: "#c94040" }}>How YouTube captions work</span>
+              </div>
+              <h2 className="font-pb-mono text-3xl font-bold text-pb-text md:text-4xl" style={{ letterSpacing: "-0.02em" }}>
+                One video.<br />Unlimited language tracks.
+              </h2>
+              <p className="mt-6 text-[15px] leading-relaxed text-pb-text-muted">
+                YouTube supports multiple subtitle tracks per video. Upload one translated SRT per language — the video itself never changes. Reach every market without re-recording a single second.
+              </p>
+              <div className="mt-8 flex flex-col gap-3">
+                {["Upload one SRT file per language", "Viewers choose their preferred language", "YouTube auto-serves the right track by region", "Your original video stays untouched"].map((item) => (
+                  <div key={item} className="flex items-start gap-3">
+                    <span className="mt-1 text-[11px]" style={{ color: "#c94040" }}>→</span>
+                    <span className="text-[14px] text-pb-text-secondary">{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── BATCH PROCESSING ─── */}
+      <section style={{ background: "#0a0707", borderTop: "1px solid rgba(201,64,64,0.06)" }}>
+        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-28">
+          <div className="grid grid-cols-1 items-center gap-16 lg:grid-cols-2">
+            <div>
+              <div className="flex items-center gap-3 mb-6">
+                <span className="inline-block h-2 w-2" style={{ background: "#c94040" }} />
+                <span className="font-pb-mono text-[11px] font-bold tracking-widest uppercase" style={{ color: "#c94040" }}>Batch processing</span>
+              </div>
+              <h2 className="font-pb-mono text-3xl font-bold text-pb-text md:text-4xl" style={{ letterSpacing: "-0.02em" }}>
+                Translate an<br />entire channel.
+              </h2>
+              <p className="mt-6 text-[15px] leading-relaxed text-pb-text-muted">
+                Paste a list of YouTube URLs. Get every subtitle file back for every language in minutes. Scale your entire video catalog without the manual work.
+              </p>
+            </div>
+            {/* URL list → output grid */}
+            <div className="font-pb-mono rounded-xl overflow-hidden" style={{ border: "1px solid rgba(201,64,64,0.15)", background: "#100c0b" }}>
+              <div className="p-6 space-y-2" style={{ borderBottom: "1px solid rgba(201,64,64,0.1)" }}>
+                <p className="text-[9px] font-bold tracking-widest text-pb-text-muted uppercase mb-3">Input URLs</p>
+                {["youtube.com/watch?v=dQw4w9WgXcQ", "youtube.com/watch?v=9bZkp7q19f0", "youtube.com/watch?v=kJQP7kiw5Fk", "youtube.com/watch?v=JGwWNGJdvx8", "youtube.com/watch?v=CevxZvSJLk8"].map((url) => (
+                  <div key={url} className="rounded px-3 py-2 text-[11px]" style={{ background: "rgba(255,255,255,0.04)", color: "rgba(240,236,227,0.4)" }}>
+                    {url}
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center justify-center py-3 text-[12px]" style={{ color: "#c94040" }}>
+                × 12 languages → 60 SRT files
+              </div>
+              <div className="grid grid-cols-4 gap-1.5 p-4">
+                {["ZH", "FR", "DE", "ES", "AR", "JA", "PT", "IT", "KO", "RU", "HI", "NL"].map((l) => (
+                  <div key={l} className="rounded px-2 py-1.5 text-center text-[10px] font-bold" style={{ background: "rgba(201,64,64,0.1)", border: "1px solid rgba(201,64,64,0.2)", color: "#c94040" }}>
+                    .{l.toLowerCase()}.srt
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ─── HOW IT WORKS ─── */}
       <section className="bg-pb-bg" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
         <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-28">
