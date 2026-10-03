@@ -404,7 +404,7 @@ export default function ProjectFilesPage() {
     (folders.length > 0 || files.length > 0) &&
     selectedFolders.size === folders.length &&
     selectedFiles.size === files.length;
-  const hasLegacyDownloadIssue = files.some((f) => f.download_available === false);
+  const hasLegacyDownloadIssue = files.some((f) => f.download_available === false && f.status === "complete");
 
   function toggleSelectAll() {
     if (allSelected) {
