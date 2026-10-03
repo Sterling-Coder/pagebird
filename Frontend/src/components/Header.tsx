@@ -122,11 +122,11 @@ export default function Header() {
                   className="w-[640px] overflow-hidden"
                   style={{
                     borderRadius: "16px",
-                    background: "rgba(18, 14, 10, 0.55)",
-                    backdropFilter: "blur(48px) saturate(2)",
-                    WebkitBackdropFilter: "blur(48px) saturate(2)",
-                    border: "1px solid rgba(255,255,255,0.1)",
-                    boxShadow: "0 32px 80px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.07)",
+                    background: "rgba(22, 18, 14, 0.76)",
+                    backdropFilter: "blur(40px) saturate(1.6)",
+                    WebkitBackdropFilter: "blur(40px) saturate(1.6)",
+                    border: "1px solid rgba(255,255,255,0.09)",
+                    boxShadow: "0 24px 64px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06)",
                   }}
                 >
                   {/* Column headers */}
