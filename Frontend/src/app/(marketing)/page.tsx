@@ -1007,33 +1007,34 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ─── CTA ─── lean narrow bar like Image #39 */}
-      <section style={{ background: "#e08a6f" }}>
+      {/* ─── CTA ─── dark with gradient headline */}
+      <section style={{
+        background: "linear-gradient(135deg, #0f0e0c 0%, #1a1410 50%, #0c0a0e 100%)",
+        borderTop: "1px solid rgba(255,255,255,0.06)",
+      }}>
         <div style={{
           maxWidth: "1100px", margin: "0 auto",
-          padding: "40px 56px",
+          padding: "56px 56px",
           display: "flex", alignItems: "center", justifyContent: "space-between",
           gap: "40px",
         }}>
-          <h2 style={{
-            fontFamily: "var(--font-inter), sans-serif",
-            fontSize: "clamp(1.5rem, 3vw, 2.5rem)",
-            fontWeight: 800,
-            color: "#15130f",
-            lineHeight: 1.15,
+          <h2 className="pb-stencil" style={{
+            fontSize: "clamp(2rem, 3.5vw, 3.2rem)",
+            lineHeight: 1.1,
             maxWidth: "600px",
-            letterSpacing: "-0.02em",
+            letterSpacing: "-0.01em",
             margin: 0,
           }}>
             Send us the document<br />you dread translating.
           </h2>
           <Link href="/login" style={{
             fontFamily: "var(--font-space-mono), monospace",
-            fontSize: "11px", fontWeight: 700, letterSpacing: "0.1em",
-            color: "#f0ece3", background: "#15130f",
-            padding: "14px 28px", whiteSpace: "nowrap",
+            fontSize: "11px", fontWeight: 700, letterSpacing: "0.12em",
+            color: "#15130f", background: "#e08a6f",
+            padding: "16px 32px", whiteSpace: "nowrap",
             textDecoration: "none", textTransform: "uppercase",
             flexShrink: 0,
+            borderRadius: "4px",
           }}>
             TRANSLATE FREE →
           </Link>
