@@ -179,66 +179,98 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* ── Main: Jobs table ── */}
+              {/* ── Main: Project / folder / file structure ── */}
               <div className="flex flex-1 flex-col" style={{ background: "#fdfcf7" }}>
-                {/* Header */}
-                <div className="flex items-center justify-between px-7 py-4" style={{ borderBottom: "1px solid #e8e2d8" }}>
-                  <div>
-                    <div style={{ fontSize: "20px", fontWeight: 700, color: "#15130f" }}>Jobs</div>
-                    <div style={{ fontSize: "12px", color: "#9a9488", marginTop: "2px" }}>6 translations</div>
+                {/* Breadcrumb + header */}
+                <div className="flex items-center justify-between px-6 py-3" style={{ borderBottom: "1px solid #e8e2d8" }}>
+                  <div className="flex items-center gap-1.5" style={{ fontSize: "12px", color: "#9a9488" }}>
+                    <span style={{ color: "#6e6a61", cursor: "pointer" }}>Projects</span>
+                    <span>/</span>
+                    <span style={{ color: "#15130f", fontWeight: 600 }}>Q4 Campaigns</span>
                   </div>
-                  <div style={{ background: "#e08a6f", color: "#fff", fontSize: "11px", fontWeight: 700, padding: "7px 16px", borderRadius: "8px", letterSpacing: "0.05em" }}>+ NEW JOB</div>
+                  <div className="flex items-center gap-2">
+                    <div style={{ border: "1px solid #dad4c7", color: "#6e6a61", fontSize: "11px", fontWeight: 600, padding: "5px 12px", borderRadius: "6px" }}>CREATE FOLDER</div>
+                    <div style={{ background: "#e08a6f", color: "#fff", fontSize: "11px", fontWeight: 700, padding: "5px 12px", borderRadius: "6px" }}>UPLOAD</div>
+                  </div>
                 </div>
 
-                {/* Filter tabs */}
-                <div className="flex items-center gap-1.5 px-7 py-3" style={{ borderBottom: "1px solid #e8e2d8" }}>
-                  {[{ l: "All", a: true }, { l: "In progress", a: false }, { l: "Complete", a: false }].map(p => (
-                    <div key={p.l} style={{
-                      fontSize: "12px", fontWeight: p.a ? 600 : 400, padding: "4px 14px", borderRadius: "20px",
-                      border: "1px solid", borderColor: p.a ? "#e08a6f" : "#dad4c7",
-                      background: p.a ? "#fef2ed" : "transparent", color: p.a ? "#e08a6f" : "#6e6a61",
-                    }}>{p.l}</div>
+                {/* Tab bar: Files, Settings, Linguistic Assets, Statistics */}
+                <div className="flex items-center gap-0 px-6" style={{ borderBottom: "1px solid #e8e2d8" }}>
+                  {[{ l: "Files", a: true }, { l: "Settings", a: false }, { l: "Linguistic Assets", a: false }, { l: "Statistics", a: false }].map(t => (
+                    <div key={t.l} style={{
+                      fontSize: "11px", fontWeight: t.a ? 700 : 500, padding: "8px 14px",
+                      color: t.a ? "#e08a6f" : "#9a9488",
+                      borderBottom: t.a ? "2px solid #e08a6f" : "2px solid transparent",
+                      marginBottom: "-1px",
+                    }}>{t.l}</div>
                   ))}
                 </div>
 
                 {/* Table */}
-                <div className="flex-1 px-7 pt-2">
-                  <div className="grid py-2" style={{ gridTemplateColumns: "2.5fr 0.7fr 0.9fr 1fr 140px", borderBottom: "1px solid #e8e2d8" }}>
-                    {["DOCUMENT", "FORMAT", "TARGET", "DATE", "STATUS"].map(h => (
+                <div className="flex-1 overflow-hidden px-6 pt-2">
+                  {/* Column headers */}
+                  <div className="grid items-center py-2" style={{ gridTemplateColumns: "28px 2.5fr 0.6fr 1fr 0.8fr 0.8fr 80px 70px", borderBottom: "1px solid #e8e2d8" }}>
+                    <span />
+                    {["DOCUMENT", "TYPE", "PROGRESS", "TARGET", "CREATED", "QA", "DL"].map(h => (
                       <span key={h} style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.12em", color: "#a09a8e" }}>{h}</span>
                     ))}
                   </div>
+
+                  {/* Folder row */}
                   {[
-                    { name: "annual_report_2026.idml", fmt: "IDML", target: "Chinese", date: "Today", progress: 100, status: "complete" },
-                    { name: "product_launch_video.srt", fmt: "SRT", target: "Arabic", date: "Today", progress: 82, status: "translating" },
-                    { name: "marketing_signage.ai", fmt: "AI", target: "French", date: "Dec 12", progress: 100, status: "complete" },
-                    { name: "company_website.html", fmt: "HTML", target: "German", date: "Dec 10", progress: 65, status: "translating" },
-                    { name: "newsletter_q4.idml", fmt: "IDML", target: "Spanish", date: "Dec 8", progress: 100, status: "complete" },
-                    { name: "tutorial_captions.vtt", fmt: "VTT", target: "Japanese", date: "Dec 7", progress: 100, status: "complete" },
+                    { type: "folder", name: "IDML Files", sub: "3 files" },
+                  ].map(row => (
+                    <div key={row.name} className="grid items-center py-2.5 cursor-pointer" style={{ gridTemplateColumns: "28px 2.5fr 0.6fr 1fr 0.8fr 0.8fr 80px 70px", borderBottom: "1px solid #f0ece3" }}>
+                      <span style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#9a9488" strokeWidth="1.75" style={{ width: "14px", height: "14px" }}>
+                          <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                        </svg>
+                      </span>
+                      <span style={{ fontSize: "13px", color: "#15130f", fontWeight: 500, display: "flex", alignItems: "center", gap: "6px" }}>
+                        {row.name}
+                        <span style={{ fontSize: "10px", color: "#9a9488", fontWeight: 400 }}>{row.sub}</span>
+                      </span>
+                      <span style={{ fontSize: "11px", color: "#c0bab2" }}>—</span>
+                      <span style={{ fontSize: "11px", color: "#c0bab2" }}>—</span>
+                      <span style={{ fontSize: "11px", color: "#c0bab2" }}>—</span>
+                      <span style={{ fontSize: "11px", color: "#9a9488" }}>Dec 5</span>
+                      <span style={{ fontSize: "11px", color: "#c0bab2" }}>—</span>
+                      <span style={{ fontSize: "11px", color: "#c0bab2" }}>—</span>
+                    </div>
+                  ))}
+
+                  {/* File rows */}
+                  {[
+                    { name: "annual_report_2026.idml", type: "idml", target: "Chinese", created: "Today", progress: 100, qa: "94%", done: true },
+                    { name: "product_brochure.pdf", type: "pdf", target: "Arabic", created: "Today", progress: 72, qa: "—", done: false },
+                    { name: "product_launch.srt", type: "srt", target: "French", created: "Dec 12", progress: 100, qa: "RUN QA", done: true },
+                    { name: "marketing_signage.ai", type: "ai", target: "German", created: "Dec 10", progress: 100, qa: "88%", done: true },
+                    { name: "company_website.html", type: "html", target: "Spanish", created: "Dec 8", progress: 48, qa: "—", done: false },
                   ].map((row, i) => (
-                    <div key={row.name} className="grid items-center py-3" style={{
-                      gridTemplateColumns: "2.5fr 0.7fr 0.9fr 1fr 140px",
-                      borderBottom: i < 5 ? "1px solid #f4f0e8" : "none",
-                    }}>
-                      <span style={{ fontSize: "13px", color: "#15130f", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: "12px" }}>{row.name}</span>
-                      <span style={{ fontSize: "11px", color: "#6e6a61" }}>{row.fmt}</span>
-                      <span style={{ fontSize: "11px", color: "#6e6a61" }}>{row.target}</span>
-                      <span style={{ fontSize: "11px", color: "#a09a8e" }}>{row.date}</span>
-                      <div className="flex items-center gap-2.5">
-                        <div style={{ flex: 1, height: "5px", background: "#e8e2d8", borderRadius: "4px", overflow: "hidden" }}>
-                          <div style={{
-                            height: "100%", borderRadius: "4px", width: `${row.progress}%`,
-                            background: row.status === "complete" ? "#4a9e5a" : row.status === "translating" ? "#e08a6f" : "#dad4c7",
-                          }} />
+                    <div key={row.name} className="grid items-center py-2.5 cursor-pointer hover:bg-[#f8f5ee]" style={{ gridTemplateColumns: "28px 2.5fr 0.6fr 1fr 0.8fr 0.8fr 80px 70px", borderBottom: i < 4 ? "1px solid #f4f0e8" : "none" }}>
+                      <span style={{ paddingLeft: "4px" }}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="#c0bab2" strokeWidth="1.75" style={{ width: "12px", height: "12px" }}>
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                          <polyline points="14 2 14 8 20 8" />
+                        </svg>
+                      </span>
+                      <span style={{ fontSize: "13px", color: "#15130f", fontWeight: 400, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: "8px" }}>{row.name}</span>
+                      <span style={{ fontSize: "10px", fontWeight: 700, color: "#9a9488", textTransform: "uppercase", letterSpacing: "0.06em" }}>{row.type}</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <div style={{ flex: 1, maxWidth: "80px", height: "4px", background: "#e8e2d8", borderRadius: "2px", overflow: "hidden" }}>
+                          <div style={{ height: "100%", width: `${row.progress}%`, background: row.done ? "#4a9e5a" : "#e08a6f", borderRadius: "2px" }} />
                         </div>
-                        <span style={{
-                          fontSize: "9px", fontWeight: 700, letterSpacing: "0.06em", padding: "2px 7px", borderRadius: "4px",
-                          color: row.status === "complete" ? "#4a9e5a" : row.status === "translating" ? "#e08a6f" : "#9a9488",
-                          background: row.status === "complete" ? "rgba(74,158,90,0.1)" : row.status === "translating" ? "rgba(224,138,111,0.12)" : "rgba(154,148,136,0.1)",
-                        }}>
-                          {row.status === "complete" ? "DONE" : row.status === "translating" ? "···" : "QUEUED"}
-                        </span>
                       </div>
+                      <span style={{ fontSize: "11px", color: "#6e6a61" }}>{row.target}</span>
+                      <span style={{ fontSize: "11px", color: "#9a9488" }}>{row.created}</span>
+                      <span style={{ fontSize: "10px", color: row.qa === "RUN QA" ? "#9a9488" : row.qa === "—" ? "#c0bab2" : "#15130f", border: row.qa === "RUN QA" ? "1px solid #dad4c7" : "none", padding: row.qa === "RUN QA" ? "2px 6px" : "0", borderRadius: "4px" }}>{row.qa}</span>
+                      <span>
+                        <svg viewBox="0 0 24 24" fill="none" stroke={row.done ? "#6e6a61" : "#dad4c7"} strokeWidth="1.75" style={{ width: "14px", height: "14px" }}>
+                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                          <polyline points="7 10 12 15 17 10" />
+                          <line x1="12" y1="15" x2="12" y2="3" />
+                        </svg>
+                      </span>
                     </div>
                   ))}
                 </div>
