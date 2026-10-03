@@ -121,89 +121,134 @@ export default function Home() {
             </div>
           </div>
 
-          {/* ── App UI mock — left nav + right projects ── */}
-          <div className="pb-enter pb-enter-delay-4 relative mt-16 overflow-hidden" style={{
-            borderRadius: "8px",
-            border: "1px solid rgba(255,255,255,0.1)",
-            boxShadow: "0 40px 120px rgba(0,0,0,0.6)",
+          {/* ── macOS-style app window mock ── */}
+          <div className="pb-enter pb-enter-delay-4 relative mt-16 lg:-mx-20 xl:-mx-32" style={{
+            borderRadius: "12px",
+            overflow: "hidden",
+            boxShadow: "0 48px 140px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.08)",
           }}>
-            <div className="flex" style={{ minHeight: "360px" }}>
+            {/* macOS title bar */}
+            <div className="flex items-center gap-2 px-4 py-3" style={{ background: "#f0ece3", borderBottom: "1px solid #dad4c7" }}>
+              <span className="inline-block h-3 w-3 rounded-full" style={{ background: "#ff5f57" }} />
+              <span className="inline-block h-3 w-3 rounded-full" style={{ background: "#febc2e" }} />
+              <span className="inline-block h-3 w-3 rounded-full" style={{ background: "#28c840" }} />
+              <span style={{ marginLeft: "8px", fontSize: "12px", color: "#6e6a61", fontWeight: 500 }}>Pagebirdy — Jobs</span>
+            </div>
 
-              {/* Left nav rail — dark green like actual app */}
+            <div className="flex" style={{ minHeight: "520px" }}>
+              {/* Left sidebar — clean white like Image #35 */}
               <div className="flex shrink-0 flex-col" style={{
-                width: "180px",
-                background: "#153a2e",
-                borderRight: "1px solid #0f2a20",
+                width: "190px",
+                background: "#f8f5ee",
+                borderRight: "1px solid #e8e2d8",
               }}>
-                {/* Logo */}
-                <div className="px-4 py-5 border-b" style={{ borderColor: "#0f2a20" }}>
+                {/* Logo in sidebar */}
+                <div className="px-5 py-4">
                   <span style={{
                     fontFamily: "var(--font-fraunces), Georgia, serif",
                     fontStyle: "italic",
-                    fontSize: "16px",
-                    color: "#f2ede0",
+                    fontSize: "18px",
+                    fontWeight: 600,
+                    color: "#15130f",
                   }}>
                     page<span style={{ color: "#e08a6f" }}>birdy</span>
                   </span>
                 </div>
-                {/* Nav items */}
-                <div className="flex flex-col gap-1 px-2 py-3">
+
+                {/* Nav section */}
+                <div className="px-3 pb-2">
+                  <div className="mb-1 px-2 pb-1 pt-3" style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.1em", color: "#a09a8e" }}>MAIN</div>
                   {[
                     { label: "Jobs", active: true },
                     { label: "Team", active: false },
                     { label: "Settings", active: false },
                   ].map((item) => (
-                    <div key={item.label} className="flex items-center gap-2.5 rounded px-3 py-2" style={{
-                      background: item.active ? "rgba(242,237,224,0.1)" : "transparent",
+                    <div key={item.label} className="flex items-center gap-2.5 rounded-md px-2 py-1.5 mb-0.5" style={{
+                      background: item.active ? "#e08a6f" : "transparent",
                     }}>
-                      <div className="h-4 w-4 rounded-sm" style={{ background: "rgba(242,237,224,0.2)" }} />
-                      <span style={{ fontSize: "13px", color: item.active ? "#f2ede0" : "rgba(242,237,224,0.45)", fontWeight: item.active ? 600 : 400 }}>
-                        {item.label}
-                      </span>
+                      <span style={{
+                        display: "inline-block", width: "6px", height: "6px", borderRadius: "2px",
+                        background: item.active ? "rgba(255,255,255,0.8)" : "#b0a898",
+                      }} />
+                      <span style={{
+                        fontSize: "13px",
+                        color: item.active ? "#fff" : "#4a463d",
+                        fontWeight: item.active ? 600 : 400,
+                      }}>{item.label}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Right main area — light paper like actual app */}
+              {/* Right main content */}
               <div className="flex flex-1 flex-col" style={{ background: "#fdfcf7" }}>
-                {/* Top bar */}
-                <div className="flex items-center justify-between border-b px-6 py-3" style={{ borderColor: "#dad4c7" }}>
-                  <span style={{ fontSize: "13px", fontWeight: 700, color: "#15130f" }}>Jobs</span>
+                {/* Header row */}
+                <div className="flex items-center justify-between border-b px-6 py-4" style={{ borderColor: "#e8e2d8" }}>
+                  <div>
+                    <div style={{ fontSize: "18px", fontWeight: 700, color: "#15130f" }}>Jobs</div>
+                    <div style={{ fontSize: "12px", color: "#9a9488", marginTop: "1px" }}>4 projects</div>
+                  </div>
                   <div className="flex items-center gap-2">
-                    <div className="rounded px-3 py-1.5" style={{ background: "#e08a6f", fontSize: "11px", fontWeight: 700, color: "#fdfcf7" }}>
-                      NEW JOB
-                    </div>
+                    <div style={{
+                      background: "#e08a6f", color: "#fff", fontSize: "11px",
+                      fontWeight: 700, padding: "6px 14px", borderRadius: "6px",
+                      letterSpacing: "0.05em",
+                    }}>NEW JOB</div>
                   </div>
                 </div>
 
-                {/* Projects table */}
-                <div className="flex-1 px-6 py-4">
-                  {/* Table header */}
-                  <div className="mb-2 grid border-b pb-2" style={{ gridTemplateColumns: "2fr 1fr 1fr 1fr 80px", borderColor: "#dad4c7" }}>
-                    {["NAME", "TYPE", "TARGET", "CREATED", ""].map((h) => (
-                      <span key={h} style={{ fontSize: "10px", fontWeight: 700, color: "#6e6a61", letterSpacing: "0.1em" }}>{h}</span>
+                {/* Filter pills */}
+                <div className="flex items-center gap-2 border-b px-6 py-2.5" style={{ borderColor: "#e8e2d8" }}>
+                  {[{ l: "Today", a: false }, { l: "7 days", a: false }, { l: "30 days", a: false }, { l: "All", a: true }].map(p => (
+                    <div key={p.l} style={{
+                      fontSize: "12px", fontWeight: p.a ? 600 : 400, padding: "3px 12px",
+                      borderRadius: "20px", border: "1px solid",
+                      borderColor: p.a ? "#e08a6f" : "#dad4c7",
+                      background: p.a ? "#e08a6f" : "transparent",
+                      color: p.a ? "#fff" : "#6e6a61",
+                    }}>{p.l}</div>
+                  ))}
+                </div>
+
+                {/* Table */}
+                <div className="flex-1 px-6 pt-3">
+                  {/* Date group */}
+                  <div className="flex items-center gap-3 py-2">
+                    <span style={{ fontSize: "13px", fontWeight: 700, color: "#15130f" }}>Today</span>
+                    <span style={{ fontSize: "11px", color: "#9a9488" }}>2 projects · 48 pages</span>
+                  </div>
+                  {/* Column headers */}
+                  <div className="grid border-b pb-1.5" style={{ gridTemplateColumns: "2.5fr 0.8fr 1fr 1fr 120px", borderColor: "#e8e2d8" }}>
+                    {["NAME", "TYPE", "TARGET", "CREATED", "PROGRESS"].map(h => (
+                      <span key={h} style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.1em", color: "#9a9488" }}>{h}</span>
                     ))}
                   </div>
                   {/* Rows */}
                   {[
-                    { name: "annual_report_2026.idml", type: "IDML", target: "Chinese", created: "Today", progress: 100 },
-                    { name: "product_brochure.pdf", type: "PDF", target: "Arabic", created: "Yesterday", progress: 78 },
-                    { name: "marketing_deck.idml", type: "IDML", target: "French", created: "Dec 12", progress: 45 },
-                    { name: "newsletter_q4.idml", type: "IDML", target: "German", created: "Dec 10", progress: 100 },
-                  ].map((row) => (
-                    <div key={row.name} className="grid items-center border-b py-3" style={{ gridTemplateColumns: "2fr 1fr 1fr 1fr 80px", borderColor: "#f0ece3" }}>
+                    { name: "annual_report_2026.idml", type: "IDML", target: "Chinese", created: "Today", progress: 100, done: true },
+                    { name: "product_brochure.pdf", type: "PDF", target: "Arabic", created: "Today", progress: 68, done: false },
+                    { name: "marketing_deck.idml", type: "IDML", target: "French", created: "Dec 12", progress: 35, done: false },
+                    { name: "newsletter_q4.idml", type: "IDML", target: "German", created: "Dec 10", progress: 100, done: true },
+                    { name: "company_handbook.pdf", type: "PDF", target: "Spanish", created: "Dec 8", progress: 100, done: true },
+                    { name: "press_release_q4.idml", type: "IDML", target: "Japanese", created: "Dec 7", progress: 22, done: false },
+                  ].map((row, i) => (
+                    <div key={row.name} className="grid items-center py-3.5" style={{
+                      gridTemplateColumns: "2.5fr 0.8fr 1fr 1fr 120px",
+                      borderBottom: i < 5 ? "1px solid #f0ece3" : "none",
+                    }}>
                       <span style={{ fontSize: "13px", color: "#15130f", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.name}</span>
                       <span style={{ fontSize: "11px", color: "#6e6a61" }}>{row.type}</span>
                       <span style={{ fontSize: "11px", color: "#6e6a61" }}>{row.target}</span>
-                      <span style={{ fontSize: "11px", color: "#6e6a61" }}>{row.created}</span>
+                      <span style={{ fontSize: "11px", color: "#9a9488" }}>{row.created}</span>
                       <div className="flex items-center gap-2">
-                        <div className="h-1.5 flex-1 overflow-hidden rounded-full" style={{ background: "#dad4c7" }}>
-                          <div className="h-full rounded-full" style={{
+                        <div style={{ flex: 1, height: "4px", background: "#e8e2d8", borderRadius: "4px", overflow: "hidden" }}>
+                          <div style={{
+                            height: "100%", borderRadius: "4px",
                             width: `${row.progress}%`,
-                            background: row.progress === 100 ? "#4a9e5a" : "#e08a6f",
+                            background: row.done ? "#4a9e5a" : "#e08a6f",
                           }} />
                         </div>
+                        <span style={{ fontSize: "10px", color: "#9a9488", minWidth: "26px" }}>{row.progress}%</span>
                       </div>
                     </div>
                   ))}
@@ -211,10 +256,10 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Bottom-to-top fade */}
+            {/* Bottom fade */}
             <div className="pointer-events-none absolute bottom-0 left-0 right-0" style={{
-              height: "45%",
-              background: "linear-gradient(to top, #0c0810 0%, #0c0810 10%, rgba(12,8,16,0.85) 45%, transparent 100%)",
+              height: "40%",
+              background: "linear-gradient(to top, #0c0810 0%, #0c0810 8%, rgba(12,8,16,0.9) 40%, transparent 100%)",
             }} />
           </div>
         </div>
