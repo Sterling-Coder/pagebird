@@ -28,6 +28,7 @@ export type JobSummary = {
   folder_id?: string | null;
   created_by?: string | null;
   created_by_name?: string | null;
+  download_available?: boolean;
   meta?: { progress?: number; stage?: string; extensions?: string[] } | null;
 };
 

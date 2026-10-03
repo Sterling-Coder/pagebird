@@ -404,6 +404,7 @@ export default function ProjectFilesPage() {
     (folders.length > 0 || files.length > 0) &&
     selectedFolders.size === folders.length &&
     selectedFiles.size === files.length;
+  const hasLegacyDownloadIssue = files.some((f) => f.download_available === false);
 
   function toggleSelectAll() {
     if (allSelected) {
@@ -617,6 +618,11 @@ export default function ProjectFilesPage() {
       </div>
 
       {error ? <p className="mb-3 text-sm text-red">{error}</p> : null}
+      {hasLegacyDownloadIssue ? (
+        <p className="mb-4 text-[12px] font-semibold text-red sm:text-[14px]">
+          This translation was created before durable file storage was enabled. Please upload the original file again.
+        </p>
+      ) : null}
       {listError ? (
         <p className="mb-3 text-sm text-ink-soft">
           Couldn&apos;t refresh this list — retrying automatically.{" "}
@@ -832,8 +838,9 @@ export default function ProjectFilesPage() {
                   {f.status === "complete" ? (
                     <button
                       type="button"
-                      disabled={downloadingIds.has(f.id)}
+                      disabled={f.download_available === false || downloadingIds.has(f.id)}
                       onClick={() => {
+                        if (f.download_available === false) return;
                         const isIdml = (ext ?? "").toLowerCase() === "idml";
                         const url = `${API_BASE_URL}/api/jobs/${f.id}/download${isIdml ? "?format=idml" : ""}`;
                         setDownloadingIds((prev) => new Set(prev).add(f.id));
@@ -851,8 +858,8 @@ export default function ProjectFilesPage() {
                       }}
                       aria-label={`Download ${name}`}
                       aria-busy={downloadingIds.has(f.id)}
-                      title="Download translated document"
-                      className="inline-flex h-6 w-6 items-center justify-center border border-rule text-ink-soft hover:border-ink hover:text-ink disabled:opacity-50"
+                      title={f.download_available === false ? "This translation needs to be uploaded again." : "Download translated document"}
+                      className="inline-flex h-6 w-6 items-center justify-center border border-rule text-ink-soft hover:border-ink hover:text-ink disabled:cursor-not-allowed disabled:opacity-35"
                     >
                       {downloadingIds.has(f.id) ? (
                         <svg viewBox="0 0 24 24" fill="none" className="h-3.5 w-3.5 animate-spin">

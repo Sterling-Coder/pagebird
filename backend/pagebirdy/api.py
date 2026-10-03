@@ -128,6 +128,15 @@ def _store() -> ReviewStore:
     return ReviewStore(_REVIEW_DB)
 
 
+def _job_download_available(job: dict) -> bool:
+    """True only for current job-scoped storage keys; legacy local paths are
+    expired and must be recreated by re-uploading the original source file."""
+    output = str(job.get("output") or "")
+    if not output:
+        return False
+    return output.startswith(f"jobs/{job.get('id')}/")
+
+
 def _upload_dir() -> str:
     return os.environ.get("BABEL_UPLOAD_DIR", _UPLOAD_DIR)
 
@@ -632,12 +641,15 @@ def list_project_files(project_id: str, folder_id: str | None = None,
     names = get_profile_names([j.get("created_by") for j in scoped])
     for j in scoped:
         j["created_by_name"] = names.get(j.get("created_by"))
+        j["download_available"] = _job_download_available(j)
     return scoped
 
 
 @app.get("/api/jobs/{job_id}")
 def get_job(job_id: str, user: dict = Depends(require_user)) -> dict:
-    return _find_owned_job(job_id, user)
+    job = _find_owned_job(job_id, user)
+    job["download_available"] = _job_download_available(job)
+    return job
 
 
 @app.delete("/api/jobs/{job_id}")
@@ -666,7 +678,10 @@ def get_job_history(job_id: str, user: dict = Depends(require_user)) -> list[dic
 def list_jobs(user: dict = Depends(require_user)) -> list[dict]:
     s = _store()
     try:
-        return s.list_jobs(created_by=effective_owner_ids(user["id"]))
+        jobs = s.list_jobs(created_by=effective_owner_ids(user["id"]))
+        for job in jobs:
+            job["download_available"] = _job_download_available(job)
+        return jobs
     finally:
         s.close()
 

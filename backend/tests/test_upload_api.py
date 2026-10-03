@@ -327,6 +327,32 @@ def test_download_of_a_pre_storage_job_explains_that_it_must_be_reuploaded(monke
     )
 
 
+def test_project_files_marks_a_pre_storage_output_unavailable(monkeypatch):
+    class Store:
+        def list_jobs(self, **_kwargs):
+            return [{
+                "id": "old-job",
+                "status": "complete",
+                "source": "uploads/old-job/book.idml",
+                "output": "out/book.zh.idml",
+                "created_by": "test-user",
+            }]
+
+        def close(self):
+            pass
+
+    monkeypatch.setitem(api.app.dependency_overrides, api.require_user,
+                        lambda: {"id": "test-user", "email": "test@example.com"})
+    monkeypatch.setattr(api, "_store", lambda: Store())
+    monkeypatch.setattr(api, "_assert_owns_project", lambda *_args: None)
+    monkeypatch.setattr(api, "get_profile_names", lambda _ids: {"test-user": "Test User"})
+
+    response = TestClient(api.app).get("/api/projects/project-1/files")
+
+    assert response.status_code == 200
+    assert response.json()[0]["download_available"] is False
+
+
 def test_bad_extension_rejected(monkeypatch, tmp_path):
     _wire(monkeypatch, tmp_path)
     client = TestClient(api.app)
