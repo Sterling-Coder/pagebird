@@ -139,41 +139,75 @@ export default function Home() {
 
               {/* ── Sidebar: dark with all products ── */}
               <div className="flex shrink-0 flex-col" style={{ width: "220px", background: "#131210", borderRight: "1px solid rgba(255,255,255,0.07)" }}>
-                {/* Logo */}
-                <div className="px-5 py-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-                  <span style={{ fontFamily: "var(--font-share-tech-mono), monospace", fontSize: "15px", letterSpacing: "0.04em" }}>
-                    <span style={{ color: "rgba(240,236,227,0.7)" }}>page</span><span style={{ color: "#e08a6f" }}>birdy</span>
+                {/* Logo + user */}
+                <div className="flex items-center justify-between px-4 py-3.5" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+                  <span style={{ fontFamily: "var(--font-share-tech-mono), monospace", fontSize: "14px", letterSpacing: "0.04em" }}>
+                    <span style={{ color: "rgba(240,236,227,0.75)" }}>page</span><span style={{ color: "#e08a6f" }}>birdy</span>
                   </span>
+                  {/* Avatar */}
+                  <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: "linear-gradient(135deg,#e08a6f,#8b6fbf)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", fontWeight: 700, color: "#fff" }}>A</div>
                 </div>
 
-                {/* Products section */}
-                <div className="px-3 pt-4">
-                  <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.14em", color: "rgba(255,255,255,0.3)", paddingLeft: "8px", marginBottom: "4px" }}>PRODUCTS</div>
-                  {[
-                    { label: "Documents / PDF", active: false },
-                    { label: "SRT / VTT Subtitles", active: false },
-                    { label: "Image Translator", active: false },
-                    { label: "Website Translator", active: false },
-                    { label: "YouTube Subtitles", active: false },
-                  ].map((item) => (
-                    <div key={item.label} className="flex items-center rounded-md px-2 py-2 mb-0.5" style={{ background: "transparent" }}>
-                      <span style={{ display: "inline-block", width: "5px", height: "5px", borderRadius: "50%", background: "rgba(255,255,255,0.2)", marginRight: "8px", flexShrink: 0 }} />
-                      <span style={{ fontSize: "12px", color: "rgba(240,236,227,0.65)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.label}</span>
+                {/* New Job button */}
+                <div className="px-3 pt-3 pb-2">
+                  <div style={{ background: "#e08a6f", color: "#fff", fontSize: "11px", fontWeight: 700, padding: "7px 0", borderRadius: "6px", textAlign: "center", letterSpacing: "0.06em" }}>+ NEW JOB</div>
+                </div>
+
+                <div style={{ height: "1px", background: "rgba(255,255,255,0.06)", margin: "0 12px" }} />
+
+                {/* Projects tree */}
+                <div className="px-3 pt-3">
+                  <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.14em", color: "rgba(255,255,255,0.28)", paddingLeft: "6px", marginBottom: "6px" }}>PROJECTS</div>
+
+                  {/* Active project — expanded */}
+                  <div style={{ marginBottom: "2px" }}>
+                    <div className="flex items-center gap-1.5 rounded-md px-2 py-2" style={{ background: "rgba(224,138,111,0.12)" }}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="#e08a6f" strokeWidth="2" style={{ width: "10px", height: "10px", flexShrink: 0 }}>
+                        <path d="m6 9 6 6 6-6" />
+                      </svg>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="#e08a6f" strokeWidth="1.75" style={{ width: "13px", height: "13px", flexShrink: 0 }}>
+                        <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                      </svg>
+                      <span style={{ fontSize: "12px", color: "#e08a6f", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Q4 Campaigns</span>
+                    </div>
+                    {/* Nested folders */}
+                    {["IDML Files", "Subtitles", "Images"].map((f, i) => (
+                      <div key={f} className="flex items-center gap-1.5 rounded-md px-2 py-1.5" style={{ marginLeft: "16px", background: i === 0 ? "rgba(255,255,255,0.06)" : "transparent" }}>
+                        <svg viewBox="0 0 24 24" fill="none" stroke={i === 0 ? "rgba(240,236,227,0.6)" : "rgba(255,255,255,0.22)"} strokeWidth="1.75" style={{ width: "11px", height: "11px", flexShrink: 0 }}>
+                          <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                        </svg>
+                        <span style={{ fontSize: "11px", color: i === 0 ? "rgba(240,236,227,0.75)" : "rgba(240,236,227,0.35)" }}>{f}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Other projects — collapsed */}
+                  {["Brand Assets", "Legal Docs"].map(p => (
+                    <div key={p} className="flex items-center gap-1.5 rounded-md px-2 py-2 mb-0.5">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="2" style={{ width: "10px", height: "10px", flexShrink: 0 }}>
+                        <path d="m9 18 6-6-6-6" />
+                      </svg>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="1.75" style={{ width: "13px", height: "13px", flexShrink: 0 }}>
+                        <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                      </svg>
+                      <span style={{ fontSize: "12px", color: "rgba(240,236,227,0.38)" }}>{p}</span>
                     </div>
                   ))}
                 </div>
 
-                {/* Workspace section */}
-                <div className="px-3 pt-5">
-                  <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.14em", color: "rgba(255,255,255,0.3)", paddingLeft: "8px", marginBottom: "4px" }}>WORKSPACE</div>
+                <div style={{ height: "1px", background: "rgba(255,255,255,0.06)", margin: "12px 12px 0" }} />
+
+                {/* Bottom nav */}
+                <div className="px-3 pt-2">
                   {[
-                    { label: "Jobs", active: true },
-                    { label: "Team", active: false },
-                    { label: "Settings", active: false },
-                  ].map((item) => (
-                    <div key={item.label} className="flex items-center gap-2.5 rounded-md px-2 py-2 mb-0.5" style={{ background: item.active ? "rgba(224,138,111,0.18)" : "transparent" }}>
-                      <span style={{ display: "inline-block", width: "5px", height: "5px", borderRadius: "50%", background: item.active ? "#e08a6f" : "rgba(255,255,255,0.2)", flexShrink: 0 }} />
-                      <span style={{ fontSize: "13px", color: item.active ? "#e08a6f" : "rgba(240,236,227,0.45)", fontWeight: item.active ? 600 : 400 }}>{item.label}</span>
+                    { label: "Team", icon: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" },
+                    { label: "Settings", icon: "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" },
+                  ].map(item => (
+                    <div key={item.label} className="flex items-center gap-2.5 rounded-md px-2 py-2 mb-0.5">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.75" style={{ width: "13px", height: "13px", flexShrink: 0 }}>
+                        <path d={item.icon} />
+                      </svg>
+                      <span style={{ fontSize: "12px", color: "rgba(240,236,227,0.38)" }}>{item.label}</span>
                     </div>
                   ))}
                 </div>
