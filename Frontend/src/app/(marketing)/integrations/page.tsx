@@ -81,28 +81,28 @@ const INTEGRATIONS = [
 export default function IntegrationsPage() {
   return (
     <>
-      <section className="border-b-[3px] border-pb-ink px-6 py-18 pb-14 md:px-14">
-        <span className="font-pb-mono-brand text-[12.5px] font-bold tracking-widest text-pb-accent uppercase">
+      <section className="border-b border-pb-border px-6 py-18 pb-14 md:px-14">
+        <span className="font-pb-mono text-[11px] font-bold tracking-widest text-pb-accent uppercase">
           — integrations
         </span>
-        <h1 className="font-pb-display mt-4.5 max-w-3xl text-5xl md:text-6xl">
+        <h1 className="font-pb-display mt-4.5 max-w-3xl text-5xl text-pb-text md:text-6xl">
           Wherever the file lives, Pagebirdy can reach it.
         </h1>
-        <p className="mt-5.5 max-w-xl text-[17px] leading-relaxed text-pb-muted">
+        <p className="mt-5.5 max-w-xl text-[17px] leading-relaxed text-pb-text-muted">
           Watch a folder, connect a repo, or call the API directly — no one has to
           open Pagebirdy for a file to come back translated. On the roadmap, coming soon.
         </p>
       </section>
 
-      <section className="grid grid-cols-1 border-b-[3px] border-pb-ink bg-pb-ink text-pb-paper sm:grid-cols-2 md:grid-cols-4">
+      <section className="grid grid-cols-1 border-b border-pb-border bg-pb-bg-card sm:grid-cols-2 md:grid-cols-4">
         {INTEGRATIONS.map((item, i) => (
           <div
             key={item.title}
-            className={`relative flex flex-col gap-3 border-pb-card-ink/15 p-8 ${
-              i % 4 !== 3 ? "sm:border-r-[3px]" : ""
-            } ${i < INTEGRATIONS.length - (INTEGRATIONS.length % 4 || 4) ? "border-b-[3px]" : "border-b-[3px] md:border-b-0"}`}
+            className={`relative flex flex-col gap-3 border-pb-border p-8 ${
+              i % 4 !== 3 ? "sm:border-r" : ""
+            } ${i < INTEGRATIONS.length - (INTEGRATIONS.length % 4 || 4) ? "border-b" : "border-b md:border-b-0"}`}
           >
-            <div className="pointer-events-none flex flex-col gap-3 opacity-60 blur-[3px] select-none">
+            <div className="pointer-events-none flex flex-col gap-3 opacity-40 blur-[2px] select-none">
               <svg
                 width="26"
                 height="26"
@@ -112,26 +112,27 @@ export default function IntegrationsPage() {
                 strokeWidth="1.6"
                 strokeLinecap="round"
                 strokeLinejoin="round"
+                className="text-pb-text"
               >
                 {item.icon}
               </svg>
-              <h3 className="text-base font-bold">{item.title}</h3>
-              <p className="text-pb-card-muted text-[13px] leading-relaxed">{item.body}</p>
+              <h3 className="text-base font-bold text-pb-text">{item.title}</h3>
+              <p className="text-[13px] leading-relaxed text-pb-text-muted">{item.body}</p>
             </div>
-            <span className="font-pb-mono-brand absolute top-8 right-8 border border-pb-accent bg-pb-ink px-2 py-0.75 text-[9.5px] font-bold tracking-wide text-pb-accent uppercase">
+            <span className="font-pb-mono absolute top-8 right-8 rounded-full bg-pb-accent-dim px-2.5 py-0.5 text-[9px] font-bold tracking-widest text-pb-accent uppercase">
               Coming soon
             </span>
           </div>
         ))}
       </section>
 
-      <section className="flex flex-col items-start justify-between gap-6 bg-pb-ink px-6 py-14 text-pb-paper md:flex-row md:items-center md:px-14">
-        <h2 className="font-pb-display max-w-lg text-2xl md:text-3xl">
+      <section className="flex flex-col items-start justify-between gap-6 bg-pb-accent px-6 py-14 md:flex-row md:items-center md:px-14">
+        <h2 className="font-pb-display max-w-lg text-2xl text-pb-bg md:text-3xl">
           Don&rsquo;t see yours? We&rsquo;re shipping new integrations soon.
         </h2>
         <Link
           href="/contact"
-          className="flex h-13.5 flex-shrink-0 items-center bg-pb-accent px-7 text-[15px] font-bold text-pb-paper"
+          className="font-pb-mono flex h-13.5 flex-shrink-0 items-center rounded-full bg-pb-bg px-7 text-[12px] font-bold tracking-widest text-pb-text uppercase transition-all hover:bg-pb-bg-raised"
         >
           Request an integration →
         </Link>

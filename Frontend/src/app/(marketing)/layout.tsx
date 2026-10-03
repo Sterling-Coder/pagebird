@@ -3,12 +3,11 @@ import { Fraunces, Space_Mono, Inter } from "next/font/google";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { DemoVideoButton } from "@/components/DemoVideoButton";
-import { ParallaxCurves } from "@/components/ParallaxCurves";
 
 export const metadata: Metadata = {
   title: "Pagebirdy — Document translation that keeps the document",
   description:
-    "Pagebirdy translates InDesign (IDML) files into 40+ languages and returns them with every font, column, table, footnote and page break exactly where it was — plus DOCX, PDF, PPTX and more.",
+    "Pagebirdy translates InDesign (IDML) files into 40+ languages and returns them with every font, column, table, footnote and page break exactly where it was — plus PDF, subtitles and more.",
 };
 
 const fraunces = Fraunces({
@@ -33,10 +32,8 @@ const inter = Inter({
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
   return (
     <div
-      className={`${fraunces.variable} ${spaceMono.variable} ${inter.variable} relative flex min-h-screen shrink-0 flex-col bg-pb-paper text-pb-ink antialiased`}
+      className={`${fraunces.variable} ${spaceMono.variable} ${inter.variable} relative flex min-h-screen shrink-0 flex-col bg-pb-bg text-pb-text antialiased`}
     >
-      <ParallaxCurves />
-
       <Header />
       <main className="flex-1">{children}</main>
       <Footer />

@@ -1,466 +1,422 @@
 import Link from "next/link";
 import { WatchDemoButton } from "@/components/WatchDemoButton";
 
-// Flip to true once there are real client logos to show — placeholder
-// names shouldn't render as if they were actual customers.
-const SHOW_CLIENT_LOGOS = false;
-const CLIENTS: string[] = [];
-
-const PROBLEMS = [
+const PRODUCTS = [
   {
-    n: "01",
-    title: "Text expands, boxes don't",
-    body: "German runs 30% longer than English. Pagebirdy reflows inside the original frame before anything overflows.",
+    title: "Document / PDF",
+    desc: "Translate InDesign IDML and PDF files with full layout preservation — fonts, columns, tables and page breaks stay exactly where they were.",
+    href: "/platform/documents",
+    live: true,
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-6 w-6">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+        <polyline points="14 2 14 8 20 8" />
+        <line x1="16" y1="13" x2="8" y2="13" />
+        <line x1="16" y1="17" x2="8" y2="17" />
+      </svg>
+    ),
   },
   {
-    n: "02",
-    title: "Tables and footnotes survive",
-    body: "Cells stay in their columns. Footnote markers stay bound to their sentences, however long the translation runs.",
+    title: "SRT / VTT Subtitles",
+    desc: "Translate subtitle files with timing preserved. Every cue stays synced to its original frame.",
+    href: "/platform/subtitles",
+    live: false,
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-6 w-6">
+        <rect x="2" y="4" width="20" height="16" rx="2" />
+        <path d="M7 15h4M13 15h4M7 11h10" />
+      </svg>
+    ),
   },
   {
-    n: "03",
-    title: "Right-to-left is first-class",
-    body: "Arabic and Hebrew mirror the whole page — margins, gutters, bullets — not just the sentence direction.",
-  },
-];
-
-const STEPS = [
-  {
-    n: "1",
-    title: "Drop the file in",
-    body: "IDML, PDF, DOCX, PPTX, XLSX or HTML — Pagebirdy reads the layout tree, not a flattened text dump.",
-    accent: false,
-  },
-  {
-    n: "2",
-    title: "Pick languages + glossary",
-    body: "Attach a termbase and lock the terms that must never be translated — product names, legal phrases.",
-    accent: false,
+    title: "Image Translator",
+    desc: "Detect and translate text embedded in images — signs, labels, infographics — and render it back in place.",
+    href: "/platform/images",
+    live: false,
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-6 w-6">
+        <rect x="3" y="3" width="18" height="18" rx="2" />
+        <circle cx="8.5" cy="8.5" r="1.5" />
+        <path d="m21 15-5-5L5 21" />
+      </svg>
+    ),
   },
   {
-    n: "3",
-    title: "Download it, translated",
-    body: "Same extension, same styles, same page count. Open it and keep editing as if nothing happened.",
-    accent: true,
+    title: "Website Translator",
+    desc: "Point at a live URL and get every page translated — navigation, footers, dynamic content included.",
+    href: "/platform/websites",
+    live: false,
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-6 w-6">
+        <circle cx="12" cy="12" r="10" />
+        <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+      </svg>
+    ),
+  },
+  {
+    title: "YouTube Subtitles",
+    desc: "Paste a YouTube link. We pull the captions, translate them, and hand back a ready-to-upload SRT.",
+    href: "/platform/youtube",
+    live: false,
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-6 w-6">
+        <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19.1c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-1.93 29 29 0 0 0 .46-5.42 29 29 0 0 0-.46-5.33z" />
+        <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02" />
+      </svg>
+    ),
   },
 ];
 
 const FEATURES = [
   {
+    title: "Layout preservation",
+    desc: "Every font, column, table, footnote and page break lands exactly where it was.",
+  },
+  {
+    title: "RTL mirroring",
+    desc: "Arabic and Hebrew mirror the whole page — margins, gutters, bullets — not just text direction.",
+  },
+  {
+    title: "OCR built in",
+    desc: "Scanned PDFs get OCR, then a translated text layer rebuilt in position.",
+  },
+  {
+    title: "Font substitution",
+    desc: "No Japanese in your typeface? We pick a metrically compatible one, not a generic fallback.",
+  },
+  {
+    title: "QA scoring",
+    desc: "Every job gets a layout-integrity score. Catch reflow and overflow before it ships.",
+  },
+  {
+    title: "Side-by-side review",
+    desc: "Reviewers edit translations against the source page. Approved edits feed back in.",
+  },
+  {
+    title: "Multi-engine translation",
+    desc: "OpenAI and DeepL in consensus. Disagreements are flagged for human review.",
+  },
+  {
+    title: "40+ languages",
+    desc: "From Afrikaans to Vietnamese, including right-to-left scripts and CJK.",
+  },
+];
+
+const FORMATS = [
+  ".idml", ".pdf", ".ai", ".psd", ".eps",
+  ".srt", ".vtt",
+  ".docx", ".pptx", ".xlsx", ".html", ".xliff",
+];
+
+const STEPS = [
+  {
     n: "01",
-    title: "Style inheritance preserved",
-    body: "Heading levels, numbered lists and the table of contents rebuild themselves with translated text.",
+    title: "Upload",
+    desc: "Drop an IDML, PDF, or subtitle file. We read the layout tree, not a flattened text dump.",
   },
   {
     n: "02",
-    title: "Font substitution that matches",
-    body: "No Japanese cut in your typeface? Pagebirdy picks a metrically compatible one, not a generic fallback.",
+    title: "Pick a language",
+    desc: "Choose from 40+ targets. Attach a glossary to lock terms that must never be translated.",
   },
   {
     n: "03",
-    title: "Termbase + glossary control",
-    body: "Import a TBX or CSV once. Locked terms are never translated; approved terms always used.",
-  },
-  {
-    n: "04",
-    title: "Side-by-side review",
-    body: "A reviewer edits the translation against the source page. Comments stay anchored to the paragraph.",
-  },
-  {
-    n: "05",
-    title: "Your files stay yours",
-    body: "Encrypted in transit and at rest, deleted on your schedule, never used to train models.",
-  },
-  {
-    n: "06",
-    title: "API + watched folders",
-    body: "Point Pagebirdy at a SharePoint, Drive or S3 folder and every new file returns translated automatically.",
+    title: "Download",
+    desc: "Same extension, same styles, same page count. Open it and keep editing as if nothing happened.",
   },
 ];
-
-const FORMATS = [".idml", ".pdf", ".indd", ".docx", ".pptx", ".xlsx", ".srt", ".html", ".xliff"];
-
-const PLANS = [
-  {
-    name: "STARTER",
-    price: "$40",
-    tagline: "For one person translating the occasional document.",
-    features: ["200 pages / month", "DOCX, PDF, PPTX, XLSX", "All 40+ languages"],
-    cta: "Start free",
-    href: "/login",
-    variant: "light" as const,
-    rotate: "-rotate-2",
-    comingSoon: true,
-  },
-  {
-    name: "TEAM",
-    price: "$400",
-    tagline: "For teams shipping in several languages at once.",
-    features: [
-      "2,000 pages / month",
-      "InDesign IDML + subtitles",
-      "Shared glossary + termbase",
-      "Side-by-side review",
-    ],
-    cta: "Start 14-day trial",
-    href: "/login",
-    variant: "dark" as const,
-    rotate: "rotate-1.5 md:-translate-y-3.5",
-    comingSoon: true,
-  },
-  {
-    name: "ENTERPRISE",
-    price: "Talk to us",
-    tagline: "For regulated teams with volume, audit and residency needs.",
-    features: ["Unlimited pages, pooled", "SSO, SCIM, audit log", "EU / US data residency"],
-    cta: "Book a call",
-    href: "/contact",
-    variant: "light" as const,
-    rotate: "-rotate-1",
-    comingSoon: false,
-  },
-];
-
-const FAQS = [
-  {
-    q: "Does the translated file open in Word and InDesign normally?",
-    a: "Yes. Pagebirdy writes back into the original file format — styles, master pages and linked assets stay editable.",
-  },
-  {
-    q: "What happens with scanned PDFs?",
-    a: "Pagebirdy runs OCR, rebuilds the text layer in position, and returns a searchable PDF with the scan preserved underneath.",
-  },
-  {
-    q: "Can our own translators review the output?",
-    a: "Invite them as reviewers. They edit side by side with the source and approved terms feed back into your glossary.",
-  },
-  {
-    q: "Are our documents used to train models?",
-    a: "No. Files are encrypted, deleted on your retention window, and never used as training data.",
-  },
-];
-
-function DocMock({
-  heading,
-  meta,
-  rotate,
-  shadow,
-}: {
-  heading: string;
-  meta: string;
-  rotate: string;
-  shadow?: boolean;
-}) {
-  return (
-    <div
-      className={`${rotate} ${shadow ? "shadow-[14px_14px_0_var(--color-pb-accent)]" : ""} relative flex h-[420px] w-[320px] flex-col gap-2.5 border-[3px] border-pb-card-ink bg-white p-6`}
-    >
-      <div className="flex items-center justify-between border-b-[3px] border-pb-card-ink/20 pb-2.5">
-        <span className="font-pb-display text-pb-card-ink text-sm">{heading}</span>
-        <span className="font-pb-mono-brand text-pb-card-faint text-[8px]">{meta}</span>
-      </div>
-      <span className="h-1 w-[88%] bg-pb-card-ink/15" />
-      <span className="h-1 w-[96%] bg-pb-card-ink/15" />
-      <span className="h-1 w-[70%] bg-pb-card-ink/15" />
-      <span className="mt-1.5 h-[60px] bg-[#f3efe5]" />
-      <span className="mt-1.5 h-1 w-[92%] bg-pb-card-ink/15" />
-      <span className="h-1 w-[64%] bg-pb-card-ink/15" />
-    </div>
-  );
-}
 
 export default function Home() {
   return (
     <>
-      {/* HERO */}
-      <section className="relative overflow-hidden border-b-[3px] border-pb-ink px-6 md:px-14">
-        <svg
-          className="pointer-events-none absolute inset-0 h-full w-full opacity-40"
-          viewBox="0 0 1600 800"
-          preserveAspectRatio="xMidYMid slice"
-          fill="none"
-          aria-hidden="true"
-        >
-          <path
-            d="M1080 -60 C 1450 120, 1180 380, 1500 650 C 1680 800, 1900 720, 2000 560"
-            stroke="#8a9a5b"
-            strokeWidth="2.5"
-          />
-        </svg>
-        <div className="grid grid-cols-1 border-b-[3px] border-pb-ink md:grid-cols-[1.15fr_0.85fr]">
-          <div className="flex flex-col justify-center gap-7 border-pb-ink py-14 md:border-r-[3px] md:py-24 md:pr-14">
-            <span className="font-pb-mono-brand text-[12.5px] font-bold tracking-widest text-pb-accent uppercase">
-              — document translation, reinvented
-            </span>
-            <h1 className="font-pb-display text-6xl md:text-8xl">
-              Same page.
-              <br />
-              Any
-              <br />
-              <span className="text-pb-accent italic">language.</span>
-            </h1>
-            <p className="max-w-[460px] text-[17px] leading-relaxed text-pb-muted">
-              Pagebirdy translates InDesign (IDML) files into 40+ languages and hands
-              them back with every font, column, table, footnote and page break
-              exactly where you left it — plus DOCX, PDF, PPTX and more.
+      {/* ─── HERO ─── */}
+      <section className="pb-hero-gradient pb-hero-lines relative overflow-hidden">
+        <div className="relative mx-auto max-w-7xl px-6 pt-20 pb-16 lg:px-10 lg:pt-28 lg:pb-24">
+          <span className="font-pb-mono mb-6 inline-flex items-center gap-2 text-[11px] font-bold tracking-widest text-pb-accent uppercase">
+            <span className="inline-block h-2 w-2 rounded-sm bg-pb-accent" />
+            Layout-preserving document translation
+          </span>
+
+          <h1 className="pb-headline-dot max-w-4xl text-5xl md:text-7xl lg:text-8xl">
+            Translate the
+            <br />
+            document.
+            <br />
+            <span className="text-pb-text">Keep the design.</span>
+          </h1>
+
+          <div className="mt-8 flex max-w-4xl flex-col gap-8 lg:mt-12 lg:flex-row lg:items-start lg:justify-between">
+            <p className="max-w-lg text-[16px] leading-relaxed text-pb-text-secondary lg:text-[17px]">
+              Pagebirdy translates InDesign, PDF, subtitles and more into 40+
+              languages — and hands them back with every font, column, table and
+              page break exactly where you left it.
             </p>
-            <div className="mt-2 flex items-center">
+            <div className="flex shrink-0 items-center gap-4">
               <Link
                 href="/login"
-                className="flex h-14 items-center gap-2.5 bg-pb-ink px-7 text-[15px] font-bold text-pb-paper"
+                className="font-pb-mono rounded-full bg-pb-accent px-7 py-3 text-[12px] font-bold tracking-widest text-pb-bg uppercase transition-all hover:brightness-110"
               >
-                Translate a document free
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="square">
-                  <path d="M5 12h14" />
-                  <path d="m13 6 6 6-6 6" />
-                </svg>
+                Translate free
               </Link>
               <WatchDemoButton />
             </div>
           </div>
 
-          <div className="group relative flex items-center justify-center p-10">
-            <div className="pb-float relative">
-              <div
-                className="absolute inset-x-10 -bottom-4 h-8 rounded-[50%] bg-black/15 blur-xl transition-all duration-500 ease-out group-hover:inset-x-6 group-hover:opacity-70"
-                aria-hidden="true"
-              />
-              <div className="absolute transition-transform duration-500 ease-out group-hover:translate-x-10 group-hover:translate-y-5 group-hover:rotate-[11deg]">
-                <DocMock heading="ノースウィンド" meta="第3四半期" rotate="rotate-[7deg] translate-x-7 translate-y-2.5" />
+          {/* Product mock — two cards side by side like giga.ai */}
+          <div className="mt-16 grid grid-cols-1 gap-0 overflow-hidden rounded-xl border border-pb-border md:grid-cols-2 lg:mt-20">
+            {/* Dark card — upload side */}
+            <div className="flex flex-col justify-between bg-pb-bg p-8 md:p-10">
+              <div>
+                <span className="font-pb-mono text-[22px] text-pb-text-muted">product_magazine.idml</span>
+                <div className="mt-6 space-y-3">
+                  <div className="h-2 w-[88%] rounded-full bg-pb-border" />
+                  <div className="h-2 w-[96%] rounded-full bg-pb-border" />
+                  <div className="h-2 w-[70%] rounded-full bg-pb-border" />
+                  <div className="mt-4 h-16 w-full rounded-lg bg-pb-bg-card" />
+                  <div className="h-2 w-[92%] rounded-full bg-pb-border" />
+                  <div className="h-2 w-[64%] rounded-full bg-pb-border" />
+                </div>
               </div>
-              <div className="relative transition-transform duration-500 ease-out group-hover:-translate-x-11 group-hover:-translate-y-2 group-hover:-rotate-9">
-                <DocMock heading="Northwind" meta="Q3 2026" rotate="-rotate-6 -translate-x-7.5 -translate-y-1.5" shadow />
-                <div
-                  className="pointer-events-none absolute inset-0 -rotate-6 -translate-x-7.5 -translate-y-1.5 bg-gradient-to-br from-white/70 via-transparent to-transparent opacity-60"
-                  aria-hidden="true"
-                />
-                <span className="font-pb-mono-brand absolute -right-2 -bottom-8.5 rotate-3 border-2 border-pb-ink bg-pb-paper px-2 py-0.75 text-[10.5px] font-bold text-pb-accent transition-transform duration-500 group-hover:rotate-6">
-                  ↳ identical layout
+              <div className="mt-8 border-t border-pb-border pt-5">
+                <span className="font-pb-mono text-[11px] tracking-widest text-pb-text-muted uppercase">
+                  Source · English
+                </span>
+              </div>
+            </div>
+
+            {/* Light/warm card — output side */}
+            <div className="flex flex-col justify-between bg-[#f5f0e6] p-8 text-[#1a1914] md:p-10">
+              <div>
+                <span className="font-pb-mono text-[22px] text-[#a09a88]">product_magazine.zh.idml</span>
+                <div className="mt-6 space-y-3">
+                  <div className="h-2 w-[76%] rounded-full bg-[#d9d3c4]" />
+                  <div className="h-2 w-[92%] rounded-full bg-[#d9d3c4]" />
+                  <div className="h-2 w-[58%] rounded-full bg-[#d9d3c4]" />
+                  <div className="mt-4 h-16 w-full rounded-lg bg-[#e8e2d4]" />
+                  <div className="h-2 w-[84%] rounded-full bg-[#d9d3c4]" />
+                  <div className="h-2 w-[50%] rounded-full bg-[#d9d3c4]" />
+                </div>
+              </div>
+              <div className="mt-8 border-t border-[#d1cbbe] pt-5">
+                <span className="font-pb-mono text-[11px] tracking-widest text-[#a09a88] uppercase">
+                  Translated · Chinese
                 </span>
               </div>
             </div>
           </div>
         </div>
-
-        <div className="flex items-center justify-between py-4">
-          <span className="font-pb-mono-brand text-xs text-pb-faint">
-            NO CARD REQUIRED — FIRST 5 PAGES FREE ON EVERY PLAN
-          </span>
-          <span className="font-pb-mono-brand text-xs text-pb-faint">01 / SCROLL</span>
-        </div>
       </section>
 
-      {/* LOGO STRIP — hidden until there are real client logos; see SHOW_CLIENT_LOGOS */}
-      {SHOW_CLIENT_LOGOS ? (
-        <section className="flex items-center gap-0 border-b-[3px] border-pb-ink px-6 py-6 md:px-14">
-          <span className="font-pb-mono-brand pr-10 text-xs font-bold tracking-wide">TRUSTED BY</span>
-          <div className="flex flex-1 flex-wrap items-center justify-around gap-6">
-            {CLIENTS.map((c) => (
-              <span key={c} className="font-pb-display text-xl text-[#a9a492]">
-                {c}
-              </span>
+      {/* ─── PRODUCTS ─── */}
+      <section className="border-t border-pb-border bg-pb-bg">
+        <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
+          <span className="font-pb-mono mb-4 inline-flex items-center gap-2 text-[11px] font-bold tracking-widest text-pb-accent uppercase">
+            <span className="inline-block h-2 w-2 rounded-sm bg-pb-accent" />
+            Products
+          </span>
+          <h2 className="font-pb-display max-w-xl text-4xl text-pb-text md:text-5xl">
+            Five ways to translate.
+          </h2>
+
+          <div className="mt-14 grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {PRODUCTS.map((p) => (
+              <Link
+                key={p.href}
+                href={p.href}
+                className="pb-card-hover group flex flex-col gap-5 rounded-xl border border-pb-border bg-pb-bg-card p-7"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-pb-accent/10 text-pb-accent">
+                    {p.icon}
+                  </div>
+                  {!p.live ? (
+                    <span className="font-pb-mono rounded-full bg-pb-accent-dim px-3 py-1 text-[9px] font-bold tracking-widest text-pb-accent uppercase">
+                      Coming soon
+                    </span>
+                  ) : (
+                    <span className="font-pb-mono rounded-full bg-emerald-900/30 px-3 py-1 text-[9px] font-bold tracking-widest text-emerald-400 uppercase">
+                      Live
+                    </span>
+                  )}
+                </div>
+                <div>
+                  <h3 className="text-[17px] font-bold text-pb-text">{p.title}</h3>
+                  <p className="mt-2 text-[13.5px] leading-relaxed text-pb-text-muted">{p.desc}</p>
+                </div>
+                <span className="font-pb-mono mt-auto text-[11px] tracking-widest text-pb-accent uppercase opacity-0 transition-opacity group-hover:opacity-100">
+                  Learn more →
+                </span>
+              </Link>
             ))}
           </div>
-        </section>
-      ) : null}
-
-      {/* PROBLEM */}
-      <section className="border-b-[3px] border-pb-ink bg-pb-ink text-pb-paper">
-        <div className="border-b-[3px] border-pb-card-ink/15 px-6 py-14 md:px-14 md:py-16">
-          <h2 className="font-pb-display max-w-3xl text-4xl md:text-5xl">
-            Translating the text is easy. Keeping the document is the hard part.
-          </h2>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3">
-          {PROBLEMS.map((p, i) => (
-            <div
-              key={p.n}
-              className={`flex flex-col gap-3.5 p-10 ${i < 2 ? "border-b-[3px] border-pb-card-ink/15 md:border-r-[3px] md:border-b-0" : ""}`}
-            >
-              <span className="font-pb-display text-5xl text-pb-accent">{p.n}</span>
-              <h3 className="text-lg font-bold">{p.title}</h3>
-              <p className="text-pb-card-muted text-sm leading-relaxed">{p.body}</p>
-            </div>
-          ))}
         </div>
       </section>
 
-      {/* HOW IT WORKS */}
-      <section className="border-b-[3px] border-pb-ink px-6 py-18 md:px-14">
-        <div className="mb-14 flex items-baseline justify-between">
-          <h2 className="font-pb-display text-4xl md:text-5xl">How it works</h2>
-          <span className="font-pb-mono-brand hidden text-xs text-pb-faint md:inline">
-            03 STEPS — 0 CLEANUP
+      {/* ─── HOW IT WORKS ─── */}
+      <section className="border-t border-pb-border bg-pb-bg-raised">
+        <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
+          <span className="font-pb-mono mb-4 inline-flex items-center gap-2 text-[11px] font-bold tracking-widest text-pb-accent uppercase">
+            <span className="inline-block h-2 w-2 rounded-sm bg-pb-accent" />
+            How it works
           </span>
-        </div>
-        <div className="relative grid grid-cols-1 gap-7 md:grid-cols-3">
-          <div className="pb-line-grow absolute top-4 right-0 left-0 hidden h-[3px] bg-pb-ink md:block" />
-          {STEPS.map((s) => (
-            <div key={s.n} className="group relative z-10 flex flex-col gap-4">
-              <span
-                className={`font-pb-mono-brand flex h-8 w-8 items-center justify-center text-[13px] font-bold text-pb-paper transition-transform duration-300 group-hover:scale-110 ${s.accent ? "bg-pb-accent animate-pulse" : "bg-pb-ink"}`}
-              >
-                {s.n}
-              </span>
+          <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
+            <h2 className="font-pb-display max-w-lg text-4xl text-pb-text md:text-5xl">
+              Three steps. Zero cleanup.
+            </h2>
+            <span className="font-pb-mono text-[11px] tracking-widest text-pb-text-muted uppercase">
+              Upload → Translate → Download
+            </span>
+          </div>
+
+          <div className="mt-14 grid grid-cols-1 gap-6 md:grid-cols-3">
+            {STEPS.map((s) => (
               <div
-                className={`flex flex-col gap-2.5 border-[3px] border-pb-card-ink bg-white p-6 transition-all duration-300 ease-out group-hover:-translate-y-1.5 ${s.accent ? "shadow-[8px_8px_0_var(--color-pb-accent)] group-hover:shadow-[12px_12px_0_var(--color-pb-accent)]" : "group-hover:shadow-[8px_8px_0_var(--color-pb-accent)]"}`}
+                key={s.n}
+                className="group flex flex-col gap-5 rounded-xl border border-pb-border bg-pb-bg p-8"
               >
-                <h3 className="text-pb-card-ink text-[17px] font-bold">{s.title}</h3>
-                <p className="text-pb-card-muted text-[13.5px] leading-relaxed">{s.body}</p>
+                <span className="font-pb-mono text-4xl font-bold text-pb-accent/30">{s.n}</span>
+                <h3 className="text-xl font-bold text-pb-text">{s.title}</h3>
+                <p className="text-[14px] leading-relaxed text-pb-text-muted">{s.desc}</p>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* FEATURES */}
-      <section className="border-b-[3px] border-pb-ink bg-pb-ink px-6 py-18 text-pb-paper md:px-14">
-        <div className="mb-12 flex items-baseline justify-between">
-          <h2 className="font-pb-display max-w-xl text-4xl text-pb-paper md:text-5xl">
+      {/* ─── FEATURES ─── */}
+      <section className="border-t border-pb-border bg-pb-bg">
+        <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
+          <span className="font-pb-mono mb-4 inline-flex items-center gap-2 text-[11px] font-bold tracking-widest text-pb-accent uppercase">
+            <span className="inline-block h-2 w-2 rounded-sm bg-pb-accent" />
+            Capabilities
+          </span>
+          <h2 className="font-pb-display max-w-2xl text-4xl text-pb-text md:text-5xl">
             Everything the file carried, carried across.
           </h2>
-          <span className="font-pb-mono-brand hidden text-xs text-[#8c8877] md:inline">
-            06 CAPABILITIES
-          </span>
-        </div>
-        <div className="grid grid-cols-1 border-t-2 border-l-2 border-[#38372c] md:grid-cols-3">
-          {FEATURES.map((f, i) => (
-            <div
-              key={f.n}
-              className={`flex flex-col gap-2.5 border-r-2 border-b-2 border-[#38372c] p-7.5 ${
-                i % 3 === 2 ? "md:border-r-0" : ""
-              }`}
-            >
-              <span className="font-pb-mono-brand text-[11px] text-pb-accent">{f.n}</span>
-              <h3 className="text-[16.5px] font-bold">{f.title}</h3>
-              <p className="text-[13.5px] leading-relaxed text-[#a29e8e]">{f.body}</p>
-            </div>
-          ))}
-        </div>
-        <div className="flex items-center gap-8 border-t-2 border-[#38372c] py-5">
-          <span className="font-pb-mono-brand pr-2 text-xs font-bold tracking-wide">FORMATS</span>
-          <div className="flex flex-wrap items-center gap-7 text-sm font-semibold text-[#c4c0b0]">
-            {FORMATS.map((f) => (
-              <span key={f}>{f}</span>
+
+          <div className="mt-14 grid grid-cols-1 gap-px overflow-hidden rounded-xl border border-pb-border bg-pb-border md:grid-cols-2 lg:grid-cols-4">
+            {FEATURES.map((f) => (
+              <div key={f.title} className="flex flex-col gap-2.5 bg-pb-bg-card p-7">
+                <h3 className="text-[15px] font-bold text-pb-text">{f.title}</h3>
+                <p className="text-[13px] leading-relaxed text-pb-text-muted">{f.desc}</p>
+              </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* PRICING */}
-      <section id="pricing" className="border-b-[3px] border-pb-ink px-6 py-22 pb-18 md:px-14">
-        <div className="mb-16 flex flex-col justify-between gap-6 md:flex-row md:items-baseline">
-          <h2 className="font-pb-display text-4xl md:text-5xl">
-            Priced by pages.
-            <br />
-            Not by seat.
-          </h2>
-          <p className="max-w-80 text-sm leading-relaxed text-pb-muted">
-            A page is a page whether you translate it into one language or six. Unused
-            pages roll over for 30 days.
-          </p>
-        </div>
-
-        <div className="flex flex-col items-center justify-center gap-8 px-0 md:flex-row md:items-start md:gap-2 md:px-5">
-          {PLANS.map((plan) => (
-            <div
-              key={plan.name}
-              className={`flex w-full max-w-75 flex-col gap-4.5 border-[3px] p-8 ${plan.rotate} ${
-                plan.variant === "dark"
-                  ? "z-10 border-pb-ink bg-pb-ink text-pb-paper shadow-[12px_12px_0_var(--color-pb-accent)]"
-                  : "border-pb-card-ink bg-white text-pb-card-ink"
-              }`}
-            >
+      {/* ─── FORMATS ─── */}
+      <section className="border-t border-pb-border bg-pb-bg-raised">
+        <div className="mx-auto max-w-7xl px-6 py-12 lg:px-10">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="font-pb-mono mr-4 text-[10px] font-bold tracking-widest text-pb-text-muted uppercase">
+              Formats
+            </span>
+            {FORMATS.map((f) => (
               <span
-                className={`font-pb-mono-brand text-[11px] font-bold tracking-wide ${
-                  plan.variant === "dark" ? "text-pb-accent" : "text-pb-card-ink"
-                }`}
+                key={f}
+                className="font-pb-mono rounded-full border border-pb-border px-4 py-1.5 text-[12px] text-pb-text-secondary"
               >
-                {plan.name}
+                {f}
               </span>
-              <span className="font-pb-display text-4xl">
-                {plan.comingSoon ? "Coming soon" : plan.price}
-                {!plan.comingSoon && plan.price.startsWith("$") && (
-                  <span className="font-sans text-sm font-medium">/mo</span>
-                )}
-              </span>
-              <p className={`text-[13px] leading-relaxed ${plan.variant === "dark" ? "text-[#a29e8e]" : "text-pb-card-muted"}`}>
-                {plan.tagline}
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ─── PRICING ─── */}
+      <section id="pricing" className="border-t border-pb-border bg-pb-bg">
+        <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
+          <span className="font-pb-mono mb-4 inline-flex items-center gap-2 text-[11px] font-bold tracking-widest text-pb-accent uppercase">
+            <span className="inline-block h-2 w-2 rounded-sm bg-pb-accent" />
+            Pricing
+          </span>
+          <div className="flex flex-col justify-between gap-8 md:flex-row md:items-end">
+            <div>
+              <h2 className="font-pb-display max-w-lg text-4xl text-pb-text md:text-5xl">
+                Start free.
+                <br />
+                Scale when ready.
+              </h2>
+              <p className="mt-4 max-w-md text-[15px] leading-relaxed text-pb-text-muted">
+                Your first documents are free. When you need more, talk to us — we price by
+                volume, not per seat.
               </p>
-              <div className={`h-0.5 ${plan.variant === "dark" ? "bg-[#38372c]" : "bg-pb-card-ink/20"}`} />
-              <div
-                className={`flex flex-col gap-2.25 text-[13px] ${
-                  plan.variant === "dark" ? "text-[#c4c0b0]" : "text-pb-card-muted"
-                }`}
-              >
-                {plan.features.map((f) => (
-                  <span key={f}>— {f}</span>
-                ))}
-              </div>
-              {plan.comingSoon ? (
-                <span
-                  aria-disabled="true"
-                  className={`mt-2 flex h-11.5 cursor-not-allowed items-center justify-center text-[13.5px] font-bold opacity-50 ${
-                    plan.variant === "dark"
-                      ? "bg-pb-accent text-pb-paper"
-                      : "border-[3px] border-pb-card-ink text-pb-card-ink"
-                  }`}
-                >
-                  Coming soon
-                </span>
-              ) : (
-                <Link
-                  href={plan.href}
-                  className={`mt-2 flex h-11.5 items-center justify-center text-[13.5px] font-bold ${
-                    plan.variant === "dark"
-                      ? "bg-pb-accent text-pb-paper"
-                      : "border-[3px] border-pb-card-ink text-pb-card-ink"
-                  }`}
-                >
-                  {plan.cta}
-                </Link>
-              )}
             </div>
-          ))}
-        </div>
-      </section>
-
-      {/* FAQ */}
-      <section className="flex flex-col gap-10 border-b-[3px] border-pb-ink px-6 py-18 md:flex-row md:px-14">
-        <div className="flex w-full flex-shrink-0 flex-col gap-3.5 md:w-85">
-          <h2 className="font-pb-display text-3xl md:text-4xl">Questions we get asked</h2>
-          <p className="text-sm leading-relaxed text-pb-muted">
-            Something else on your mind?{" "}
-            <Link href="/contact" className="underline">
-              Ask us directly
-            </Link>{" "}
-            — we answer within 1 business day.
-          </p>
-        </div>
-        <div className="flex flex-1 flex-col md:border-l-[3px] md:border-pb-ink md:pl-10">
-          {FAQS.map((f, i) => (
-            <div
-              key={f.q}
-              className={`flex flex-col gap-2 py-5.5 ${i < FAQS.length - 1 ? "border-b-2 border-pb-line" : ""}`}
+            <Link
+              href="/contact"
+              className="font-pb-mono inline-flex shrink-0 items-center rounded-full bg-pb-accent px-8 py-3.5 text-[12px] font-bold tracking-widest text-pb-bg uppercase transition-all hover:brightness-110"
             >
-              <h3 className="text-[16.5px] font-bold">{f.q}</h3>
-              <p className="text-sm leading-relaxed text-pb-muted">{f.a}</p>
+              Book a call
+            </Link>
+          </div>
+
+          <div className="mt-14 grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="rounded-xl border border-pb-border bg-pb-bg-card p-8">
+              <span className="font-pb-mono text-[10px] font-bold tracking-widest text-pb-text-muted uppercase">Free</span>
+              <p className="mt-3 text-3xl font-bold text-pb-text">$0</p>
+              <p className="mt-2 text-[13px] text-pb-text-muted">Try it out with your first documents.</p>
+              <div className="mt-6 space-y-2.5 text-[13px] text-pb-text-secondary">
+                <span className="block">— 5 pages free</span>
+                <span className="block">— PDF + IDML</span>
+                <span className="block">— All 40+ languages</span>
+              </div>
+              <Link
+                href="/login"
+                className="font-pb-mono mt-8 block rounded-full border border-pb-border py-2.5 text-center text-[11px] font-bold tracking-widest text-pb-text uppercase transition-colors hover:border-pb-text"
+              >
+                Get started
+              </Link>
             </div>
-          ))}
+
+            <div className="rounded-xl border border-pb-accent/30 bg-pb-bg-card p-8 shadow-[0_0_40px_rgba(224,138,111,0.08)]">
+              <span className="font-pb-mono text-[10px] font-bold tracking-widest text-pb-accent uppercase">Team</span>
+              <p className="mt-3 text-3xl font-bold text-pb-text">Coming soon</p>
+              <p className="mt-2 text-[13px] text-pb-text-muted">For teams shipping in several languages.</p>
+              <div className="mt-6 space-y-2.5 text-[13px] text-pb-text-secondary">
+                <span className="block">— Volume page packs</span>
+                <span className="block">— All formats + subtitles</span>
+                <span className="block">— Shared glossary</span>
+                <span className="block">— Side-by-side review</span>
+              </div>
+              <span className="font-pb-mono mt-8 block cursor-not-allowed rounded-full bg-pb-accent/20 py-2.5 text-center text-[11px] font-bold tracking-widest text-pb-accent uppercase opacity-60">
+                Coming soon
+              </span>
+            </div>
+
+            <div className="rounded-xl border border-pb-border bg-pb-bg-card p-8">
+              <span className="font-pb-mono text-[10px] font-bold tracking-widest text-pb-text-muted uppercase">Enterprise</span>
+              <p className="mt-3 text-3xl font-bold text-pb-text">Custom</p>
+              <p className="mt-2 text-[13px] text-pb-text-muted">For regulated teams with volume and audit needs.</p>
+              <div className="mt-6 space-y-2.5 text-[13px] text-pb-text-secondary">
+                <span className="block">— Unlimited pages</span>
+                <span className="block">— SSO + audit log</span>
+                <span className="block">— Data residency</span>
+              </div>
+              <Link
+                href="/contact"
+                className="font-pb-mono mt-8 block rounded-full border border-pb-border py-2.5 text-center text-[11px] font-bold tracking-widest text-pb-text uppercase transition-colors hover:border-pb-text"
+              >
+                Book a call
+              </Link>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="flex flex-col items-start justify-between gap-6 border-b-[3px] border-pb-ink bg-pb-accent px-6 py-14 text-pb-ink md:flex-row md:items-center md:px-14">
-        <h2 className="font-pb-display max-w-2xl text-3xl md:text-5xl">
-          Send us the document you dread translating.
-        </h2>
-        <Link
-          href="/login"
-          className="flex h-14.5 flex-shrink-0 items-center bg-pb-ink px-7.5 text-[15.5px] font-bold text-pb-paper"
-        >
-          Translate a document free →
-        </Link>
+      {/* ─── CTA ─── */}
+      <section className="bg-pb-accent">
+        <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-8 px-6 py-16 md:flex-row md:items-center lg:px-10 lg:py-20">
+          <h2 className="font-pb-display max-w-2xl text-3xl text-pb-bg md:text-5xl">
+            Send us the document you dread translating.
+          </h2>
+          <Link
+            href="/login"
+            className="font-pb-mono shrink-0 rounded-full bg-pb-bg px-8 py-3.5 text-[12px] font-bold tracking-widest text-pb-text uppercase transition-all hover:bg-pb-bg-raised"
+          >
+            Translate free →
+          </Link>
+        </div>
       </section>
     </>
   );

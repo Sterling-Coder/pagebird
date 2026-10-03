@@ -76,25 +76,34 @@ body {
   }
 }
 
-/* Pagebirdy marketing site theme — scoped to (marketing) route group via pb- prefix,
-   kept separate from the app's --color-* tokens above so /login and /app are unaffected. */
+/* Pagebirdy marketing site theme — dark, warm, editorial SaaS aesthetic.
+   Scoped to (marketing) route group via pb- prefix so /login and /app stay unaffected. */
 @theme inline {
-  --color-pb-paper: #153a2e;
-  --color-pb-ink: #f2ede0;
+  --color-pb-bg: #131210;
+  --color-pb-bg-raised: #1c1b18;
+  --color-pb-bg-card: #242320;
+  --color-pb-text: #f0ece3;
+  --color-pb-text-secondary: #a8a49a;
+  --color-pb-text-muted: #6e6a61;
   --color-pb-accent: #e08a6f;
-  --color-pb-line: #3d5847;
-  --color-pb-muted: #c9c4b0;
-  --color-pb-faint: #8fa090;
-  /* Fixed — always dark, independent of the page theme above. Use these for
-     text sitting on a literal white/cream card (DocMock, step cards, the
-     light pricing tier), never the page-theme pb-ink/muted/faint, which
-     flip with the theme and go invisible on a surface that doesn't. */
-  --color-pb-card-ink: #14140f;
-  --color-pb-card-muted: #45443c;
-  --color-pb-card-faint: #8c8877;
+  --color-pb-accent-dim: rgba(224, 138, 111, 0.15);
+  --color-pb-border: #2e2d28;
+  --color-pb-border-light: #3a3935;
+  --color-pb-glass: rgba(28, 27, 24, 0.85);
+  --color-pb-glass-border: rgba(255, 255, 255, 0.08);
   --font-pb-display: var(--font-fraunces);
-  --font-pb-mono-brand: var(--font-space-mono);
+  --font-pb-mono: var(--font-space-mono);
   --font-pb-sans: var(--font-inter);
+  /* Legacy aliases so old components still compile during migration */
+  --color-pb-paper: #131210;
+  --color-pb-ink: #f0ece3;
+  --color-pb-line: #2e2d28;
+  --color-pb-muted: #a8a49a;
+  --color-pb-faint: #6e6a61;
+  --color-pb-card-ink: #f0ece3;
+  --color-pb-card-muted: #a8a49a;
+  --color-pb-card-faint: #6e6a61;
+  --font-pb-mono-brand: var(--font-space-mono);
 }
 
 .font-pb-display {
@@ -103,46 +112,88 @@ body {
   line-height: 0.95;
 }
 
-.font-pb-mono-brand {
-  font-family: var(--font-pb-mono-brand), monospace;
+.font-pb-mono {
+  font-family: var(--font-pb-mono), monospace;
 }
 
-@keyframes pb-line-grow {
+.font-pb-mono-brand {
+  font-family: var(--font-pb-mono), monospace;
+}
+
+/* Hero gradient — warm amber/orange vertical bands, like giga.ai */
+.pb-hero-gradient {
+  background: linear-gradient(
+    180deg,
+    #131210 0%,
+    #2a1a0e 15%,
+    #3d2210 30%,
+    #4a2a12 45%,
+    #3d2210 60%,
+    #2a1a0e 80%,
+    #131210 100%
+  );
+}
+
+/* Vertical line texture overlay for hero */
+.pb-hero-lines::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(255, 180, 100, 0.06) 0px,
+    rgba(255, 180, 100, 0.06) 1px,
+    transparent 1px,
+    transparent 4px
+  );
+  pointer-events: none;
+}
+
+/* Glassmorphism panel */
+.pb-glass {
+  background: var(--color-pb-glass);
+  backdrop-filter: blur(24px) saturate(1.2);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  border: 1px solid var(--color-pb-glass-border);
+}
+
+/* Dot-matrix / monospace headline style */
+.pb-headline-dot {
+  font-family: var(--font-pb-mono), monospace;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: rgba(240, 236, 227, 0.35);
+}
+
+/* Subtle card hover lift */
+.pb-card-hover {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s ease;
+}
+.pb-card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes pb-fade-in-up {
   from {
-    transform: scaleX(0);
+    opacity: 0;
+    transform: translateY(16px);
   }
   to {
-    transform: scaleX(1);
-  }
-}
-
-.pb-line-grow {
-  transform-origin: left;
-  animation: pb-line-grow 1.1s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .pb-line-grow {
-    animation: none;
-  }
-}
-
-@keyframes pb-float {
-  0%,
-  100% {
+    opacity: 1;
     transform: translateY(0);
   }
-  50% {
-    transform: translateY(-8px);
-  }
 }
 
-.pb-float {
-  animation: pb-float 5.5s ease-in-out infinite;
+.pb-fade-in-up {
+  animation: pb-fade-in-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .pb-float {
+  .pb-fade-in-up,
+  .pb-card-hover:hover {
     animation: none;
+    transform: none;
   }
 }
