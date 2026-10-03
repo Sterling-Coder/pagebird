@@ -2,204 +2,367 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "YouTube Subtitle Translation — Pagebirdy",
+  title: "YouTube Subtitle Translator — Pagebirdy",
   description:
-    "Paste a YouTube link. We pull the captions, translate them, and hand back a ready-to-upload SRT.",
+    "Paste a YouTube link. We pull the captions, translate them into 40+ languages, and hand back a ready-to-upload SRT file.",
 };
 
 const FEATURES = [
-  {
-    title: "Paste a link",
-    desc: "No downloads, no ffmpeg. Paste the YouTube URL and we pull the captions automatically.",
-  },
-  {
-    title: "Auto-detect source language",
-    desc: "We read the existing captions and detect the source language — no manual selection needed.",
-  },
-  {
-    title: "Timing preserved",
-    desc: "Every cue stays synced to its original timecode. No drift, no re-timing.",
-  },
-  {
-    title: "Ready-to-upload SRT",
-    desc: "Download the translated file and upload it straight to YouTube Studio as a new subtitle track.",
-  },
-  {
-    title: "Multi-engine translation",
-    desc: "OpenAI and DeepL in consensus for the best result on every caption line.",
-  },
-  {
-    title: "40+ languages",
-    desc: "From Afrikaans to Vietnamese, including CJK and right-to-left scripts.",
-  },
+  { n: "01", title: "Auto-fetch captions", desc: "Paste a URL. We pull the captions directly — no download, no manual export needed." },
+  { n: "02", title: "All YouTube formats", desc: "Auto-generated or manual captions, community contributions — we handle every format YouTube provides." },
+  { n: "03", title: "40+ target languages", desc: "From Spanish to Japanese to Arabic. Right-to-left scripts included." },
+  { n: "04", title: "SRT + VTT output", desc: "Download in any format YouTube accepts — or the format your video platform needs." },
+  { n: "05", title: "Batch translation", desc: "Paste multiple URLs at once. Translate an entire channel's backlog in one job." },
+  { n: "06", title: "Creator-ready", desc: "Output formatted exactly for YouTube's subtitle upload tool. No reformatting needed." },
 ];
 
-const STEPS = [
-  {
-    n: "01",
-    title: "Paste the YouTube URL",
-    desc: "Drop a link to any public YouTube video. We fetch the existing captions.",
-  },
-  {
-    n: "02",
-    title: "Pick a language",
-    desc: "Choose from 40+ target languages. Attach a glossary to lock brand names and terms.",
-  },
-  {
-    n: "03",
-    title: "Download the SRT",
-    desc: "Get a translated .srt file ready to upload to YouTube Studio or any video platform.",
-  },
+const USE_CASES = [
+  { label: "YouTube Creators", desc: "Reach global audiences without recording in multiple languages." },
+  { label: "Course Creators", desc: "Make your courses accessible to students worldwide." },
+  { label: "Corporate Video", desc: "Localise training videos, product demos, and announcements." },
+  { label: "Podcast Clips", desc: "Translate video podcast clips for different regional audiences." },
 ];
 
 export default function YouTubePage() {
   return (
     <>
-      {/* Hero */}
-      <section className="pb-hero-gradient pb-hero-lines relative overflow-hidden">
-        <div className="relative mx-auto max-w-7xl px-6 pt-20 pb-16 lg:px-10 lg:pt-28 lg:pb-24">
-          <div className="mb-6 flex items-center gap-3">
-            <span className="font-pb-mono inline-flex items-center gap-2 text-[11px] font-bold tracking-widest text-pb-accent uppercase">
-              <span className="inline-block h-2 w-2 rounded-sm bg-pb-accent" />
-              YouTube Subtitles
-            </span>
-            <span className="font-pb-mono rounded-full bg-pb-accent-dim px-3 py-1 text-[9px] font-bold tracking-widest text-pb-accent uppercase">
+      {/* ─── HERO ─── */}
+      <section
+        className="relative min-h-screen overflow-hidden"
+        style={{
+          background:
+            "radial-gradient(ellipse 110% 75% at 68% 28%, #c41414 0%, #7a0808 18%, #300410 40%, #0c090a 70%)",
+        }}
+      >
+        {/* Vertical scan lines */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            backgroundImage:
+              "repeating-linear-gradient(90deg, rgba(220,60,60,0.07) 0px, rgba(220,60,60,0.07) 1px, transparent 1px, transparent 170px)",
+          }}
+        />
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            backgroundImage:
+              "repeating-linear-gradient(180deg, transparent 0px, transparent 3px, rgba(0,0,0,0.04) 3px, rgba(0,0,0,0.04) 4px)",
+          }}
+        />
+
+        <div className="relative mx-auto max-w-7xl px-6 pt-36 pb-20 lg:px-10 lg:pt-44 lg:pb-32">
+          {/* Badge row */}
+          <div className="mb-8 flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              <span className="inline-block h-2 w-2" style={{ background: "#c94040" }} />
+              <span className="font-pb-mono text-[11px] font-bold tracking-widest text-pb-accent uppercase">
+                YouTube Subtitle Translator
+              </span>
+            </div>
+            <span
+              className="font-pb-mono rounded-full border px-3 py-1 text-[9px] font-bold tracking-widest uppercase"
+              style={{ borderColor: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.4)" }}
+            >
               Coming soon
             </span>
           </div>
 
-          <h1 className="pb-headline-dot max-w-4xl text-5xl md:text-7xl lg:text-8xl">
-            Translate the
+          {/* Headline */}
+          <h1
+            className="pb-enter font-pb-mono max-w-5xl"
+            style={{
+              fontSize: "clamp(3.5rem, 10vw, 9rem)",
+              lineHeight: 0.9,
+              letterSpacing: "-0.02em",
+              color: "rgba(240,236,227,0.22)",
+              fontWeight: 700,
+            }}
+          >
+            YouTube
             <br />
-            captions.
+            <span style={{ color: "#f0ece3" }}>captions.</span>
             <br />
-            <span className="text-pb-text">Reach every viewer.</span>
+            Any language.
           </h1>
 
-          <p className="mt-8 max-w-lg text-[16px] leading-relaxed text-pb-text-secondary lg:text-[17px]">
-            Paste a YouTube link. We pull the captions, translate them into 40+
-            languages, and hand back a ready-to-upload SRT — timing intact.
-          </p>
-
-          <div className="mt-8">
-            <Link
-              href="/contact"
-              className="font-pb-mono rounded-full bg-pb-accent px-7 py-3 text-[12px] font-bold tracking-widest text-pb-bg uppercase transition-all hover:brightness-110"
-            >
-              Join waitlist
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Product mock — YouTube flow */}
-      <section className="border-t border-pb-border bg-pb-bg">
-        <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
-          <div className="overflow-hidden rounded-xl border border-pb-border">
-            <div className="bg-pb-bg-card p-8 md:p-10">
-              <div className="mx-auto max-w-2xl">
-                <div className="flex items-center gap-3 rounded-lg border border-pb-border bg-pb-bg px-5 py-4">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-5 w-5 shrink-0 text-pb-text-muted">
-                    <path d="M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19.1c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-1.93 29 29 0 0 0 .46-5.42 29 29 0 0 0-.46-5.33z" />
-                    <polygon points="9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02" />
-                  </svg>
-                  <span className="font-mono text-[14px] text-pb-text-secondary">
-                    https://youtube.com/watch?v=dQw4w9WgXcQ
-                  </span>
-                </div>
-
-                <div className="mt-6 flex items-center gap-3">
-                  <span className="font-pb-mono rounded-full bg-emerald-900/30 px-3 py-1 text-[9px] font-bold tracking-widest text-emerald-400 uppercase">
-                    Detected: English
-                  </span>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="h-4 w-4 text-pb-text-muted">
-                    <path d="M5 12h14M12 5l7 7-7 7" />
-                  </svg>
-                  <span className="font-pb-mono rounded-full bg-pb-accent-dim px-3 py-1 text-[9px] font-bold tracking-widest text-pb-accent uppercase">
-                    Target: Korean
-                  </span>
-                </div>
-
-                <div className="mt-8 space-y-3">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="rounded-lg bg-pb-bg p-4 font-mono text-[12px]">
-                      <span className="text-pb-text-muted">00:00:05 → 00:00:08</span>
-                      <p className="mt-1 text-pb-text-secondary">Never gonna give you up</p>
-                    </div>
-                    <div className="rounded-lg bg-[#f5f0e6] p-4 font-mono text-[12px]">
-                      <span className="text-[#a09a88]">00:00:05 → 00:00:08</span>
-                      <p className="mt-1 text-[#1a1914]">절대 포기하지 않을 거야</p>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="rounded-lg bg-pb-bg p-4 font-mono text-[12px]">
-                      <span className="text-pb-text-muted">00:00:09 → 00:00:12</span>
-                      <p className="mt-1 text-pb-text-secondary">Never gonna let you down</p>
-                    </div>
-                    <div className="rounded-lg bg-[#f5f0e6] p-4 font-mono text-[12px]">
-                      <span className="text-[#a09a88]">00:00:09 → 00:00:12</span>
-                      <p className="mt-1 text-[#1a1914]">절대 실망시키지 않을 거야</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
+          <div className="pb-enter pb-enter-delay-2 mt-12 flex max-w-5xl flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+            <p className="max-w-lg text-[16px] leading-relaxed text-pb-text-secondary lg:text-[17px]">
+              Paste a YouTube link. We pull the captions, translate them into 40+
+              languages, and hand back a ready-to-upload SRT file. No account needed.
+            </p>
+            <div className="flex shrink-0 items-center gap-5">
+              <Link
+                href="/contact"
+                className="font-pb-mono rounded-full px-7 py-3 text-[12px] font-bold tracking-widest text-pb-bg uppercase transition-all hover:brightness-110"
+                style={{ background: "#c94040" }}
+              >
+                Join waitlist
+              </Link>
+              <Link
+                href="/platform"
+                className="font-pb-mono text-[12px] tracking-widest text-pb-text-secondary uppercase transition-colors hover:text-pb-text"
+              >
+                All products →
+              </Link>
             </div>
           </div>
         </div>
       </section>
 
-      {/* How it works */}
-      <section className="border-t border-pb-border bg-pb-bg-raised">
+      {/* ─── URL MOCK ─── */}
+      <section style={{ background: "#0c0a09", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
         <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
-          <span className="font-pb-mono mb-4 inline-flex items-center gap-2 text-[11px] font-bold tracking-widest text-pb-accent uppercase">
-            <span className="inline-block h-2 w-2 rounded-sm bg-pb-accent" />
-            How it works
-          </span>
-          <h2 className="font-pb-display max-w-lg text-4xl text-pb-text md:text-5xl">
-            Link. Translate. Upload.
+          <div className="mb-10">
+            <span className="font-pb-mono text-[10px] font-bold tracking-widest text-pb-text-muted uppercase">
+              How it looks
+            </span>
+          </div>
+
+          {/* URL input mock */}
+          <div
+            className="overflow-hidden"
+            style={{ borderRadius: "12px", border: "1px solid rgba(255,255,255,0.08)" }}
+          >
+            {/* Input bar */}
+            <div
+              className="flex items-center gap-4 px-6 py-5"
+              style={{ background: "#161412", borderBottom: "1px solid rgba(255,255,255,0.06)" }}
+            >
+              <span
+                className="font-pb-mono flex-1 text-[14px]"
+                style={{ color: "rgba(240,236,227,0.35)" }}
+              >
+                youtube.com/watch?v=dQw4w9WgXcQ
+              </span>
+              <div className="flex items-center gap-3">
+                <span className="font-pb-mono text-[11px] text-pb-text-muted">→ Chinese</span>
+                <span
+                  className="font-pb-mono rounded-full px-4 py-1.5 text-[11px] font-bold tracking-widest text-white uppercase"
+                  style={{ background: "#c94040" }}
+                >
+                  Translate
+                </span>
+              </div>
+            </div>
+
+            {/* SRT output mock */}
+            <div
+              className="grid grid-cols-1 gap-0 md:grid-cols-2"
+              style={{ background: "#100e0c" }}
+            >
+              {/* Original */}
+              <div
+                className="p-8"
+                style={{ borderRight: "1px solid rgba(255,255,255,0.04)" }}
+              >
+                <div className="mb-5 flex items-center justify-between">
+                  <span className="font-pb-mono text-[10px] tracking-widest text-pb-text-muted uppercase">
+                    Original · English
+                  </span>
+                  <span className="font-pb-mono text-[10px] text-pb-text-muted">.srt</span>
+                </div>
+                <pre
+                  className="font-pb-mono space-y-4 text-[12px] leading-relaxed"
+                  style={{ color: "rgba(240,236,227,0.3)" }}
+                >
+{`1
+00:00:01,000 --> 00:00:04,500
+Never gonna give you up,
+never gonna let you down
+
+2
+00:00:04,800 --> 00:00:08,200
+Never gonna run around
+and desert you`}
+                </pre>
+              </div>
+
+              {/* Translated */}
+              <div className="p-8">
+                <div className="mb-5 flex items-center justify-between">
+                  <span className="font-pb-mono text-[10px] tracking-widest text-pb-text-muted uppercase">
+                    Translated · Chinese
+                  </span>
+                  <span
+                    className="font-pb-mono text-[10px]"
+                    style={{ color: "#c94040" }}
+                  >
+                    Ready to upload
+                  </span>
+                </div>
+                <pre
+                  className="font-pb-mono space-y-4 text-[12px] leading-relaxed text-pb-text-secondary"
+                >
+{`1
+00:00:01,000 --> 00:00:04,500
+永远不会放弃你，
+永远不会让你失望
+
+2
+00:00:04,800 --> 00:00:08,200
+永远不会跑走
+或抛弃你`}
+                </pre>
+              </div>
+            </div>
+
+            {/* Download row */}
+            <div
+              className="flex items-center justify-between px-6 py-4"
+              style={{ background: "#0c0a09", borderTop: "1px solid rgba(255,255,255,0.04)" }}
+            >
+              <span className="font-pb-mono text-[11px] text-pb-text-muted">
+                Timecodes preserved · Upload directly to YouTube Studio
+              </span>
+              <span
+                className="font-pb-mono text-[11px] font-bold tracking-widest uppercase"
+                style={{ color: "#c94040" }}
+              >
+                ↓ Download .srt
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── HOW IT WORKS ─── */}
+      <section className="bg-pb-bg" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+        <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
+          <div className="flex items-center gap-3 mb-6">
+            <span className="inline-block h-2 w-2" style={{ background: "#c94040" }} />
+            <span className="font-pb-mono text-[11px] font-bold tracking-widest uppercase" style={{ color: "#c94040" }}>
+              How it works
+            </span>
+          </div>
+          <h2
+            className="font-pb-mono mb-16 text-4xl font-bold text-pb-text md:text-5xl"
+            style={{ letterSpacing: "-0.02em" }}
+          >
+            Paste. Translate. Upload.
           </h2>
-          <div className="mt-14 grid grid-cols-1 gap-6 md:grid-cols-3">
-            {STEPS.map((s) => (
-              <div key={s.n} className="flex flex-col gap-5 rounded-xl border border-pb-border bg-pb-bg p-8">
-                <span className="font-pb-mono text-4xl font-bold text-pb-accent/30">{s.n}</span>
-                <h3 className="text-xl font-bold text-pb-text">{s.title}</h3>
-                <p className="text-[14px] leading-relaxed text-pb-text-muted">{s.desc}</p>
+
+          <div className="grid grid-cols-1 gap-0 md:grid-cols-3">
+            {[
+              { n: "01", title: "Paste your URL", desc: "Drop in any YouTube URL. We handle public videos, unlisted, and playlists." },
+              { n: "02", title: "We fetch & translate", desc: "We pull the captions directly from YouTube and translate into your chosen language." },
+              { n: "03", title: "Download & upload", desc: "Get your SRT or VTT file. Open YouTube Studio, upload under the video's subtitles tab." },
+            ].map((s, i) => (
+              <div
+                key={s.n}
+                className={`py-10 ${i < 2 ? "md:border-r md:pr-10" : ""} ${i > 0 ? "md:pl-10" : ""} ${i < 2 ? "border-b border-white/[0.04] md:border-b-0" : ""}`}
+              >
+                <span
+                  className="font-pb-mono block text-[80px] font-bold leading-none"
+                  style={{ color: "rgba(201,64,64,0.12)" }}
+                >
+                  {s.n}
+                </span>
+                <h3 className="mt-4 text-[22px] font-bold text-pb-text">{s.title}</h3>
+                <p className="mt-3 text-[14px] leading-relaxed text-pb-text-muted">{s.desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Features */}
-      <section className="border-t border-pb-border bg-pb-bg">
+      {/* ─── FEATURES — horizontal rows ─── */}
+      <section style={{ background: "#0c0a09", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+        <div className="mx-auto max-w-7xl px-6 lg:px-10">
+          <div className="border-b border-white/[0.04] py-16">
+            <h2
+              className="font-pb-mono text-4xl font-bold text-pb-text md:text-5xl"
+              style={{ letterSpacing: "-0.02em" }}
+            >
+              Everything a creator needs.
+            </h2>
+          </div>
+          {FEATURES.map((f) => (
+            <div
+              key={f.n}
+              className="flex items-start gap-8 border-b border-white/[0.04] py-6"
+            >
+              <span className="font-pb-mono mt-0.5 w-8 shrink-0 text-[11px]" style={{ color: "#c94040" }}>
+                {f.n}
+              </span>
+              <div className="flex flex-1 flex-col gap-1 md:flex-row md:gap-12">
+                <h3 className="w-56 shrink-0 text-[15px] font-bold text-pb-text">{f.title}</h3>
+                <p className="text-[14px] leading-relaxed text-pb-text-muted">{f.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ─── CREATOR STAT SECTION ─── */}
+      <section className="bg-pb-bg" style={{ borderTop: "1px solid rgba(255,255,255,0.04)" }}>
+        <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-32">
+          <div className="grid grid-cols-1 gap-16 md:grid-cols-2">
+            <div>
+              <p
+                className="font-pb-mono text-[80px] font-bold leading-none md:text-[100px]"
+                style={{ color: "rgba(201,64,64,0.25)" }}
+              >
+                2.7B
+              </p>
+              <p className="mt-4 text-[18px] font-semibold text-pb-text">
+                YouTube users don&apos;t speak English.
+              </p>
+              <p className="mt-3 text-[14px] leading-relaxed text-pb-text-muted">
+                Your content exists. Your audience exists. The only gap is language.
+              </p>
+            </div>
+            <div className="flex flex-col justify-center">
+              <h2
+                className="font-pb-mono text-3xl font-bold text-pb-text md:text-4xl"
+                style={{ letterSpacing: "-0.02em" }}
+              >
+                Your content.<br />Every language.<br />Every market.
+              </h2>
+              <p className="mt-6 text-[15px] leading-relaxed text-pb-text-muted">
+                Built for YouTube creators who publish globally — no translation agency, no
+                per-minute pricing, no waiting. One link, 40+ languages, minutes.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── USE CASES ─── */}
+      <section style={{ background: "#0c0a09", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
         <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
-          <span className="font-pb-mono mb-4 inline-flex items-center gap-2 text-[11px] font-bold tracking-widest text-pb-accent uppercase">
-            <span className="inline-block h-2 w-2 rounded-sm bg-pb-accent" />
-            Features
-          </span>
-          <h2 className="font-pb-display max-w-2xl text-4xl text-pb-text md:text-5xl">
-            Captions translated. Timing untouched.
-          </h2>
-          <div className="mt-14 grid grid-cols-1 gap-px overflow-hidden rounded-xl border border-pb-border bg-pb-border md:grid-cols-2 lg:grid-cols-3">
-            {FEATURES.map((f) => (
-              <div key={f.title} className="flex flex-col gap-2.5 bg-pb-bg-card p-7">
-                <h3 className="text-[15px] font-bold text-pb-text">{f.title}</h3>
-                <p className="text-[13px] leading-relaxed text-pb-text-muted">{f.desc}</p>
+          <div className="flex items-center gap-3 mb-12">
+            <span className="inline-block h-2 w-2" style={{ background: "#c94040" }} />
+            <span className="font-pb-mono text-[11px] font-bold tracking-widest uppercase" style={{ color: "#c94040" }}>
+              Use cases
+            </span>
+          </div>
+          <div className="grid grid-cols-1 gap-0 md:grid-cols-2 lg:grid-cols-4">
+            {USE_CASES.map((u, i) => (
+              <div
+                key={u.label}
+                className={`py-8 ${i < 3 ? "md:border-r md:pr-8" : ""} ${i > 0 ? "md:pl-8" : ""} ${i < 2 ? "border-b border-white/[0.04] lg:border-b-0" : ""}`}
+              >
+                <h3 className="text-[17px] font-bold text-pb-text">{u.label}</h3>
+                <p className="mt-2 text-[13px] leading-relaxed text-pb-text-muted">{u.desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* CTA */}
-      <section className="bg-pb-accent">
-        <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-8 px-6 py-16 md:flex-row md:items-center lg:px-10 lg:py-20">
-          <h2 className="font-pb-display max-w-2xl text-3xl text-pb-bg md:text-5xl">
-            Get notified when YouTube translation launches.
+      {/* ─── CTA ─── */}
+      <section style={{ background: "#c94040" }}>
+        <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-8 px-6 py-20 md:flex-row md:items-center lg:px-10 lg:py-24">
+          <h2
+            className="font-pb-mono max-w-2xl text-3xl font-bold text-white md:text-5xl"
+            style={{ letterSpacing: "-0.02em" }}
+          >
+            Join the waitlist for<br />YouTube Subtitle Translator.
           </h2>
           <Link
             href="/contact"
-            className="font-pb-mono shrink-0 rounded-full bg-pb-bg px-8 py-3.5 text-[12px] font-bold tracking-widest text-pb-text uppercase transition-all hover:bg-pb-bg-raised"
+            className="font-pb-mono shrink-0 border-2 border-white bg-white px-8 py-3.5 text-[12px] font-bold tracking-widest uppercase transition-all hover:bg-transparent hover:text-white"
+            style={{ color: "#c94040" }}
           >
             Join waitlist →
           </Link>

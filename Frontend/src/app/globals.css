@@ -149,6 +149,42 @@ body {
   pointer-events: none;
 }
 
+/* Full-page vertical column grid — fixed overlay, matches giga.ai */
+.pb-page-grid {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+}
+.pb-page-grid > span {
+  border-left: 1px solid rgba(255, 255, 255, 0.04);
+}
+.pb-page-grid > span:last-child {
+  border-right: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+/* Page entrance animation — hero content slides up */
+@keyframes pb-entrance {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.pb-enter {
+  animation: pb-entrance 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.pb-enter-delay-1 { animation-delay: 0.1s; }
+.pb-enter-delay-2 { animation-delay: 0.22s; }
+.pb-enter-delay-3 { animation-delay: 0.36s; }
+.pb-enter-delay-4 { animation-delay: 0.52s; }
+
 /* Glassmorphism panel */
 .pb-glass {
   background: var(--color-pb-glass);

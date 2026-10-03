@@ -34,8 +34,23 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
     <div
       className={`${fraunces.variable} ${spaceMono.variable} ${inter.variable} relative flex min-h-screen shrink-0 flex-col bg-pb-bg text-pb-text antialiased`}
     >
+      {/* Full-page vertical grid lines — fixed overlay like giga.ai */}
+      <div className="pointer-events-none fixed inset-0 z-10" aria-hidden="true">
+        <div className="mx-auto grid h-full max-w-7xl grid-cols-4 px-6 lg:grid-cols-8 lg:px-10">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div
+              key={i}
+              style={{
+                borderLeft: "1px solid rgba(255,255,255,0.04)",
+                borderRight: i === 7 ? "1px solid rgba(255,255,255,0.04)" : undefined,
+              }}
+            />
+          ))}
+        </div>
+      </div>
+
       <Header />
-      <main className="flex-1">{children}</main>
+      <main className="relative z-0 flex-1">{children}</main>
       <Footer />
       <DemoVideoButton />
     </div>
