@@ -121,134 +121,123 @@ export default function Home() {
             </div>
           </div>
 
-          {/* ── macOS-style app window mock ── */}
+          {/* ── macOS app window — full product sidebar + jobs ── */}
           <div className="pb-enter pb-enter-delay-4 relative mt-16 lg:-mx-20 xl:-mx-32" style={{
             borderRadius: "12px",
             overflow: "hidden",
             boxShadow: "0 48px 140px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.08)",
           }}>
-            {/* macOS title bar */}
-            <div className="flex items-center gap-2 px-4 py-3" style={{ background: "#f0ece3", borderBottom: "1px solid #dad4c7" }}>
+            {/* Title bar */}
+            <div className="flex items-center gap-2 px-4 py-3" style={{ background: "#1a1814", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
               <span className="inline-block h-3 w-3 rounded-full" style={{ background: "#ff5f57" }} />
               <span className="inline-block h-3 w-3 rounded-full" style={{ background: "#febc2e" }} />
               <span className="inline-block h-3 w-3 rounded-full" style={{ background: "#28c840" }} />
-              <span style={{ marginLeft: "8px", fontSize: "12px", color: "#6e6a61", fontWeight: 500 }}>Pagebirdy — Jobs</span>
+              <span style={{ marginLeft: "10px", fontSize: "12px", color: "rgba(255,255,255,0.4)", fontWeight: 500 }}>Pagebirdy</span>
             </div>
 
             <div className="flex" style={{ minHeight: "520px" }}>
-              {/* Left sidebar — clean white like Image #35 */}
-              <div className="flex shrink-0 flex-col" style={{
-                width: "190px",
-                background: "#f8f5ee",
-                borderRight: "1px solid #e8e2d8",
-              }}>
-                {/* Logo in sidebar */}
-                <div className="px-5 py-4">
-                  <span style={{
-                    fontFamily: "var(--font-fraunces), Georgia, serif",
-                    fontStyle: "italic",
-                    fontSize: "18px",
-                    fontWeight: 600,
-                    color: "#15130f",
-                  }}>
-                    page<span style={{ color: "#e08a6f" }}>birdy</span>
+
+              {/* ── Sidebar: dark with all products ── */}
+              <div className="flex shrink-0 flex-col" style={{ width: "220px", background: "#131210", borderRight: "1px solid rgba(255,255,255,0.07)" }}>
+                {/* Logo */}
+                <div className="px-5 py-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                  <span style={{ fontFamily: "var(--font-share-tech-mono), monospace", fontSize: "15px", letterSpacing: "0.04em" }}>
+                    <span style={{ color: "rgba(240,236,227,0.7)" }}>page</span><span style={{ color: "#e08a6f" }}>birdy</span>
                   </span>
                 </div>
 
-                {/* Nav section */}
-                <div className="px-3 pb-2">
-                  <div className="mb-1 px-2 pb-1 pt-3" style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.1em", color: "#a09a8e" }}>MAIN</div>
+                {/* Products section */}
+                <div className="px-3 pt-4">
+                  <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.14em", color: "rgba(255,255,255,0.3)", paddingLeft: "8px", marginBottom: "4px" }}>PRODUCTS</div>
+                  {[
+                    { label: "Documents / PDF", active: false },
+                    { label: "SRT / VTT Subtitles", active: false },
+                    { label: "Image Translator", active: false },
+                    { label: "Website Translator", active: false },
+                    { label: "YouTube Subtitles", active: false },
+                  ].map((item) => (
+                    <div key={item.label} className="flex items-center rounded-md px-2 py-2 mb-0.5" style={{ background: "transparent" }}>
+                      <span style={{ display: "inline-block", width: "5px", height: "5px", borderRadius: "50%", background: "rgba(255,255,255,0.2)", marginRight: "8px", flexShrink: 0 }} />
+                      <span style={{ fontSize: "12px", color: "rgba(240,236,227,0.65)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.label}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Workspace section */}
+                <div className="px-3 pt-5">
+                  <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.14em", color: "rgba(255,255,255,0.3)", paddingLeft: "8px", marginBottom: "4px" }}>WORKSPACE</div>
                   {[
                     { label: "Jobs", active: true },
                     { label: "Team", active: false },
                     { label: "Settings", active: false },
                   ].map((item) => (
-                    <div key={item.label} className="flex items-center gap-2.5 rounded-md px-2 py-1.5 mb-0.5" style={{
-                      background: item.active ? "#e08a6f" : "transparent",
-                    }}>
-                      <span style={{
-                        display: "inline-block", width: "6px", height: "6px", borderRadius: "2px",
-                        background: item.active ? "rgba(255,255,255,0.8)" : "#b0a898",
-                      }} />
-                      <span style={{
-                        fontSize: "13px",
-                        color: item.active ? "#fff" : "#4a463d",
-                        fontWeight: item.active ? 600 : 400,
-                      }}>{item.label}</span>
+                    <div key={item.label} className="flex items-center gap-2.5 rounded-md px-2 py-2 mb-0.5" style={{ background: item.active ? "rgba(224,138,111,0.18)" : "transparent" }}>
+                      <span style={{ display: "inline-block", width: "5px", height: "5px", borderRadius: "50%", background: item.active ? "#e08a6f" : "rgba(255,255,255,0.2)", flexShrink: 0 }} />
+                      <span style={{ fontSize: "13px", color: item.active ? "#e08a6f" : "rgba(240,236,227,0.45)", fontWeight: item.active ? 600 : 400 }}>{item.label}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Right main content */}
+              {/* ── Main: Jobs table ── */}
               <div className="flex flex-1 flex-col" style={{ background: "#fdfcf7" }}>
-                {/* Header row */}
-                <div className="flex items-center justify-between border-b px-6 py-4" style={{ borderColor: "#e8e2d8" }}>
+                {/* Header */}
+                <div className="flex items-center justify-between px-7 py-4" style={{ borderBottom: "1px solid #e8e2d8" }}>
                   <div>
-                    <div style={{ fontSize: "18px", fontWeight: 700, color: "#15130f" }}>Jobs</div>
-                    <div style={{ fontSize: "12px", color: "#9a9488", marginTop: "1px" }}>4 projects</div>
+                    <div style={{ fontSize: "20px", fontWeight: 700, color: "#15130f" }}>Jobs</div>
+                    <div style={{ fontSize: "12px", color: "#9a9488", marginTop: "2px" }}>6 translations</div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div style={{
-                      background: "#e08a6f", color: "#fff", fontSize: "11px",
-                      fontWeight: 700, padding: "6px 14px", borderRadius: "6px",
-                      letterSpacing: "0.05em",
-                    }}>NEW JOB</div>
-                  </div>
+                  <div style={{ background: "#e08a6f", color: "#fff", fontSize: "11px", fontWeight: 700, padding: "7px 16px", borderRadius: "8px", letterSpacing: "0.05em" }}>+ NEW JOB</div>
                 </div>
 
-                {/* Filter pills */}
-                <div className="flex items-center gap-2 border-b px-6 py-2.5" style={{ borderColor: "#e8e2d8" }}>
-                  {[{ l: "Today", a: false }, { l: "7 days", a: false }, { l: "30 days", a: false }, { l: "All", a: true }].map(p => (
+                {/* Filter tabs */}
+                <div className="flex items-center gap-1.5 px-7 py-3" style={{ borderBottom: "1px solid #e8e2d8" }}>
+                  {[{ l: "All", a: true }, { l: "In progress", a: false }, { l: "Complete", a: false }].map(p => (
                     <div key={p.l} style={{
-                      fontSize: "12px", fontWeight: p.a ? 600 : 400, padding: "3px 12px",
-                      borderRadius: "20px", border: "1px solid",
-                      borderColor: p.a ? "#e08a6f" : "#dad4c7",
-                      background: p.a ? "#e08a6f" : "transparent",
-                      color: p.a ? "#fff" : "#6e6a61",
+                      fontSize: "12px", fontWeight: p.a ? 600 : 400, padding: "4px 14px", borderRadius: "20px",
+                      border: "1px solid", borderColor: p.a ? "#e08a6f" : "#dad4c7",
+                      background: p.a ? "#fef2ed" : "transparent", color: p.a ? "#e08a6f" : "#6e6a61",
                     }}>{p.l}</div>
                   ))}
                 </div>
 
                 {/* Table */}
-                <div className="flex-1 px-6 pt-3">
-                  {/* Date group */}
-                  <div className="flex items-center gap-3 py-2">
-                    <span style={{ fontSize: "13px", fontWeight: 700, color: "#15130f" }}>Today</span>
-                    <span style={{ fontSize: "11px", color: "#9a9488" }}>2 projects · 48 pages</span>
-                  </div>
-                  {/* Column headers */}
-                  <div className="grid border-b pb-1.5" style={{ gridTemplateColumns: "2.5fr 0.8fr 1fr 1fr 120px", borderColor: "#e8e2d8" }}>
-                    {["NAME", "TYPE", "TARGET", "CREATED", "PROGRESS"].map(h => (
-                      <span key={h} style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.1em", color: "#9a9488" }}>{h}</span>
+                <div className="flex-1 px-7 pt-2">
+                  <div className="grid py-2" style={{ gridTemplateColumns: "2.5fr 0.7fr 0.9fr 1fr 140px", borderBottom: "1px solid #e8e2d8" }}>
+                    {["DOCUMENT", "FORMAT", "TARGET", "DATE", "STATUS"].map(h => (
+                      <span key={h} style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.12em", color: "#a09a8e" }}>{h}</span>
                     ))}
                   </div>
-                  {/* Rows */}
                   {[
-                    { name: "annual_report_2026.idml", type: "IDML", target: "Chinese", created: "Today", progress: 100, done: true },
-                    { name: "product_brochure.pdf", type: "PDF", target: "Arabic", created: "Today", progress: 68, done: false },
-                    { name: "marketing_deck.idml", type: "IDML", target: "French", created: "Dec 12", progress: 35, done: false },
-                    { name: "newsletter_q4.idml", type: "IDML", target: "German", created: "Dec 10", progress: 100, done: true },
-                    { name: "company_handbook.pdf", type: "PDF", target: "Spanish", created: "Dec 8", progress: 100, done: true },
-                    { name: "press_release_q4.idml", type: "IDML", target: "Japanese", created: "Dec 7", progress: 22, done: false },
+                    { name: "annual_report_2026.idml", fmt: "IDML", target: "Chinese", date: "Today", progress: 100, status: "complete" },
+                    { name: "product_launch_video.srt", fmt: "SRT", target: "Arabic", date: "Today", progress: 82, status: "translating" },
+                    { name: "marketing_signage.ai", fmt: "AI", target: "French", date: "Dec 12", progress: 100, status: "complete" },
+                    { name: "company_website.html", fmt: "HTML", target: "German", date: "Dec 10", progress: 65, status: "translating" },
+                    { name: "newsletter_q4.idml", fmt: "IDML", target: "Spanish", date: "Dec 8", progress: 100, status: "complete" },
+                    { name: "tutorial_captions.vtt", fmt: "VTT", target: "Japanese", date: "Dec 7", progress: 100, status: "complete" },
                   ].map((row, i) => (
-                    <div key={row.name} className="grid items-center py-3.5" style={{
-                      gridTemplateColumns: "2.5fr 0.8fr 1fr 1fr 120px",
-                      borderBottom: i < 5 ? "1px solid #f0ece3" : "none",
+                    <div key={row.name} className="grid items-center py-3" style={{
+                      gridTemplateColumns: "2.5fr 0.7fr 0.9fr 1fr 140px",
+                      borderBottom: i < 5 ? "1px solid #f4f0e8" : "none",
                     }}>
-                      <span style={{ fontSize: "13px", color: "#15130f", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{row.name}</span>
-                      <span style={{ fontSize: "11px", color: "#6e6a61" }}>{row.type}</span>
+                      <span style={{ fontSize: "13px", color: "#15130f", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: "12px" }}>{row.name}</span>
+                      <span style={{ fontSize: "11px", color: "#6e6a61" }}>{row.fmt}</span>
                       <span style={{ fontSize: "11px", color: "#6e6a61" }}>{row.target}</span>
-                      <span style={{ fontSize: "11px", color: "#9a9488" }}>{row.created}</span>
-                      <div className="flex items-center gap-2">
-                        <div style={{ flex: 1, height: "4px", background: "#e8e2d8", borderRadius: "4px", overflow: "hidden" }}>
+                      <span style={{ fontSize: "11px", color: "#a09a8e" }}>{row.date}</span>
+                      <div className="flex items-center gap-2.5">
+                        <div style={{ flex: 1, height: "5px", background: "#e8e2d8", borderRadius: "4px", overflow: "hidden" }}>
                           <div style={{
-                            height: "100%", borderRadius: "4px",
-                            width: `${row.progress}%`,
-                            background: row.done ? "#4a9e5a" : "#e08a6f",
+                            height: "100%", borderRadius: "4px", width: `${row.progress}%`,
+                            background: row.status === "complete" ? "#4a9e5a" : row.status === "translating" ? "#e08a6f" : "#dad4c7",
                           }} />
                         </div>
-                        <span style={{ fontSize: "10px", color: "#9a9488", minWidth: "26px" }}>{row.progress}%</span>
+                        <span style={{
+                          fontSize: "9px", fontWeight: 700, letterSpacing: "0.06em", padding: "2px 7px", borderRadius: "4px",
+                          color: row.status === "complete" ? "#4a9e5a" : row.status === "translating" ? "#e08a6f" : "#9a9488",
+                          background: row.status === "complete" ? "rgba(74,158,90,0.1)" : row.status === "translating" ? "rgba(224,138,111,0.12)" : "rgba(154,148,136,0.1)",
+                        }}>
+                          {row.status === "complete" ? "DONE" : row.status === "translating" ? "···" : "QUEUED"}
+                        </span>
                       </div>
                     </div>
                   ))}
@@ -258,8 +247,8 @@ export default function Home() {
 
             {/* Bottom fade */}
             <div className="pointer-events-none absolute bottom-0 left-0 right-0" style={{
-              height: "40%",
-              background: "linear-gradient(to top, #0c0810 0%, #0c0810 8%, rgba(12,8,16,0.9) 40%, transparent 100%)",
+              height: "35%",
+              background: "linear-gradient(to top, #0c0810 0%, #0c0810 6%, rgba(12,8,16,0.9) 35%, transparent 100%)",
             }} />
           </div>
         </div>
