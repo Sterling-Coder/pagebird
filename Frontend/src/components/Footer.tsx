@@ -25,8 +25,11 @@ const COLUMNS = [
 
 export default function Footer() {
   return (
-    <footer className="border-t border-pb-border bg-pb-bg">
-      <div className="mx-auto max-w-7xl px-6 pt-16 pb-8 lg:px-10">
+    <footer
+      className="pb-glass-section"
+      style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
+    >
+      <div className="mx-auto max-w-[1100px] px-8 pt-16 pb-8 lg:px-14">
         <div className="flex flex-col justify-between gap-12 md:flex-row">
           <div className="flex flex-col gap-4">
             <span
@@ -60,7 +63,10 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="mt-14 flex flex-col items-start justify-between gap-4 border-t border-pb-border pt-6 md:flex-row md:items-center">
+        <div
+          className="mt-14 flex flex-col items-start justify-between gap-4 pt-6 md:flex-row md:items-center"
+          style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
+        >
           <span className="font-pb-mono text-[11px] tracking-wide text-pb-text-muted">
             © {new Date().getFullYear()} Pagebirdy. All rights reserved.
           </span>

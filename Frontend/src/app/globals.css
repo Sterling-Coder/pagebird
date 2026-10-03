@@ -166,25 +166,65 @@ body {
   border-right: 1px solid rgba(255, 255, 255, 0.04);
 }
 
-/* Page entrance animation — hero content slides up */
+/* Stencil headline — CSS background-clip trick to get the horizontal stripe LCD look */
+.pb-stencil {
+  font-family: var(--font-share-tech-mono), var(--font-pb-mono), monospace;
+  background-image: repeating-linear-gradient(
+    0deg,
+    rgba(255, 255, 255, 0.92) 0px,
+    rgba(255, 255, 255, 0.92) 2px,
+    rgba(255, 255, 255, 0.20) 2px,
+    rgba(255, 255, 255, 0.20) 4px
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  letter-spacing: -0.01em;
+  line-height: 1.0;
+}
+
+/* Page entrance — dramatic blur + slide like giga.ai */
 @keyframes pb-entrance {
-  from {
+  0% {
     opacity: 0;
-    transform: translateY(28px);
+    transform: translateY(36px);
+    filter: blur(8px);
   }
-  to {
+  50% {
+    opacity: 1;
+    filter: blur(0px);
+  }
+  100% {
     opacity: 1;
     transform: translateY(0);
+    filter: blur(0px);
   }
 }
 
-.pb-enter {
-  animation: pb-entrance 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+@keyframes pb-entrance-label {
+  0% { opacity: 0; transform: translateY(12px); letter-spacing: 0.3em; }
+  100% { opacity: 1; transform: translateY(0); letter-spacing: 0.15em; }
 }
-.pb-enter-delay-1 { animation-delay: 0.1s; }
-.pb-enter-delay-2 { animation-delay: 0.22s; }
-.pb-enter-delay-3 { animation-delay: 0.36s; }
-.pb-enter-delay-4 { animation-delay: 0.52s; }
+
+.pb-enter {
+  animation: pb-entrance 1.1s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.pb-enter-label {
+  animation: pb-entrance-label 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.pb-enter-delay-1 { animation-delay: 0.08s; }
+.pb-enter-delay-2 { animation-delay: 0.2s; }
+.pb-enter-delay-3 { animation-delay: 0.34s; }
+.pb-enter-delay-4 { animation-delay: 0.5s; }
+
+/* Glass section — lets gradient bleed through */
+.pb-glass-section {
+  background: rgba(10, 8, 6, 0.65);
+  backdrop-filter: blur(32px) saturate(1.4);
+  -webkit-backdrop-filter: blur(32px) saturate(1.4);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
 
 /* Glassmorphism panel */
 .pb-glass {

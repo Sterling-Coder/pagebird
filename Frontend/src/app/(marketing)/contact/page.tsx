@@ -9,36 +9,48 @@ export const metadata: Metadata = {
 export default function ContactPage() {
   return (
     <>
-      <section className="mx-auto max-w-7xl px-6 pt-20 lg:px-10">
-        <span className="font-pb-mono mb-4 inline-flex items-center gap-2 text-[11px] font-bold tracking-widest text-pb-accent uppercase">
-          <span className="inline-block h-2 w-2 rounded-sm bg-pb-accent" />
-          Get in touch
-        </span>
-        <h1 className="font-pb-display max-w-2xl text-5xl text-pb-text md:text-7xl">
-          Send us the document you dread{" "}
-          <span className="text-pb-accent italic">translating.</span>
-        </h1>
+      {/* Hero */}
+      <section className="relative overflow-hidden" style={{
+        background: "linear-gradient(180deg, #c8a820 0%, #c86018 8%, #b03010 18%, #8a1c10 32%, #5a1018 50%, #2e0a20 68%, #180818 82%, #0c0810 100%)",
+        minHeight: "38vh",
+      }}>
+        <div className="pointer-events-none absolute inset-0" style={{
+          backgroundImage: "repeating-linear-gradient(90deg, rgba(0,0,0,0.18) 0px, rgba(0,0,0,0.18) 1px, transparent 1px, transparent 80px)",
+        }} />
+        <div className="pointer-events-none absolute inset-0" style={{
+          backgroundImage: "repeating-linear-gradient(180deg, transparent 0px, transparent 2px, rgba(0,0,0,0.06) 2px, rgba(0,0,0,0.06) 3px)",
+        }} />
+        <div className="relative mx-auto max-w-[1100px] px-8 pt-28 pb-12 lg:px-14 lg:pt-36">
+          <div className="pb-enter-label flex items-center gap-3 mb-8">
+            <span className="inline-block h-2 w-2 bg-pb-accent" />
+            <span className="font-pb-mono text-[11px] font-bold tracking-widest text-pb-accent uppercase">Get in touch</span>
+          </div>
+          <h1 className="pb-enter pb-stencil" style={{ fontSize: "clamp(2.8rem, 4.5vw, 4.5rem)" }}>
+            Send us the<br />document you dread.
+          </h1>
+        </div>
       </section>
 
-      <section className="mx-auto mt-14 grid max-w-7xl grid-cols-1 gap-12 border-t border-pb-border px-6 pt-14 pb-20 md:grid-cols-2 md:gap-0 lg:px-10">
-        <div className="flex flex-col gap-7 md:border-r md:border-pb-border md:pr-14 md:pb-16">
-          <ContactForm />
-        </div>
-
-        <div className="flex flex-col gap-10 md:pl-14">
-          <div className="flex flex-col gap-2.5">
-            <span className="font-pb-mono text-[10px] font-bold tracking-widest text-pb-accent uppercase">General</span>
-            <h3 className="text-[19px] font-bold text-pb-text">founder@thepagebirdy.com</h3>
-            <p className="text-sm leading-relaxed text-pb-text-muted">
-              Questions about the product, pricing, or a document you&rsquo;d like to
-              test.
-            </p>
-          </div>
-          <div className="flex flex-col gap-2.5 border-t border-pb-border pt-6">
-            <span className="font-pb-mono text-[10px] font-bold tracking-widest text-pb-text-muted uppercase">Office</span>
-            <p className="text-sm leading-relaxed text-pb-text-muted">
-              Bangalore, India
-            </p>
+      {/* Form section */}
+      <section className="pb-glass-section">
+        <div className="mx-auto max-w-[1100px] px-8 py-16 lg:px-14 lg:py-20">
+          <div className="grid grid-cols-1 gap-12 md:grid-cols-2 md:gap-0">
+            <div className="flex flex-col gap-7 md:pr-14" style={{ borderRight: "1px solid rgba(255,255,255,0.06)" }}>
+              <ContactForm />
+            </div>
+            <div className="flex flex-col gap-10 md:pl-14">
+              <div className="flex flex-col gap-2.5">
+                <span className="font-pb-mono text-[10px] font-bold tracking-widest text-pb-accent uppercase">General</span>
+                <h3 className="text-[19px] font-bold text-pb-text">founder@thepagebirdy.com</h3>
+                <p className="text-sm leading-relaxed text-pb-text-muted">
+                  Questions about the product, pricing, or a document you&rsquo;d like to test.
+                </p>
+              </div>
+              <div className="flex flex-col gap-2.5 pt-6" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                <span className="font-pb-mono text-[10px] font-bold tracking-widest text-pb-text-muted uppercase">Office</span>
+                <p className="text-sm leading-relaxed text-pb-text-muted">Bangalore, India</p>
+              </div>
+            </div>
           </div>
         </div>
       </section>

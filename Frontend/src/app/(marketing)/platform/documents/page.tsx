@@ -89,68 +89,57 @@ export default function DocumentsPage() {
           }}
         />
 
-        <div className="relative mx-auto max-w-7xl px-6 pt-36 pb-20 lg:px-10 lg:pt-44 lg:pb-32">
-          {/* Label */}
-          <div className="mb-10 flex items-center gap-3">
-            <span className="inline-block h-2 w-2 bg-pb-accent" />
-            <span className="font-pb-mono text-[11px] font-bold tracking-widest text-pb-accent uppercase">
-              Document / PDF
-            </span>
+        <div className="relative mx-auto max-w-[1100px] px-8 pt-36 pb-20 lg:px-14 lg:pt-44 lg:pb-32">
+          {/* Label row */}
+          <div className="pb-enter-label mb-10 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="inline-block h-2 w-2 bg-pb-accent" />
+              <span className="font-pb-mono text-[11px] font-bold tracking-widest text-pb-accent uppercase">
+                Document / PDF
+              </span>
+            </div>
             <span
               className="font-pb-mono rounded-full border px-2.5 py-0.5 text-[9px] font-bold tracking-widest uppercase"
-              style={{
-                borderColor: "rgba(52,211,153,0.35)",
-                background: "rgba(6,78,59,0.3)",
-                color: "#6ee7b7",
-              }}
+              style={{ borderColor: "rgba(52,211,153,0.35)", background: "rgba(6,78,59,0.3)", color: "#6ee7b7" }}
             >
               Live
             </span>
           </div>
 
-          {/* Headline */}
-          <h1
-            className="font-pb-mono"
-            style={{
-              fontSize: "clamp(3.5rem, 9.5vw, 9rem)",
-              lineHeight: 0.9,
-              letterSpacing: "-0.025em",
-            }}
-          >
-            <span style={{ color: "rgba(240,236,227,0.22)", display: "block" }}>
-              Translate the
-            </span>
-            <span style={{ color: "#f0ece3", display: "block" }}>
-              document.
-            </span>
-            <span style={{ color: "rgba(240,236,227,0.22)", display: "block" }}>
+          {/* Two-column: headline left, description right */}
+          <div className="grid grid-cols-1 items-end gap-12 lg:grid-cols-[55fr_45fr] lg:gap-16">
+            <h1
+              className="pb-enter pb-enter-delay-1 pb-stencil"
+              style={{ fontSize: "clamp(2.8rem, 4.5vw, 4.5rem)" }}
+            >
+              Translate the<br />
+              document.<br />
               Keep the design.
-            </span>
-          </h1>
+            </h1>
 
-          {/* Sub + CTAs */}
-          <div className="mt-12 flex max-w-7xl flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-            <p className="max-w-md text-[16px] leading-relaxed text-pb-text-secondary lg:text-[17px]">
-              Upload an InDesign IDML or PDF. Get it back in any of 40+
-              languages with every font, column, table and page break exactly
-              where you left it.
-            </p>
-            <div className="flex shrink-0 items-center gap-5">
-              <Link
-                href="/login"
-                className="font-pb-mono rounded-full bg-pb-accent px-7 py-3 text-[12px] font-bold tracking-widest text-pb-bg uppercase transition-all hover:brightness-110"
-              >
-                Translate free
-              </Link>
-              <WatchDemoButton />
+            <div className="pb-enter pb-enter-delay-2 flex flex-col gap-8">
+              <p className="text-[16px] leading-relaxed text-pb-text-secondary lg:text-[17px]">
+                Upload an InDesign IDML or PDF. Get it back in any of 40+
+                languages with every font, column, table and page break exactly
+                where you left it.
+              </p>
+              <div className="pb-enter pb-enter-delay-3 flex items-center gap-5">
+                <Link
+                  href="/login"
+                  className="font-pb-mono rounded-full bg-pb-accent px-7 py-3 text-[12px] font-bold tracking-widest text-pb-bg uppercase transition-all hover:brightness-110"
+                >
+                  Translate free
+                </Link>
+                <WatchDemoButton />
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* ─── BEFORE / AFTER ─── */}
-      <section style={{ background: "#0a0908" }}>
-        <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
+      <section className="pb-glass-section" style={{ background: "#0a0908" }}>
+        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-28">
           <div className="mb-10 flex items-center justify-between">
             <span
               className="font-pb-mono text-[11px] font-bold tracking-widest uppercase"
@@ -255,8 +244,8 @@ export default function DocumentsPage() {
       </section>
 
       {/* ─── PIPELINE DIAGRAM ─── */}
-      <section style={{ background: "#0e0d0b" }}>
-        <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
+      <section className="pb-glass-section" style={{ background: "#0e0d0b" }}>
+        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-28">
           {/* Label + headline */}
           <div className="mb-4 flex items-center gap-3">
             <span className="inline-block h-2 w-2 bg-pb-accent" />
@@ -441,7 +430,7 @@ export default function DocumentsPage() {
               "repeating-linear-gradient(90deg, rgba(120,80,255,0.05) 0px, rgba(120,80,255,0.05) 1px, transparent 1px, transparent 170px)",
           }}
         />
-        <div className="relative mx-auto max-w-7xl px-6 py-24 lg:px-10 lg:py-36">
+        <div className="relative mx-auto max-w-[1100px] px-8 py-24 lg:px-14 lg:py-36">
           <div className="grid grid-cols-1 gap-16 lg:grid-cols-2 lg:gap-24">
             {/* Copy */}
             <div className="flex flex-col justify-center">
@@ -547,8 +536,8 @@ export default function DocumentsPage() {
       </section>
 
       {/* ─── HOW IT WORKS ─── */}
-      <section style={{ background: "#0a0908" }}>
-        <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
+      <section className="pb-glass-section" style={{ background: "#0a0908" }}>
+        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-28">
           <div className="mb-16 flex items-center gap-3">
             <span className="inline-block h-2 w-2 bg-pb-accent" />
             <span className="font-pb-mono text-[11px] font-bold tracking-widest text-pb-accent uppercase">
@@ -594,8 +583,8 @@ export default function DocumentsPage() {
       </section>
 
       {/* ─── CAPABILITIES ─── editorial numbered rows */}
-      <section className="bg-pb-bg">
-        <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
+      <section className="pb-glass-section bg-pb-bg">
+        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-28">
           <div className="flex flex-col justify-between gap-4 pb-12 md:flex-row md:items-end" style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
             <div>
               <div className="mb-6 flex items-center gap-3">
@@ -643,7 +632,7 @@ export default function DocumentsPage() {
 
       {/* ─── FORMATS ─── */}
       <section style={{ background: "#0a0908", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-        <div className="mx-auto max-w-7xl px-6 py-8 lg:px-10">
+        <div className="mx-auto max-w-[1100px] px-8 py-8 lg:px-14">
           <div className="flex flex-wrap items-center gap-3">
             <span className="font-pb-mono mr-4 text-[10px] font-bold tracking-widest uppercase" style={{ color: "rgba(240,236,227,0.3)" }}>
               Supported formats
@@ -662,8 +651,8 @@ export default function DocumentsPage() {
       </section>
 
       {/* ─── LANGUAGES ─── */}
-      <section className="bg-pb-bg">
-        <div className="mx-auto max-w-7xl px-6 py-16 lg:px-10 lg:py-20">
+      <section className="pb-glass-section bg-pb-bg">
+        <div className="mx-auto max-w-[1100px] px-8 py-16 lg:px-14 lg:py-20">
           <div className="mb-10 flex items-center gap-3">
             <span className="inline-block h-2 w-2 bg-pb-accent" />
             <span className="font-pb-mono text-[11px] font-bold tracking-widest text-pb-accent uppercase">
@@ -683,7 +672,7 @@ export default function DocumentsPage() {
 
       {/* ─── CTA ─── */}
       <section style={{ background: "#e08a6f" }}>
-        <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-8 px-6 py-20 md:flex-row md:items-center lg:px-10 lg:py-24">
+        <div className="mx-auto flex max-w-[1100px] flex-col items-start justify-between gap-8 px-8 py-20 md:flex-row md:items-center lg:px-14 lg:py-24">
           <h2
             className="font-pb-mono max-w-2xl font-bold"
             style={{

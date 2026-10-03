@@ -78,15 +78,12 @@ export default function SubtitlesPage() {
           }}
         />
 
-        <div className="relative mx-auto max-w-7xl px-6 pt-36 pb-20 lg:px-10 lg:pt-44 lg:pb-32">
-          {/* Label */}
-          <div className="mb-8 flex items-center gap-4">
-            <div className="flex items-center gap-2">
+        <div className="relative mx-auto max-w-[1100px] px-8 pt-36 pb-20 lg:px-14 lg:pt-44 lg:pb-32">
+          {/* Label row */}
+          <div className="pb-enter-label mb-10 flex items-center justify-between">
+            <div className="flex items-center gap-3">
               <span className="inline-block h-2 w-2" style={{ background: "#8b6fbf" }} />
-              <span
-                className="font-pb-mono text-[11px] font-bold tracking-widest uppercase"
-                style={{ color: "#8b6fbf" }}
-              >
+              <span className="font-pb-mono text-[11px] font-bold tracking-widest uppercase" style={{ color: "#8b6fbf" }}>
                 SRT / VTT Subtitles
               </span>
             </div>
@@ -98,39 +95,33 @@ export default function SubtitlesPage() {
             </span>
           </div>
 
-          {/* Headline */}
-          <h1
-            className="font-pb-mono max-w-4xl"
-            style={{
-              fontSize: "clamp(3.5rem, 9vw, 8rem)",
-              lineHeight: 0.92,
-              letterSpacing: "-0.02em",
-            }}
-          >
-            <span style={{ color: "rgba(240,236,227,0.2)" }}>Subtitles.</span>
-            <br />
-            <span style={{ color: "rgba(240,236,227,0.7)" }}>Translated.</span>
-            <br />
-            <span style={{ color: "#f0ece3" }}>On time.</span>
-          </h1>
+          {/* Two-column: headline left, description right */}
+          <div className="grid grid-cols-1 items-end gap-12 lg:grid-cols-[55fr_45fr] lg:gap-16">
+            <h1
+              className="pb-enter pb-enter-delay-1 pb-stencil"
+              style={{ fontSize: "clamp(2.8rem, 4.5vw, 4.5rem)" }}
+            >
+              Subtitles.<br />Translated.<br />On time.
+            </h1>
 
-          <div className="mt-12 flex max-w-5xl flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
-            <p className="max-w-lg text-[16px] leading-relaxed text-pb-text-secondary lg:text-[17px]">
-              Upload your SRT or VTT file. Every cue comes back translated —
-              and stays synced to its original timecode. No manual offset, no
-              re-timing.
-            </p>
-            <div className="flex shrink-0 items-center gap-5">
-              <Link
-                href="/contact"
-                className="font-pb-mono rounded-full px-7 py-3 text-[12px] font-bold tracking-widest uppercase transition-all hover:brightness-110"
-                style={{ background: "#8b6fbf", color: "#0a090f" }}
-              >
-                Join the waitlist
-              </Link>
-              <span className="font-pb-mono text-[12px] tracking-widest text-pb-text-muted uppercase">
-                Shipping soon →
-              </span>
+            <div className="pb-enter pb-enter-delay-2 flex flex-col gap-8">
+              <p className="text-[16px] leading-relaxed text-pb-text-secondary lg:text-[17px]">
+                Upload your SRT or VTT file. Every cue comes back translated —
+                and stays synced to its original timecode. No manual offset, no
+                re-timing.
+              </p>
+              <div className="pb-enter pb-enter-delay-3 flex items-center gap-5">
+                <Link
+                  href="/contact"
+                  className="font-pb-mono rounded-full px-7 py-3 text-[12px] font-bold tracking-widest uppercase transition-all hover:brightness-110"
+                  style={{ background: "#8b6fbf", color: "#0a090f" }}
+                >
+                  Join the waitlist
+                </Link>
+                <span className="font-pb-mono text-[12px] tracking-widest text-pb-text-muted uppercase">
+                  Shipping soon →
+                </span>
+              </div>
             </div>
           </div>
 
@@ -190,8 +181,8 @@ export default function SubtitlesPage() {
       </section>
 
       {/* ─── PIPELINE DIAGRAM ─── */}
-      <section style={{ background: "#0d0b14" }}>
-        <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-32">
+      <section className="pb-glass-section" style={{ background: "#0d0b14" }}>
+        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-32">
           <div className="mb-6 flex items-center gap-2">
             <span className="inline-block h-2 w-2" style={{ background: "#8b6fbf" }} />
             <span className="font-pb-mono text-[11px] font-bold tracking-widest uppercase" style={{ color: "#8b6fbf" }}>
@@ -292,8 +283,8 @@ export default function SubtitlesPage() {
       </section>
 
       {/* ─── HOW IT WORKS ─── */}
-      <section style={{ background: "#0a090f" }}>
-        <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-32">
+      <section className="pb-glass-section" style={{ background: "#0a090f" }}>
+        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-32">
           <div className="mb-6 flex items-center gap-2">
             <span className="inline-block h-2 w-2" style={{ background: "#8b6fbf" }} />
             <span
@@ -345,8 +336,8 @@ export default function SubtitlesPage() {
       </section>
 
       {/* ─── FEATURES ─── editorial numbered rows */}
-      <section style={{ background: "#0d0b18" }}>
-        <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-32">
+      <section className="pb-glass-section" style={{ background: "#0d0b18" }}>
+        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-32">
           <div className="flex flex-col justify-between gap-4 pb-12 md:flex-row md:items-end" style={{ borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
             <div>
               <div className="mb-6 flex items-center gap-2">
@@ -398,8 +389,8 @@ export default function SubtitlesPage() {
       </section>
 
       {/* ─── USE CASES ─── */}
-      <section style={{ background: "#0a090f" }}>
-        <div className="mx-auto max-w-7xl px-6 py-20 lg:px-10 lg:py-28">
+      <section className="pb-glass-section" style={{ background: "#0a090f" }}>
+        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-28">
           <div className="mb-6 flex items-center gap-2">
             <span className="inline-block h-2 w-2" style={{ background: "#8b6fbf" }} />
             <span className="font-pb-mono text-[11px] font-bold tracking-widest uppercase" style={{ color: "#8b6fbf" }}>
@@ -434,7 +425,7 @@ export default function SubtitlesPage() {
 
       {/* ─── FORMATS ─── */}
       <section style={{ background: "#0d0b18", borderTop: "1px solid rgba(255,255,255,0.04)" }}>
-        <div className="mx-auto max-w-7xl px-6 py-8 lg:px-10">
+        <div className="mx-auto max-w-[1100px] px-8 py-8 lg:px-14">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-pb-mono mr-6 text-[10px] font-bold tracking-widest text-pb-text-muted uppercase">
               Formats
@@ -453,9 +444,9 @@ export default function SubtitlesPage() {
       </section>
 
       {/* ─── CTA ─── */}
-      <section style={{ background: "#5c14c8" }}>
+      <section className="pb-glass-section" style={{ background: "#5c14c8" }}>
         <div
-          className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-8 px-6 py-20 md:flex-row md:items-center lg:px-10 lg:py-24"
+          className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-8 px-6 py-20 md:flex-row md:items-center lg:px-14 lg:py-24"
         >
           <div>
             <h2
