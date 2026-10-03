@@ -1445,12 +1445,16 @@ async def translate_links_upload(
         else:
             _activity(f"{display_name} ready to download", owner_id=user["id"])
 
-        if project_id:
-            store = _store()
-            try:
+        # Mark output as a storage-scoped key so _job_download_available
+        # returns True — links jobs store files under jobs/{id}/Links_*/
+        # rather than a single output file, so we use the job prefix as sentinel.
+        store = _store()
+        try:
+            store.update_job_paths(job_id, output=f"jobs/{job_id}/")
+            if project_id:
                 store.set_project_target_lang_if_unset(project_id, lang.code)
-            finally:
-                store.close()
+        finally:
+            store.close()
 
         return report
 
