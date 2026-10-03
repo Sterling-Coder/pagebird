@@ -1501,6 +1501,17 @@ def download_output(job_id: str, format: str | None = None, type: str | None = N
     target_type = (type or "").lower().strip()
     source = str(job.get("source", ""))
 
+    # Jobs created before object storage was introduced still point at the
+    # container's old uploads/out directories. Those files disappeared on the
+    # next deploy, so report an actionable expiry instead of treating it as a
+    # missing current object.
+    if not out.startswith(f"jobs/{job_id}/"):
+        raise HTTPException(
+            status_code=410,
+            detail=("This translation was created before durable file storage was enabled. "
+                    "Please upload the original file again."),
+        )
+
     def _serve(key: str, media: str) -> Response:
         data = storage.read_bytes(key)
         if data is None:

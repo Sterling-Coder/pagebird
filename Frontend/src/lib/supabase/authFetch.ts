@@ -17,7 +17,12 @@ export async function authHeaders(): Promise<Record<string, string>> {
  * URL (query-string tokens leak into browser history and server logs). */
 export async function downloadAuthed(url: string, filename: string): Promise<void> {
   const res = await fetch(url, { headers: await authHeaders() });
-  if (!res.ok) throw new Error(`Download failed (${res.status})`);
+  if (!res.ok) {
+    const body = await res.json().catch(() => null);
+    throw new Error(
+      typeof body?.detail === "string" ? body.detail : `Download failed (${res.status})`
+    );
+  }
   const blob = await res.blob();
   const blobUrl = URL.createObjectURL(blob);
   const a = document.createElement("a");

@@ -303,6 +303,30 @@ def test_download_unknown_job_404(monkeypatch, tmp_path):
     assert client.get("/api/jobs/nope/download").status_code == 404
 
 
+def test_download_of_a_pre_storage_job_explains_that_it_must_be_reuploaded(monkeypatch, tmp_path):
+    """Legacy local paths disappear when the production container is replaced.
+
+    This must not look like a missing current output: the caller needs to know
+    that the source artifact predates durable storage and cannot be recovered.
+    """
+    _wire(monkeypatch, tmp_path)
+    monkeypatch.setitem(api.app.dependency_overrides, api.require_user,
+                        lambda: {"id": "test-user", "email": "test@example.com"})
+    monkeypatch.setattr(api, "_find_owned_job", lambda *_args: {
+        "source": "uploads/old-job/book.idml",
+        "output": "out/book.zh.idml",
+        "meta": {"format": "idml", "target_lang": "zh"},
+    })
+
+    response = TestClient(api.app).get("/api/jobs/old-job/download?format=idml")
+
+    assert response.status_code == 410
+    assert response.json()["detail"] == (
+        "This translation was created before durable file storage was enabled. "
+        "Please upload the original file again."
+    )
+
+
 def test_bad_extension_rejected(monkeypatch, tmp_path):
     _wire(monkeypatch, tmp_path)
     client = TestClient(api.app)
