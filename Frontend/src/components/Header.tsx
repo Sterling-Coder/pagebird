@@ -69,37 +69,19 @@ export default function Header() {
       }}
     >
       <div className="mx-auto flex h-[52px] max-w-7xl items-center justify-between px-6 lg:px-10">
-        {/* Logo */}
-        <Link href="/" className="flex items-center gap-2.5 group">
-          {/* Bird mark — abstract bird in flight */}
-          <svg width="28" height="28" viewBox="0 0 28 28" fill="none" className="transition-transform duration-300 group-hover:scale-110">
-            {/* Body */}
-            <path
-              d="M14 18 C10 18 5 15 3 10 C5 11 8 11.5 10 10.5 C11 8 13 6 16 5.5 C20 5 24 7 25 11 C26 14.5 23 17 20 18 C18.5 18.5 16 18.5 14 18 Z"
-              fill="#e08a6f"
-              opacity="0.95"
-            />
-            {/* Wing top */}
-            <path
-              d="M16 5.5 C18 3 21 1.5 24 2 C23 4 21 5.5 19 6 C18 6.2 17 6 16 5.5 Z"
-              fill="#f0a880"
-              opacity="0.9"
-            />
-            {/* Tail */}
-            <path
-              d="M3 10 C2 12 1.5 14 2 16 C3.5 14.5 5 13 5 11 C4 10.8 3.5 10.4 3 10 Z"
-              fill="#c87050"
-              opacity="0.8"
-            />
-            {/* Eye */}
-            <circle cx="20" cy="10.5" r="1.2" fill="#1a1815" />
-            <circle cx="20.4" cy="10.1" r="0.4" fill="rgba(255,255,255,0.6)" />
-          </svg>
+        {/* Wordmark */}
+        <Link href="/" className="group flex items-baseline gap-0">
           <span
-            className="text-[19px] font-semibold tracking-tight text-pb-text"
-            style={{ fontFamily: "var(--font-fraunces), Georgia, serif", fontStyle: "italic" }}
+            className="text-[18px] font-medium tracking-[0.01em] text-white/80 transition-colors group-hover:text-white"
+            style={{ fontFamily: "var(--font-share-tech-mono), var(--font-space-mono), monospace", letterSpacing: "0.04em" }}
           >
-            page<span className="text-pb-accent">birdy</span>
+            page
+          </span>
+          <span
+            className="text-[18px] font-medium tracking-[0.01em] transition-colors"
+            style={{ fontFamily: "var(--font-share-tech-mono), var(--font-space-mono), monospace", letterSpacing: "0.04em", color: "#e08a6f" }}
+          >
+            birdy
           </span>
         </Link>
 
