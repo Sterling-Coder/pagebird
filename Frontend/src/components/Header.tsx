@@ -119,7 +119,7 @@ export default function Header() {
                 onMouseLeave={closePlatform}
               >
                 <div
-                  className="w-[640px] overflow-hidden"
+                  className="w-[560px] overflow-hidden"
                   style={{
                     borderRadius: "16px",
                     background: "rgba(22, 18, 14, 0.76)",
@@ -130,7 +130,7 @@ export default function Header() {
                   }}
                 >
                   {/* Column headers */}
-                  <div className="grid grid-cols-2 px-6 pt-5 pb-4" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+                  <div className="grid grid-cols-2 px-5 pt-3.5 pb-3" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
                     <span className="font-pb-mono text-[10px] font-bold tracking-[0.15em] text-pb-text-muted uppercase">
                       The Pagebirdy Platform
                     </span>
@@ -142,56 +142,56 @@ export default function Header() {
                   {/* Two-column body */}
                   <div className="grid grid-cols-2">
                     {/* Left */}
-                    <div className="px-4 py-4" style={{ borderRight: "1px solid rgba(255,255,255,0.07)" }}>
+                    <div className="px-3 py-3" style={{ borderRight: "1px solid rgba(255,255,255,0.07)" }}>
                       <Link
                         href="/platform"
-                        className="group mb-3 flex flex-col gap-0.5 rounded-xl px-4 py-3 transition-colors hover:bg-white/[0.05]"
+                        className="group mb-2 flex flex-col gap-0.5 rounded-lg px-3 py-2 transition-colors hover:bg-white/[0.05]"
                       >
-                        <span className="text-[17px] font-semibold text-white">Platform overview</span>
-                        <span className="text-[13px] leading-snug text-pb-text-muted">
+                        <span className="text-[14px] font-semibold text-white">Platform overview</span>
+                        <span className="text-[11px] leading-snug text-pb-text-muted">
                           All products. One translation platform.
                         </span>
                       </Link>
 
-                      <div className="mx-4 my-2" style={{ height: "1px", background: "rgba(255,255,255,0.06)" }} />
+                      <div className="mx-3 my-1.5" style={{ height: "1px", background: "rgba(255,255,255,0.06)" }} />
 
                       {PLATFORM_LEFT.map((p) => (
                         <Link
                           key={p.href}
                           href={p.href}
-                          className="group flex items-start gap-4 rounded-xl px-4 py-3 transition-colors hover:bg-white/[0.05]"
+                          className="group flex items-start gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-white/[0.05]"
                         >
-                          <span className="font-pb-mono mt-0.5 shrink-0 text-[12px] text-pb-text-muted">{p.n}</span>
+                          <span className="font-pb-mono mt-0.5 shrink-0 text-[10px] text-pb-text-muted">{p.n}</span>
                           <div>
-                            <span className="text-[15px] font-semibold text-white">{p.title}</span>
-                            <p className="mt-0.5 text-[12px] leading-snug text-pb-text-muted">{p.desc}</p>
+                            <span className="text-[13px] font-semibold text-white">{p.title}</span>
+                            <p className="text-[11px] leading-snug text-pb-text-muted">{p.desc}</p>
                           </div>
                         </Link>
                       ))}
                     </div>
 
                     {/* Right */}
-                    <div className="px-4 py-4">
-                      <div className="px-4 py-3 mb-1">
-                        <span className="font-pb-mono text-[10px] font-bold tracking-[0.12em] text-pb-accent uppercase">
-                          Live now
+                    <div className="px-3 py-3">
+                      <div className="px-3 py-2 mb-0.5">
+                        <span className="font-pb-mono text-[9px] font-bold tracking-[0.14em] text-pb-accent uppercase">
+                          Products
                         </span>
                       </div>
                       {PLATFORM_RIGHT.map((p) => (
                         <Link
                           key={p.href}
                           href={p.href}
-                          className="group flex items-start gap-4 rounded-xl px-4 py-3 transition-colors hover:bg-white/[0.05]"
+                          className="group flex items-start gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-white/[0.05]"
                         >
-                          <span className="font-pb-mono mt-0.5 shrink-0 text-[12px] text-pb-text-muted">{p.n}</span>
+                          <span className="font-pb-mono mt-0.5 shrink-0 text-[10px] text-pb-text-muted">{p.n}</span>
                           <div>
-                            <div className="flex items-center gap-2.5">
-                              <span className="text-[15px] font-semibold text-white">{p.title}</span>
-                              <span className="font-pb-mono rounded-full border border-white/15 px-2 py-0.5 text-[8px] tracking-widest text-pb-text-muted uppercase">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[13px] font-semibold text-white">{p.title}</span>
+                              <span className="font-pb-mono rounded-full border border-white/15 px-1.5 py-0.5 text-[8px] tracking-widest text-pb-text-muted uppercase">
                                 Soon
                               </span>
                             </div>
-                            <p className="mt-0.5 text-[12px] leading-snug text-pb-text-muted">{p.desc}</p>
+                            <p className="text-[11px] leading-snug text-pb-text-muted">{p.desc}</p>
                           </div>
                         </Link>
                       ))}
@@ -200,7 +200,7 @@ export default function Header() {
 
                   {/* Footer row */}
                   <div
-                    className="flex items-center justify-between px-8 py-3.5"
+                    className="flex items-center justify-between px-6 py-3"
                     style={{ borderTop: "1px solid rgba(255,255,255,0.07)" }}
                   >
                     <span className="text-[12px] text-pb-text-muted">
