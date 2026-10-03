@@ -415,12 +415,12 @@ def _idml_zip_response(idml_key: str, job_id: str, lang_code: str | None) -> Res
     import io
     import zipfile
 
-    idml_bytes = storage.read_bytes(idml_key)
-    if idml_bytes is None:
-        return None
-
     entries = _links_zip_entries(job_id, lang_code)
     if entries is None:
+        return None
+
+    idml_bytes = storage.read_bytes(idml_key)
+    if idml_bytes is None:
         return None
 
     buf = io.BytesIO()
@@ -1531,8 +1531,9 @@ def download_output(job_id: str, format: str | None = None, type: str | None = N
                     "Please upload the original file again."),
         )
 
-    def _serve(key: str, media: str) -> Response:
-        data = storage.read_bytes(key)
+    def _serve(key: str, media: str, data: bytes | None = None) -> Response:
+        if data is None:
+            data = storage.read_bytes(key)
         if data is None:
             raise HTTPException(status_code=404, detail="file not found")
         return Response(
@@ -1577,16 +1578,21 @@ def download_output(job_id: str, format: str | None = None, type: str | None = N
             zipped = _idml_zip_response(out, job_id, lang_code)
             if zipped is not None:
                 return zipped
-            if storage.read_bytes(out) is not None:
-                return _serve(out, "application/octet-stream")
-        idml_key = os.path.splitext(out)[0] + ".idml"
-        if storage.read_bytes(idml_key) is not None:
+            idml = storage.read_bytes(out)
+            if idml is not None:
+                return _serve(out, "application/octet-stream", idml)
+        else:
+            idml_key = os.path.splitext(out)[0] + ".idml"
             zipped = _idml_zip_response(idml_key, job_id, lang_code)
             if zipped is not None:
                 return zipped
-            return _serve(idml_key, "application/octet-stream")
-        if source.lower().endswith(".idml") and storage.read_bytes(source) is not None:
-            return _serve(source, "application/octet-stream")
+            idml = storage.read_bytes(idml_key)
+            if idml is not None:
+                return _serve(idml_key, "application/octet-stream", idml)
+        if source.lower().endswith(".idml"):
+            idml = storage.read_bytes(source)
+            if idml is not None:
+                return _serve(source, "application/octet-stream", idml)
         raise HTTPException(status_code=404, detail="IDML format not available for this job")
 
     data = storage.read_bytes(out)

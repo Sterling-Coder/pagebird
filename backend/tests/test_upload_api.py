@@ -303,6 +303,31 @@ def test_download_unknown_job_404(monkeypatch, tmp_path):
     assert client.get("/api/jobs/nope/download").status_code == 404
 
 
+def test_download_idml_without_links_reads_output_once(monkeypatch):
+    job_id = "idml-job"
+    output = f"jobs/{job_id}/book.zh.idml"
+    reads = []
+    monkeypatch.setitem(api.app.dependency_overrides, api.require_user,
+                        lambda: {"id": "test-user", "email": "test@example.com"})
+    monkeypatch.setattr(api, "_find_owned_job", lambda *_args: {
+        "source": f"jobs/{job_id}/book.idml",
+        "output": output,
+        "meta": {"target_lang": "zh"},
+    })
+    monkeypatch.setattr(api.storage, "list_prefix", lambda _prefix: [])
+
+    def read_bytes(key):
+        reads.append(key)
+        return b"translated-idml" if key == output else None
+
+    monkeypatch.setattr(api.storage, "read_bytes", read_bytes)
+    response = TestClient(api.app).get(f"/api/jobs/{job_id}/download?format=idml")
+
+    assert response.status_code == 200
+    assert response.content == b"translated-idml"
+    assert reads == [output]
+
+
 def test_download_of_a_pre_storage_job_explains_that_it_must_be_reuploaded(monkeypatch, tmp_path):
     """Legacy local paths disappear when the production container is replaced.
 
