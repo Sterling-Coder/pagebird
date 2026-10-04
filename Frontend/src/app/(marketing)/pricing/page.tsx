@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import PricingFAQ from "@/components/PricingFAQ";
 
 export const metadata: Metadata = {
   title: "Pricing — Pagebirdy",
@@ -175,29 +176,7 @@ export default function PricingPage() {
       </section>
 
       {/* FAQ */}
-      <section className="pb-glass-section" style={{ background: "#0a0908" }}>
-        <div className="mx-auto max-w-[1100px] px-8 py-16 lg:px-14 lg:py-24">
-          <div className="flex items-center gap-3 mb-14">
-            <span className="inline-block h-2 w-2 bg-pb-accent" />
-            <span className="font-pb-mono text-[11px] font-bold tracking-widest text-pb-accent uppercase">Common questions</span>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
-            {FAQ.map((item, i) => (
-              <div
-                key={item.q}
-                className={`flex flex-col gap-3 py-8 ${i % 2 === 0 ? "md:pr-12" : "md:pl-12"}`}
-                style={{
-                  borderBottom: "1px solid rgba(255,255,255,0.05)",
-                  borderRight: i % 2 === 0 ? "1px solid rgba(255,255,255,0.05)" : undefined,
-                }}
-              >
-                <h3 style={{ fontSize: "15px", fontWeight: 700, color: "#f0ece3" }}>{item.q}</h3>
-                <p style={{ fontSize: "13px", lineHeight: 1.7, color: "rgba(240,236,227,0.5)" }}>{item.a}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <PricingFAQ items={FAQ} />
 
       {/* Enterprise CTA */}
       <section style={{

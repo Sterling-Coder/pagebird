@@ -119,90 +119,66 @@ export default function Header() {
                 onMouseLeave={closePlatform}
               >
                 <div
-                  className="w-[560px] overflow-hidden"
+                  className="w-[580px] overflow-hidden"
                   style={{
                     borderRadius: "16px",
-                    background: "rgba(22, 18, 14, 0.76)",
-                    backdropFilter: "blur(40px) saturate(1.6)",
-                    WebkitBackdropFilter: "blur(40px) saturate(1.6)",
-                    border: "1px solid rgba(255,255,255,0.09)",
-                    boxShadow: "0 24px 64px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.06)",
+                    background: "rgba(15, 12, 10, 0.45)",
+                    backdropFilter: "blur(48px) saturate(1.4)",
+                    WebkitBackdropFilter: "blur(48px) saturate(1.4)",
+                    border: "1px solid rgba(255,255,255,0.18)",
+                    boxShadow: "0 24px 64px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.15)",
                   }}
                 >
-                  {/* Column headers */}
-                  <div className="grid grid-cols-2 px-5 pt-3.5 pb-3" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
-                    <span className="font-pb-mono text-[10px] font-bold tracking-[0.15em] text-pb-text-muted uppercase">
-                      The Pagebirdy Platform
-                    </span>
-                    <span className="font-pb-mono text-[10px] font-bold tracking-[0.15em] text-pb-text-muted uppercase">
-                      Products
-                    </span>
-                  </div>
-
-                  {/* Two-column body */}
-                  <div className="grid grid-cols-2">
-                    {/* Left */}
-                    <div className="px-3 py-3" style={{ borderRight: "1px solid rgba(255,255,255,0.07)" }}>
-                      <Link
-                        href="/platform"
-                        className="group mb-2 flex flex-col gap-0.5 rounded-lg px-3 py-2 transition-colors hover:bg-white/[0.05]"
-                      >
-                        <span className="text-[14px] font-semibold text-white">Platform overview</span>
-                        <span className="text-[11px] leading-snug text-pb-text-muted">
-                          All products. One translation platform.
-                        </span>
-                      </Link>
-
-                      <div className="mx-3 my-1.5" style={{ height: "1px", background: "rgba(255,255,255,0.06)" }} />
-
-                      {PLATFORM_LEFT.map((p) => (
+                  {/* Products grid — all 5 */}
+                  <div className="grid grid-cols-2 p-4">
+                    {/* Left col — 3 products */}
+                    <div className="pr-3" style={{ borderRight: "1px solid rgba(255,255,255,0.08)" }}>
+                      {[...PLATFORM_LEFT].map((p) => (
                         <Link
                           key={p.href}
                           href={p.href}
-                          className="group flex items-start gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-white/[0.05]"
+                          className="group flex items-start gap-3 rounded-lg px-4 py-3 transition-colors hover:bg-white/[0.06]"
                         >
-                          <span className="font-pb-mono mt-0.5 shrink-0 text-[10px] text-pb-text-muted">{p.n}</span>
-                          <div>
+                          <span className="font-pb-mono mt-[2px] shrink-0 text-[10px] text-pb-text-muted">{p.n}</span>
+                          <div className="min-w-0">
                             <span className="text-[13px] font-semibold text-white">{p.title}</span>
-                            <p className="text-[11px] leading-snug text-pb-text-muted">{p.desc}</p>
+                            <p className="text-[11px] leading-snug text-pb-text-muted mt-1">{p.desc}</p>
                           </div>
                         </Link>
                       ))}
                     </div>
-
-                    {/* Right */}
-                    <div className="px-3 py-3">
-                      <div className="px-3 py-2 mb-0.5">
-                        <span className="font-pb-mono text-[9px] font-bold tracking-[0.14em] text-pb-accent uppercase">
-                          Products
-                        </span>
-                      </div>
+                    {/* Right col — 2 products */}
+                    <div className="pl-3">
                       {PLATFORM_RIGHT.map((p) => (
                         <Link
                           key={p.href}
                           href={p.href}
-                          className="group flex items-start gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-white/[0.05]"
+                          className="group flex items-start gap-3 rounded-lg px-4 py-3 transition-colors hover:bg-white/[0.06]"
                         >
-                          <span className="font-pb-mono mt-0.5 shrink-0 text-[10px] text-pb-text-muted">{p.n}</span>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-[13px] font-semibold text-white">{p.title}</span>
-                              <span className="font-pb-mono rounded-full border border-white/15 px-1.5 py-0.5 text-[8px] tracking-widest text-pb-text-muted uppercase">
-                                Soon
-                              </span>
-                            </div>
-                            <p className="text-[11px] leading-snug text-pb-text-muted">{p.desc}</p>
+                          <span className="font-pb-mono mt-[2px] shrink-0 text-[10px] text-pb-text-muted">{p.n}</span>
+                          <div className="min-w-0">
+                            <span className="text-[13px] font-semibold text-white">{p.title}</span>
+                            <p className="text-[11px] leading-snug text-pb-text-muted mt-1">{p.desc}</p>
                           </div>
                         </Link>
                       ))}
                     </div>
                   </div>
+
 
                 </div>
               </div>
             )}
           </div>
 
+          <Link
+            href="/integrations"
+            className={`font-pb-mono rounded-md px-4 py-1.5 text-[13px] tracking-wide transition-colors ${
+              pathname === "/integrations" ? "bg-white/[0.08] text-white" : "text-pb-text-secondary hover:text-white"
+            }`}
+          >
+            Integrations
+          </Link>
           <Link
             href="/pricing"
             className={`font-pb-mono rounded-md px-4 py-1.5 text-[13px] tracking-wide transition-colors ${
@@ -263,9 +239,7 @@ export default function Header() {
           style={{ borderTop: "1px solid rgba(255,255,255,0.07)", background: "#1a1815" }}
         >
           <div className="flex flex-col gap-1">
-            <Link href="/platform" className="font-pb-mono px-3 py-2.5 text-[14px] text-pb-text-secondary hover:text-white">
-              Platform overview
-            </Link>
+            <span className="font-pb-mono px-3 py-1 text-[10px] font-bold tracking-[0.15em] text-pb-text-muted uppercase">Platform</span>
             {[...PLATFORM_LEFT, ...PLATFORM_RIGHT].map((p) => (
               <Link
                 key={p.href}
@@ -277,6 +251,9 @@ export default function Header() {
               </Link>
             ))}
             <div className="mt-3" style={{ height: "1px", background: "rgba(255,255,255,0.07)" }} />
+            <Link href="/integrations" className="font-pb-mono px-3 py-2.5 text-[14px] text-pb-text-secondary hover:text-white">
+              Integrations
+            </Link>
             <Link href="/pricing" className="font-pb-mono px-3 py-2.5 text-[14px] text-pb-text-secondary hover:text-white">
               Pricing
             </Link>
