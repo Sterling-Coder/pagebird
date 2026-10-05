@@ -32,19 +32,30 @@ export default function Footer() {
       {/* Link columns */}
       <div style={{
         display: "grid",
-        gridTemplateColumns: "repeat(4, 1fr)",
-        gap: "32px",
+        gridTemplateColumns: "1fr repeat(3, auto)",
+        gap: "48px",
         maxWidth: "1100px",
         margin: "0 auto",
-        padding: "0 56px 40px",
+        padding: "48px 56px 40px",
         borderTop: "1px solid rgba(255,255,255,0.06)",
-        paddingTop: "40px",
       }}>
+        {/* Left — brand */}
+        <div>
+          <Link href="/" style={{ textDecoration: "none", display: "inline-block", marginBottom: "12px" }}>
+            <span style={{ fontFamily: "var(--font-share-tech-mono), monospace", fontSize: "16px", letterSpacing: "0.04em" }}>
+              <span style={{ color: "rgba(240,236,227,0.6)" }}>page</span><span style={{ color: "#e08a6f" }}>birdy</span>
+            </span>
+          </Link>
+          <p style={{ fontSize: "11px", color: "rgba(240,236,227,0.28)", fontFamily: "var(--font-space-mono), monospace", lineHeight: 1.6, maxWidth: "180px" }}>
+            Layout-preserving translation for documents, subtitles and more.
+          </p>
+        </div>
+
+        {/* Right — 3 columns */}
         {[
           {
             title: "PLATFORM",
             links: [
-              { label: "Overview", href: "/platform" },
               { label: "Documents / PDF", href: "/platform/documents" },
               { label: "SRT / VTT Subtitles", href: "/platform/subtitles" },
               { label: "Image Translator", href: "/platform/images" },
@@ -56,30 +67,19 @@ export default function Footer() {
             title: "PRODUCT",
             links: [
               { label: "How it works", href: "/#how-it-works" },
-              { label: "Capabilities", href: "/#capabilities" },
               { label: "Formats", href: "/#formats" },
               { label: "Languages", href: "/platform/documents#languages" },
-              { label: "RTL support", href: "/platform/documents#rtl" },
-              { label: "QA & Review", href: "/platform/documents#qa" },
+              { label: "Integrations", href: "/integrations" },
             ],
           },
           {
             title: "COMPANY",
             links: [
+              { label: "About", href: "/about" },
               { label: "Pricing", href: "/pricing" },
               { label: "Contact", href: "/contact" },
               { label: "Privacy", href: "#" },
               { label: "Terms", href: "#" },
-            ],
-          },
-          {
-            title: "COMING SOON",
-            links: [
-              { label: ".docx / .pptx", href: "#" },
-              { label: ".xlsx", href: "#" },
-              { label: "API access", href: "#" },
-              { label: "Glossary import", href: "#" },
-              { label: "Team plans", href: "#" },
             ],
           },
         ].map((col) => (

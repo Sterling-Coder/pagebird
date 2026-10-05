@@ -45,8 +45,8 @@ export default function Home() {
             {/* LEFT */}
             <div className="flex flex-col justify-end lg:pr-12">
               <div className="pb-enter-label mb-6 flex items-center gap-3">
-                <span className="inline-block h-2 w-2 bg-pb-accent" />
-                <span className="font-pb-mono text-[11px] font-bold tracking-[0.15em] text-pb-accent uppercase">
+                <span className="inline-block h-2 w-2 rounded-full" style={{ background: "rgba(0,0,0,0.45)" }} />
+                <span className="font-pb-mono text-[11px] font-bold tracking-[0.15em] uppercase" style={{ color: "rgba(0,0,0,0.55)" }}>
                   Layout-preserving translation
                 </span>
               </div>
@@ -80,186 +80,259 @@ export default function Home() {
             </div>
           </div>
 
-          {/* ── macOS app window — full product sidebar + jobs ── */}
+          {/* ── macOS app window — kanban board ── */}
           <div className="pb-enter pb-enter-delay-4 relative mt-16 lg:-mx-20 xl:-mx-32" style={{
             borderRadius: "12px",
-            overflow: "hidden",
-            boxShadow: "0 48px 140px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.2)",
-            backdropFilter: "blur(12px)",
-            background: "rgba(255,255,255,0.08)",
+            background: "#e2ddd6",
+            boxShadow: "0 60px 160px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,0,0,0.12)",
           }}>
             {/* Title bar */}
-            <div className="flex items-center gap-2 px-4 py-3" style={{ background: "#1a1814", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+            <div className="flex items-center gap-2 px-5 py-3" style={{ background: "#e8e2d8", borderBottom: "1px solid #d8d2c8" }}>
               <span className="inline-block h-3 w-3 rounded-full" style={{ background: "#ff5f57" }} />
               <span className="inline-block h-3 w-3 rounded-full" style={{ background: "#febc2e" }} />
               <span className="inline-block h-3 w-3 rounded-full" style={{ background: "#28c840" }} />
-              <span style={{ marginLeft: "10px", fontSize: "12px", color: "rgba(255,255,255,0.4)", fontWeight: 500 }}>Pagebirdy</span>
+              <span style={{ marginLeft: "12px", fontSize: "12px", color: "#9a9284", fontWeight: 500 }}>Pagebirdy</span>
             </div>
 
-            <div className="flex" style={{ minHeight: "520px" }}>
+            {/* Inner layout — sidebar + main as inset floating panels */}
+            <div className="flex gap-2 p-2" style={{ minHeight: "680px" }}>
 
-              {/* ── Sidebar ── */}
-              <div className="flex shrink-0 flex-col" style={{ width: "220px", background: "#131210", borderRight: "1px solid rgba(255,255,255,0.07)" }}>
-                <div className="flex items-center justify-between px-4 py-3.5" style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
-                  <span style={{ fontFamily: "var(--font-share-tech-mono), monospace", fontSize: "14px", letterSpacing: "0.04em" }}>
-                    <span style={{ color: "rgba(240,236,227,0.75)" }}>page</span><span style={{ color: "#e08a6f" }}>birdy</span>
+              {/* ── Sidebar — WHITE theme ── */}
+              <div className="flex shrink-0 flex-col" style={{ width: "214px", background: "#ffffff", borderRadius: "8px", overflow: "hidden", boxShadow: "1px 0 0 #e2ddd6" }}>
+                {/* Logo */}
+                <div className="flex items-center px-4 py-3.5" style={{ borderBottom: "1px solid #e8e2d8" }}>
+                  <span style={{ fontFamily: "var(--font-share-tech-mono), monospace", fontSize: "13.5px", letterSpacing: "0.04em" }}>
+                    <span style={{ color: "#3a3630" }}>page</span><span style={{ color: "#e08a6f" }}>birdy</span>
                   </span>
-                  <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: "linear-gradient(135deg,#e08a6f,#8b6fbf)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", fontWeight: 700, color: "#fff" }}>A</div>
                 </div>
 
-                <div className="px-3 pt-3 pb-2">
-                  <div style={{ background: "#e08a6f", color: "#fff", fontSize: "11px", fontWeight: 700, padding: "7px 0", borderRadius: "6px", textAlign: "center", letterSpacing: "0.06em" }}>+ NEW JOB</div>
-                </div>
-
-                <div style={{ height: "1px", background: "rgba(255,255,255,0.06)", margin: "0 12px" }} />
-
-                <div className="px-3 pt-3">
-                  <div style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.14em", color: "rgba(255,255,255,0.28)", paddingLeft: "6px", marginBottom: "6px" }}>PROJECTS</div>
-
-                  <div style={{ marginBottom: "2px" }}>
-                    <div className="flex items-center gap-1.5 rounded-md px-2 py-2" style={{ background: "rgba(224,138,111,0.12)" }}>
-                      <svg viewBox="0 0 24 24" fill="none" stroke="#e08a6f" strokeWidth="2" style={{ width: "10px", height: "10px", flexShrink: 0 }}>
-                        <path d="m6 9 6 6 6-6" />
-                      </svg>
-                      <svg viewBox="0 0 24 24" fill="none" stroke="#e08a6f" strokeWidth="1.75" style={{ width: "13px", height: "13px", flexShrink: 0 }}>
-                        <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                      </svg>
-                      <span style={{ fontSize: "12px", color: "#e08a6f", fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>Q4 Campaigns</span>
-                    </div>
-                    {["IDML Files", "Subtitles", "Images"].map((f, i) => (
-                      <div key={f} className="flex items-center gap-1.5 rounded-md px-2 py-1.5" style={{ marginLeft: "16px", background: i === 0 ? "rgba(255,255,255,0.06)" : "transparent" }}>
-                        <svg viewBox="0 0 24 24" fill="none" stroke={i === 0 ? "rgba(240,236,227,0.6)" : "rgba(255,255,255,0.22)"} strokeWidth="1.75" style={{ width: "11px", height: "11px", flexShrink: 0 }}>
-                          <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                        </svg>
-                        <span style={{ fontSize: "11px", color: i === 0 ? "rgba(240,236,227,0.75)" : "rgba(240,236,227,0.35)" }}>{f}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {["Brand Assets", "Legal Docs"].map(p => (
-                    <div key={p} className="flex items-center gap-1.5 rounded-md px-2 py-2 mb-0.5">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.25)" strokeWidth="2" style={{ width: "10px", height: "10px", flexShrink: 0 }}>
-                        <path d="m9 18 6-6-6-6" />
-                      </svg>
-                      <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="1.75" style={{ width: "13px", height: "13px", flexShrink: 0 }}>
-                        <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                      </svg>
-                      <span style={{ fontSize: "12px", color: "rgba(240,236,227,0.38)" }}>{p}</span>
-                    </div>
-                  ))}
-                </div>
-
-                <div style={{ height: "1px", background: "rgba(255,255,255,0.06)", margin: "12px 12px 0" }} />
-
-                <div className="px-3 pt-2">
+                {/* Work section */}
+                <div className="px-2 pt-3 pb-1">
+                  <div style={{ fontSize: "9.5px", color: "#b0a898", letterSpacing: "0.1em", fontWeight: 600, padding: "2px 8px 6px" }}>Work</div>
                   {[
-                    { label: "Team", icon: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" },
-                    { label: "Settings", icon: "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" },
+                    { label: "Dashboard", icon: "M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" },
+                    { label: "Inbox", icon: "M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" },
                   ].map(item => (
-                    <div key={item.label} className="flex items-center gap-2.5 rounded-md px-2 py-2 mb-0.5">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.75" style={{ width: "13px", height: "13px", flexShrink: 0 }}>
+                    <div key={item.label} className="flex items-center gap-2.5 rounded-md px-2.5 py-1.5 mb-0.5">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="#b0a898" strokeWidth="1.75" style={{ width: "13px", height: "13px", flexShrink: 0 }}>
                         <path d={item.icon} />
                       </svg>
-                      <span style={{ fontSize: "12px", color: "rgba(240,236,227,0.38)" }}>{item.label}</span>
+                      <span style={{ fontSize: "12.5px", color: "#6b6560" }}>{item.label}</span>
                     </div>
                   ))}
+                  {/* Active: Jobs */}
+                  <div className="flex items-center gap-2.5 rounded-md px-2.5 py-1.5 mb-0.5" style={{ background: "#f0ece3" }}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#3a3630" strokeWidth="1.75" style={{ width: "13px", height: "13px", flexShrink: 0 }}>
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                      <line x1="9" y1="3" x2="9" y2="21" /><line x1="15" y1="3" x2="15" y2="21" />
+                    </svg>
+                    <span style={{ fontSize: "12.5px", color: "#1a1814", fontWeight: 600 }}>Jobs</span>
+                  </div>
+                </div>
+
+                <div style={{ height: "1px", background: "#e8e2d8", margin: "6px 10px" }} />
+
+                {/* Projects section */}
+                <div className="px-2 pb-1">
+                  <div style={{ fontSize: "9.5px", color: "#b0a898", letterSpacing: "0.1em", fontWeight: 600, padding: "2px 8px 6px" }}>Projects</div>
+                  {[
+                    { label: "Q4 Campaigns", active: true },
+                    { label: "Legal Docs", active: false },
+                    { label: "Brand Assets", active: false },
+                    { label: "Marketing Hub", active: false },
+                  ].map(p => (
+                    <div key={p.label} className="flex items-center gap-2.5 rounded-md px-2.5 py-1.5 mb-0.5" style={{ background: p.active ? "rgba(224,138,111,0.1)" : "transparent" }}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke={p.active ? "#e08a6f" : "#b0a898"} strokeWidth="1.75" style={{ width: "13px", height: "13px", flexShrink: 0 }}>
+                        <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                      </svg>
+                      <span style={{ fontSize: "12.5px", color: p.active ? "#e08a6f" : "#6b6560", fontWeight: p.active ? 600 : 400 }}>{p.label}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div style={{ height: "1px", background: "#e8e2d8", margin: "6px 10px" }} />
+
+                {/* Settings */}
+                <div className="px-2">
+                  {[
+                    { label: "Team", icon: "M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" },
+                    { label: "Settings", icon: "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" },
+                  ].map(item => (
+                    <div key={item.label} className="flex items-center gap-2.5 rounded-md px-2.5 py-1.5 mb-0.5">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="#b0a898" strokeWidth="1.75" style={{ width: "13px", height: "13px", flexShrink: 0 }}>
+                        <path d={item.icon} />
+                      </svg>
+                      <span style={{ fontSize: "12.5px", color: "#6b6560" }}>{item.label}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* User row */}
+                <div className="mt-auto flex items-center gap-2.5 px-4 py-3" style={{ borderTop: "1px solid #e8e2d8" }}>
+                  <div style={{ width: "26px", height: "26px", borderRadius: "50%", background: "linear-gradient(135deg,#e08a6f,#8b6fbf)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "10px", fontWeight: 700, color: "#fff", flexShrink: 0 }}>A</div>
+                  <span style={{ fontSize: "12px", color: "#6b6560" }}>Alex Chen</span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#b0a898" strokeWidth="2" style={{ width: "12px", height: "12px", marginLeft: "auto" }}>
+                    <path d="m7 15 5 5 5-5M7 9l5-5 5 5" />
+                  </svg>
                 </div>
               </div>
 
-              {/* ── Main area ── */}
-              <div className="flex flex-1 flex-col" style={{ background: "rgba(255,252,247,0.95)" }}>
-                <div className="flex items-center justify-between px-6 py-3" style={{ borderBottom: "1px solid #e8e2d8" }}>
-                  <div className="flex items-center gap-1.5" style={{ fontSize: "12px", color: "#9a9488" }}>
-                    <span style={{ color: "#6e6a61", cursor: "pointer" }}>Projects</span>
-                    <span>/</span>
-                    <span style={{ color: "#15130f", fontWeight: 600 }}>Q4 Campaigns</span>
+              {/* ── Main area — WHITE theme ── */}
+              <div className="flex flex-1 flex-col overflow-hidden" style={{ background: "#f5f3f0", borderRadius: "8px" }}>
+
+                {/* Top bar */}
+                <div className="flex items-center justify-between px-5 py-3" style={{ borderBottom: "1px solid #e2ddd6", background: "#f5f3f0" }}>
+                  <div className="flex items-center gap-3">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#6b6560" strokeWidth="1.75" style={{ width: "14px", height: "14px" }}>
+                      <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                      <line x1="9" y1="3" x2="9" y2="21" /><line x1="15" y1="3" x2="15" y2="21" />
+                    </svg>
+                    <span style={{ fontSize: "13px", fontWeight: 600, color: "#1a1814" }}>Jobs</span>
+                    <span style={{ fontSize: "11px", color: "#8a8478", background: "#e8e2d8", padding: "1px 7px", borderRadius: "10px" }}>47</span>
+                    <span style={{ fontSize: "11px", color: "#9a9488" }}>Translation queue for Q4 Campaigns</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div style={{ border: "1px solid #dad4c7", color: "#6e6a61", fontSize: "11px", fontWeight: 600, padding: "5px 12px", borderRadius: "6px" }}>CREATE FOLDER</div>
-                    <div style={{ background: "#e08a6f", color: "#fff", fontSize: "11px", fontWeight: 700, padding: "5px 12px", borderRadius: "6px" }}>UPLOAD</div>
+                    <div style={{ border: "1.5px solid #d8d2c8", color: "#6b6560", fontSize: "11px", padding: "4px 12px", borderRadius: "6px", fontWeight: 500, background: "#fff" }}>Sources •</div>
+                    <div style={{ background: "#e08a6f", color: "#fff", fontSize: "11px", fontWeight: 700, padding: "5px 14px", borderRadius: "6px", letterSpacing: "0.04em" }}>+ Upload</div>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-0 px-6" style={{ borderBottom: "1px solid #e8e2d8" }}>
-                  {[{ l: "Files", a: true }, { l: "Settings", a: false }, { l: "Linguistic Assets", a: false }, { l: "Statistics", a: false }].map(t => (
-                    <div key={t.l} style={{
-                      fontSize: "11px", fontWeight: t.a ? 700 : 500, padding: "8px 14px",
-                      color: t.a ? "#e08a6f" : "#9a9488",
-                      borderBottom: t.a ? "2px solid #e08a6f" : "2px solid transparent",
-                      marginBottom: "-1px",
-                    }}>{t.l}</div>
+                {/* Filter chips */}
+                <div className="flex items-center gap-1.5 px-5 py-2" style={{ borderBottom: "1px solid #e2ddd6", background: "#f5f3f0" }}>
+                  {["All", "Documents", "Subtitles", "Images"].map(f => (
+                    <div key={f} style={{ fontSize: "11px", color: "#8a8478", padding: "3px 10px", borderRadius: "20px", border: "1px solid #d8d2c8", cursor: "pointer" }}>{f}</div>
                   ))}
+                  <div style={{ fontSize: "11px", color: "#1a1814", padding: "3px 10px", borderRadius: "20px", background: "#1a1814", border: "1px solid #1a1814", fontWeight: 600, color: "#f5f3f0" }}>Active</div>
+                  <div style={{ fontSize: "11px", color: "#8a8478", padding: "3px 10px", borderRadius: "20px", border: "1px solid #d8d2c8" }}>Archived (6)</div>
                 </div>
 
-                <div className="flex-1 overflow-hidden px-6 pt-2">
-                  <div className="grid items-center py-2" style={{ gridTemplateColumns: "28px 2.5fr 0.6fr 1fr 0.8fr 0.8fr 80px 70px", borderBottom: "1px solid #e8e2d8" }}>
-                    <span />
-                    {["DOCUMENT", "TYPE", "PROGRESS", "TARGET", "CREATED", "QA", "DL"].map(h => (
-                      <span key={h} style={{ fontSize: "9px", fontWeight: 700, letterSpacing: "0.12em", color: "#a09a8e" }}>{h}</span>
-                    ))}
+                {/* Info banner */}
+                <div className="mx-4 mt-3 mb-1 flex items-start justify-between rounded-lg px-4 py-3" style={{ background: "rgba(74,112,224,0.06)", border: "1px solid rgba(74,112,224,0.2)" }}>
+                  <div>
+                    <div style={{ fontSize: "12px", fontWeight: 600, color: "#4a70e0" }}>✦ AI consensus check running on 3 jobs</div>
+                    <div style={{ fontSize: "11px", color: "#7a90c8", marginTop: "3px" }}>OpenAI and DeepL are comparing segments. Flagged items will appear in QA Review.</div>
                   </div>
+                  <span style={{ fontSize: "11px", color: "#9a9488", cursor: "pointer", flexShrink: 0, marginLeft: "16px" }}>Dismiss</span>
+                </div>
 
-                  {/* Folder row */}
-                  <div className="grid items-center py-2.5 cursor-pointer" style={{ gridTemplateColumns: "28px 2.5fr 0.6fr 1fr 0.8fr 0.8fr 80px 70px", borderBottom: "1px solid #f0ece3" }}>
-                    <span style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-                      <svg viewBox="0 0 24 24" fill="none" stroke="#9a9488" strokeWidth="1.75" style={{ width: "14px", height: "14px" }}>
-                        <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                      </svg>
-                    </span>
-                    <span style={{ fontSize: "13px", color: "#15130f", fontWeight: 500, display: "flex", alignItems: "center", gap: "6px" }}>
-                      IDML Files
-                      <span style={{ fontSize: "10px", color: "#9a9488", fontWeight: 400 }}>3 files</span>
-                    </span>
-                    <span style={{ fontSize: "11px", color: "#c0bab2" }}>—</span>
-                    <span style={{ fontSize: "11px", color: "#c0bab2" }}>—</span>
-                    <span style={{ fontSize: "11px", color: "#c0bab2" }}>—</span>
-                    <span style={{ fontSize: "11px", color: "#9a9488" }}>Dec 5</span>
-                    <span style={{ fontSize: "11px", color: "#c0bab2" }}>—</span>
-                    <span style={{ fontSize: "11px", color: "#c0bab2" }}>—</span>
-                  </div>
-
-                  {/* File rows */}
+                {/* Kanban columns */}
+                <div className="flex flex-1 gap-3 overflow-hidden px-4 py-3" style={{ minHeight: 0, background: "#ece8e2" }}>
                   {[
-                    { name: "annual_report_2026.idml", type: "idml", target: "Chinese", created: "Today", progress: 100, qa: "94%", done: true },
-                    { name: "product_brochure.pdf", type: "pdf", target: "Arabic", created: "Today", progress: 72, qa: "—", done: false },
-                    { name: "product_launch.srt", type: "srt", target: "French", created: "Dec 12", progress: 100, qa: "RUN QA", done: true },
-                    { name: "marketing_signage.ai", type: "ai", target: "German", created: "Dec 10", progress: 100, qa: "88%", done: true },
-                    { name: "company_website.html", type: "html", target: "Spanish", created: "Dec 8", progress: 48, qa: "—", done: false },
-                  ].map((row, i) => (
-                    <div key={row.name} className="grid items-center py-2.5 cursor-pointer hover:bg-[#f8f5ee]" style={{ gridTemplateColumns: "28px 2.5fr 0.6fr 1fr 0.8fr 0.8fr 80px 70px", borderBottom: i < 4 ? "1px solid #f4f0e8" : "none" }}>
-                      <span style={{ paddingLeft: "4px" }}>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="#c0bab2" strokeWidth="1.75" style={{ width: "12px", height: "12px" }}>
-                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                          <polyline points="14 2 14 8 20 8" />
-                        </svg>
-                      </span>
-                      <span style={{ fontSize: "13px", color: "#15130f", fontWeight: 400, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: "8px" }}>{row.name}</span>
-                      <span style={{ fontSize: "10px", fontWeight: 700, color: "#9a9488", textTransform: "uppercase", letterSpacing: "0.06em" }}>{row.type}</span>
-                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                        <div style={{ flex: 1, maxWidth: "80px", height: "4px", background: "#e8e2d8", borderRadius: "2px", overflow: "hidden" }}>
-                          <div style={{ height: "100%", width: `${row.progress}%`, background: row.done ? "#4a9e5a" : "#e08a6f", borderRadius: "2px" }} />
-                        </div>
+                    {
+                      name: "Queued", dot: "#9a9488", count: 5,
+                      cards: [
+                        { id: "PB-218", title: "annual_report_fr.idml", tags: ["French"], assignee: "M", date: "Dec 5" },
+                        { id: "PB-217", title: "legal_terms_v2.pdf", tags: ["Arabic", "German"], assignee: "J", date: "Dec 5" },
+                        { id: "PB-216", title: "product_launch.srt", tags: ["Chinese"], assignee: null, date: "Dec 4" },
+                        { id: "PB-215", title: "store_banners.psd", tags: ["Spanish"], assignee: "A", date: "Dec 4" },
+                      ],
+                    },
+                    {
+                      name: "Translating", dot: "#d97706", count: 8,
+                      cards: [
+                        { id: "PB-214", title: "q4_campaign_deck.idml — Chinese", tags: ["Layout Agent"], assignee: "M", date: "Dec 5" },
+                        { id: "PB-213", title: "product_brochure.pdf — Arabic", tags: ["Layout Agent"], assignee: "J", date: "Dec 4" },
+                        { id: "PB-212", title: "marketing_video.srt — French", tags: ["Timecode Agent"], assignee: "A", date: "Dec 3" },
+                        { id: "PB-211", title: "signage_package.ai — German", tags: ["OCR Agent"], assignee: "M", date: "Dec 3" },
+                      ],
+                    },
+                    {
+                      name: "QA Review", dot: "#3b82f6", count: 4,
+                      cards: [
+                        { id: "PB-210", title: "brand_guide.idml — Japanese", tags: ["94% match"], assignee: "J", date: "Dec 2" },
+                        { id: "PB-209", title: "invoice_template.pdf — Spanish", tags: ["Flagged"], assignee: "A", date: "Dec 2", flagged: true },
+                        { id: "PB-208", title: "app_screenshots.psd — Korean", tags: ["88% match"], assignee: "M", date: "Dec 1" },
+                      ],
+                    },
+                    {
+                      name: "Delivered", dot: "#16a34a", count: 30,
+                      cards: [
+                        { id: "PB-207", title: "homepage_copy.html — French", tags: ["Done"], assignee: "J", date: "Nov 30" },
+                        { id: "PB-206", title: "manual_v3.idml — Arabic", tags: ["Done"], assignee: "A", date: "Nov 29" },
+                        { id: "PB-205", title: "subtitles_ep12.srt — Chinese", tags: ["Done"], assignee: "M", date: "Nov 28" },
+                        { id: "PB-204", title: "print_ad_pack.ai — German", tags: ["Done"], assignee: "J", date: "Nov 27" },
+                      ],
+                    },
+                  ].map(col => (
+                    <div key={col.name} className="flex shrink-0 flex-col" style={{ width: "232px", minWidth: "232px" }}>
+                      {/* Column header */}
+                      <div className="flex items-center gap-2 mb-2 px-1">
+                        <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: col.dot, display: "inline-block", flexShrink: 0 }} />
+                        <span style={{ fontSize: "12px", fontWeight: 600, color: "#3a3630" }}>{col.name}</span>
+                        <span style={{ fontSize: "11px", color: "#9a9488" }}>{col.count}</span>
+                        <span style={{ marginLeft: "auto", fontSize: "16px", color: "#b0a898", lineHeight: 1 }}>+</span>
+                        <span style={{ fontSize: "14px", color: "#b0a898", lineHeight: 1 }}>···</span>
                       </div>
-                      <span style={{ fontSize: "11px", color: "#6e6a61" }}>{row.target}</span>
-                      <span style={{ fontSize: "11px", color: "#9a9488" }}>{row.created}</span>
-                      <span style={{ fontSize: "10px", color: row.qa === "RUN QA" ? "#9a9488" : row.qa === "—" ? "#c0bab2" : "#15130f", border: row.qa === "RUN QA" ? "1px solid #dad4c7" : "none", padding: row.qa === "RUN QA" ? "2px 6px" : "0", borderRadius: "4px" }}>{row.qa}</span>
-                      <span>
-                        <svg viewBox="0 0 24 24" fill="none" stroke={row.done ? "#6e6a61" : "#dad4c7"} strokeWidth="1.75" style={{ width: "14px", height: "14px" }}>
-                          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                          <polyline points="7 10 12 15 17 10" />
-                          <line x1="12" y1="15" x2="12" y2="3" />
-                        </svg>
-                      </span>
+
+                      {/* Cards */}
+                      <div className="flex flex-col gap-2 overflow-hidden">
+                        {col.cards.map(card => (
+                          <div key={card.id} style={{
+                            background: "#ffffff",
+                            border: `1px solid ${"flagged" in card && card.flagged ? "rgba(220,38,38,0.25)" : "#e2ddd6"}`,
+                            borderRadius: "8px",
+                            padding: "10px 12px",
+                            boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+                          }}>
+                            {/* Card header */}
+                            <div className="flex items-center gap-1.5 mb-1.5">
+                              <svg viewBox="0 0 16 12" style={{ width: "12px", height: "10px", flexShrink: 0 }}>
+                                <rect x="0" y="6" width="3" height="6" fill="#e08a6f" rx="0.5" />
+                                <rect x="4.5" y="3" width="3" height="9" fill="#e08a6f" rx="0.5" opacity="0.7" />
+                                <rect x="9" y="0" width="3" height="12" fill="#e08a6f" rx="0.5" opacity="0.5" />
+                              </svg>
+                              <span style={{ fontSize: "10px", color: "#9a9488", fontFamily: "var(--font-space-mono), monospace" }}>{card.id}</span>
+                            </div>
+                            <div style={{ fontSize: "12.5px", color: "#1a1814", fontWeight: 500, lineHeight: 1.35, marginBottom: "8px" }}>{card.title}</div>
+                            <div className="flex flex-wrap gap-1 mb-2">
+                              {card.tags.map(t => (
+                                <span key={t} style={{
+                                  fontSize: "10px", padding: "2px 7px", borderRadius: "4px",
+                                  background: t === "Flagged" ? "#fee2e2" : t === "Done" ? "#dcfce7" : "#f0ece3",
+                                  color: t === "Flagged" ? "#dc2626" : t === "Done" ? "#16a34a" : "#6b6560",
+                                  border: `1px solid ${t === "Flagged" ? "#fca5a5" : t === "Done" ? "#86efac" : "#d8d2c8"}`,
+                                }}>{t}</span>
+                              ))}
+                            </div>
+                            <div className="flex items-center justify-between">
+                              {card.assignee ? (
+                                <div style={{ width: "20px", height: "20px", borderRadius: "50%", background: "linear-gradient(135deg,#6b9cf4,#8b6fbf)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "9px", fontWeight: 700, color: "#fff" }}>{card.assignee}</div>
+                              ) : <span />}
+                              <span style={{ fontSize: "10px", color: "#9a9488" }}>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: "10px", height: "10px", display: "inline", marginRight: "3px", verticalAlign: "middle" }}>
+                                  <rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
+                                </svg>
+                                {card.date}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   ))}
+
+                  {/* 5th column peeking */}
+                  <div className="flex shrink-0 flex-col" style={{ width: "50px", minWidth: "50px", overflow: "hidden" }}>
+                    <div className="flex items-center gap-1.5 mb-2 px-1">
+                      <span style={{ width: "7px", height: "7px", borderRadius: "50%", background: "#8b6fbf", display: "inline-block" }} />
+                      <span style={{ fontSize: "12px", fontWeight: 600, color: "#6b6560", whiteSpace: "nowrap" }}>Do</span>
+                    </div>
+                    <div style={{ background: "#ffffff", border: "1px solid #e2ddd6", borderRadius: "8px", padding: "10px 12px", overflow: "hidden", boxShadow: "0 1px 3px rgba(0,0,0,0.06)" }}>
+                      <svg viewBox="0 0 16 12" style={{ width: "12px", height: "10px" }}>
+                        <rect x="0" y="6" width="3" height="6" fill="#8b6fbf" rx="0.5" />
+                        <rect x="4.5" y="3" width="3" height="9" fill="#8b6fbf" rx="0.5" opacity="0.7" />
+                        <rect x="9" y="0" width="3" height="12" fill="#8b6fbf" rx="0.5" opacity="0.5" />
+                      </svg>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
 
             {/* Bottom fade */}
             <div className="pointer-events-none absolute bottom-0 left-0 right-0" style={{
-              height: "35%",
-              background: "linear-gradient(to top, #0c0810 0%, #0c0810 6%, rgba(12,8,16,0.9) 35%, transparent 100%)",
+              height: "32%",
+              background: "linear-gradient(to top, #080507 0%, #080507 5%, rgba(8,5,7,0.85) 40%, transparent 100%)",
             }} />
           </div>
         </div>
@@ -457,153 +530,218 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ─── §3 HOW IT WORKS + AI ENGINE ─── */}
-      <section className="pb-glass-section" style={{ background: "#0e0d0b" }}>
-        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-32">
-          <div className="flex items-center gap-3 mb-6">
-            <span className="inline-block h-2 w-2 bg-pb-accent" />
-            <span className="font-pb-mono text-[11px] font-bold tracking-widest text-pb-accent uppercase">
-              How it works
-            </span>
+      {/* ─── §2.5 BENTO FEATURE GRID ─── */}
+      <section style={{ background: "#0a0908", position: "relative", zIndex: 20, isolation: "isolate" }}>
+        <div className="mx-auto max-w-[1100px] px-8 lg:px-14" style={{ paddingTop: "80px", paddingBottom: "100px" }}>
+
+          {/* Section header */}
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
+            <span style={{ width: "8px", height: "8px", background: "#e08a6f", display: "inline-block" }} />
+            <span style={{ fontFamily: "var(--font-space-mono),monospace", fontSize: "11px", fontWeight: 700, letterSpacing: "0.16em", color: "#e08a6f", textTransform: "uppercase" }}>Platform</span>
           </div>
-          <h2 className="font-pb-mono text-4xl font-bold text-pb-text md:text-5xl lg:text-6xl" style={{ letterSpacing: "-0.02em" }}>
-            Three steps.<br />Zero cleanup.
+          <h2 className="pb-stencil" style={{ fontSize: "clamp(2rem,3.5vw,3.2rem)", lineHeight: 1.05, marginBottom: "48px", maxWidth: "560px" }}>
+            Everything your global<br />team needs.
           </h2>
 
-          <div className="mt-20 grid grid-cols-1 gap-0 md:grid-cols-3">
-            {/* Step 01 */}
-            <div className="border-white/[0.06] py-10 border-b md:border-b-0 md:border-r md:pr-10">
-              <span className="font-pb-mono block text-[80px] font-bold leading-none" style={{ color: "rgba(240,236,227,0.06)" }}>01</span>
-              <div className="mt-3 mb-4 opacity-60" style={{ border: "1px dashed rgba(224,138,111,0.35)", borderRadius: "6px", padding: "10px 14px" }}>
-                <span className="font-pb-mono text-[11px] text-pb-accent/70">product_magazine.idml</span>
-                <div className="mt-1 font-pb-mono text-[9px] text-pb-text-muted">4.2 MB — ready to translate</div>
-              </div>
-              <h3 className="text-[22px] font-bold text-pb-text">Upload</h3>
-              <p className="mt-3 text-[14px] leading-relaxed text-pb-text-muted">Drop an IDML, PDF, or subtitle file. We read the layout tree — not a flattened text dump.</p>
-            </div>
+          {/* Two-column masonry */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", alignItems: "start" }}>
 
-            {/* Step 02 */}
-            <div className="border-white/[0.06] py-10 border-b md:border-b-0 md:border-r md:px-10">
-              <span className="font-pb-mono block text-[80px] font-bold leading-none" style={{ color: "rgba(240,236,227,0.06)" }}>02</span>
-              <div className="mt-3 mb-4 flex flex-wrap gap-1.5 opacity-60">
-                {["Chinese", "Arabic", "French", "German", "Japanese", "Spanish"].map((l) => (
-                  <span key={l} className="font-pb-mono rounded-full border border-white/15 px-2.5 py-0.5 text-[9px] text-pb-text-muted">{l}</span>
+            {/* ── LEFT COLUMN ── */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+
+              {/* Card A — Translation Agents (PURPLE) */}
+              <div style={{ background: "#2a1060", border: "1px solid rgba(139,111,191,0.3)", borderRadius: "16px", padding: "28px", overflow: "hidden", position: "relative" }}>
+                <div style={{ position: "absolute", top: 0, right: 0, width: "280px", height: "280px", background: "radial-gradient(ellipse at top right, rgba(139,111,191,0.25), transparent 70%)", pointerEvents: "none" }} />
+                <div style={{ fontFamily: "var(--font-space-mono),monospace", fontSize: "10px", fontWeight: 700, letterSpacing: "0.14em", color: "#b89fe8", textTransform: "uppercase", marginBottom: "14px" }}>Translation Agents</div>
+                <div style={{ fontSize: "22px", fontWeight: 700, color: "#f0ece3", marginBottom: "8px" }}>Specialist agents.<br />One for every format.</div>
+                <div style={{ fontSize: "13px", color: "rgba(240,236,227,0.5)", lineHeight: 1.7, marginBottom: "24px" }}>Each format gets a dedicated parser. Layout, timecode, OCR — purpose-built, not generic.</div>
+                {[
+                  { color: "#e08a6f", name: "Layout Agent",    fmt: ".idml  .pdf",    detail: "Rebuilds frames, styles, masters" },
+                  { color: "#8b6fbf", name: "Timecode Agent",  fmt: ".srt  .vtt",     detail: "Syncs every cue to its timecode" },
+                  { color: "#4a9e8a", name: "OCR Agent",       fmt: ".psd  .ai  .eps", detail: "Reads + renders text in images" },
+                  { color: "#4a70e0", name: "Web Agent",       fmt: ".html  .md",     detail: "Translates content, keeps markup" },
+                ].map(a => (
+                  <div key={a.name} style={{ display: "flex", alignItems: "center", gap: "12px", background: "#3a1878", border: "1px solid #4a2090", borderRadius: "10px", padding: "10px 14px", marginBottom: "8px" }}>
+                    <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: a.color, flexShrink: 0 }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: "12.5px", fontWeight: 600, color: "rgba(240,236,227,0.88)" }}>{a.name}</div>
+                      <div style={{ fontSize: "10.5px", color: "rgba(240,236,227,0.38)", marginTop: "1px" }}>{a.detail}</div>
+                    </div>
+                    <span style={{ fontFamily: "var(--font-space-mono),monospace", fontSize: "9.5px", color: a.color, background: "#3d1880", border: `1px solid ${a.color}50`, padding: "2px 8px", borderRadius: "4px", flexShrink: 0 }}>{a.fmt}</span>
+                  </div>
                 ))}
-                <span className="font-pb-mono rounded-full border border-pb-accent/30 bg-pb-accent/10 px-2.5 py-0.5 text-[9px] text-pb-accent">+34 more</span>
               </div>
-              <h3 className="text-[22px] font-bold text-pb-text">Pick a language</h3>
-              <p className="mt-3 text-[14px] leading-relaxed text-pb-text-muted">Choose from 40+ targets. Attach a glossary to lock terms that must never be translated.</p>
-            </div>
 
-            {/* Step 03 */}
-            <div className="border-white/[0.06] py-10 md:pl-10">
-              <span className="font-pb-mono block text-[80px] font-bold leading-none" style={{ color: "rgba(240,236,227,0.06)" }}>03</span>
-              <div className="mt-3 mb-4 flex items-center gap-3 opacity-60">
-                <span style={{ color: "#4ade80", fontSize: "18px" }}>✓</span>
-                <div>
-                  <div className="font-pb-mono text-[11px] text-pb-text">product_magazine.zh.idml</div>
-                  <div className="font-pb-mono text-[9px] text-pb-text-muted">Translated · ready to open</div>
+              {/* Card B — Workflow node diagram (DARK DOTTED) */}
+              <div style={{ background: "#161616", border: "1px solid rgba(255,255,255,0.09)", borderRadius: "16px", padding: "28px", overflow: "hidden", position: "relative", backgroundImage: "radial-gradient(rgba(255,255,255,0.055) 1px, transparent 1px)", backgroundSize: "22px 22px" }}>
+                <div style={{ fontFamily: "var(--font-space-mono),monospace", fontSize: "10px", fontWeight: 700, letterSpacing: "0.14em", color: "rgba(255,255,255,0.3)", textTransform: "uppercase", marginBottom: "20px" }}>Translation workflow</div>
+                <div style={{ display: "flex", alignItems: "center", gap: "0" }}>
+                  {/* Trigger */}
+                  <div style={{ background: "#1a1a1a", border: "1px solid rgba(255,255,255,0.12)", borderRadius: "10px", padding: "12px 16px", minWidth: "110px" }}>
+                    <div style={{ fontFamily: "var(--font-space-mono),monospace", fontSize: "9px", color: "rgba(255,255,255,0.35)", letterSpacing: "0.1em", marginBottom: "6px" }}>TRIGGER</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <span style={{ width: "18px", height: "18px", borderRadius: "4px", background: "#1a3828", border: "1px solid rgba(74,222,128,0.5)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <svg viewBox="0 0 12 12" fill="#4ade80" style={{ width: "8px", height: "8px" }}><polygon points="3,2 10,6 3,10" /></svg>
+                      </span>
+                      <div>
+                        <div style={{ fontSize: "10.5px", fontWeight: 600, color: "#f0ece3" }}>START</div>
+                        <div style={{ fontSize: "9px", color: "rgba(255,255,255,0.35)" }}>File upload</div>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Arrow */}
+                  <div style={{ flex: 1, height: "1px", background: "rgba(255,255,255,0.15)", margin: "0 6px", position: "relative" }}>
+                    <div style={{ position: "absolute", right: "-4px", top: "-3px", width: "7px", height: "7px", borderTop: "1.5px solid rgba(255,255,255,0.3)", borderRight: "1.5px solid rgba(255,255,255,0.3)", transform: "rotate(45deg)" }} />
+                  </div>
+                  {/* Steps */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                    {[
+                      { icon: "✦", color: "#8b6fbf", label: "AGENT", sub: "AI Translate" },
+                      { icon: "◈", color: "#4a9e8a", label: "TOOL",  sub: "QA Check" },
+                    ].map(s => (
+                      <div key={s.label} style={{ background: "#1a1a1a", border: `1px solid ${s.color}35`, borderRadius: "8px", padding: "8px 12px", display: "flex", alignItems: "center", gap: "8px" }}>
+                        <span style={{ fontSize: "12px", color: s.color }}>{s.icon}</span>
+                        <div>
+                          <div style={{ fontFamily: "var(--font-space-mono),monospace", fontSize: "9px", color: "rgba(255,255,255,0.3)", letterSpacing: "0.1em" }}>{s.label}</div>
+                          <div style={{ fontSize: "11px", fontWeight: 600, color: "#f0ece3" }}>{s.sub}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Arrow */}
+                  <div style={{ flex: 1, height: "1px", background: "rgba(255,255,255,0.15)", margin: "0 6px", position: "relative" }}>
+                    <div style={{ position: "absolute", right: "-4px", top: "-3px", width: "7px", height: "7px", borderTop: "1.5px solid rgba(255,255,255,0.3)", borderRight: "1.5px solid rgba(255,255,255,0.3)", transform: "rotate(45deg)" }} />
+                  </div>
+                  {/* Send */}
+                  <div style={{ background: "#1a1a1a", border: "1px solid rgba(74,112,224,0.3)", borderRadius: "10px", padding: "12px 16px", minWidth: "100px" }}>
+                    <div style={{ fontFamily: "var(--font-space-mono),monospace", fontSize: "9px", color: "rgba(74,112,224,0.7)", letterSpacing: "0.1em", marginBottom: "4px" }}>DELIVER</div>
+                    <div style={{ fontSize: "11px", fontWeight: 600, color: "#f0ece3" }}>Translated</div>
+                    <div style={{ fontSize: "9.5px", color: "rgba(255,255,255,0.35)" }}>Same format</div>
+                  </div>
                 </div>
               </div>
-              <h3 className="text-[22px] font-bold text-pb-text">Download</h3>
-              <p className="mt-3 text-[14px] leading-relaxed text-pb-text-muted">Same extension, same styles, same page count. Open it and keep editing as if nothing happened.</p>
-            </div>
-          </div>
 
-          {/* ── Under the hood: AI consensus diagram ── */}
-          <div className="mt-20 pt-14" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-            <div className="flex items-center gap-3 mb-8">
-              <span className="inline-block h-2 w-2 bg-pb-accent" />
-              <span className="font-pb-mono text-[11px] font-bold tracking-widest text-pb-accent uppercase">Under the hood</span>
-            </div>
-            <div className="grid grid-cols-1 gap-12 lg:grid-cols-2 items-center">
-              <div>
-                <h3 className="pb-stencil" style={{ fontSize: "clamp(1.6rem,2.8vw,2.4rem)", lineHeight: 1.05, marginBottom: "14px" }}>
-                  Two AI engines.<br />One consensus.
-                </h3>
-                <p style={{ fontSize: "15px", color: "rgba(240,236,227,0.55)", lineHeight: 1.6, marginBottom: "20px" }}>
-                  OpenAI and DeepL translate independently. When they agree, the translation ships. When they disagree, the segment is flagged for human review — catching errors before they reach your client.
-                </p>
-                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+              {/* Card C — Industries (OLIVE/GREEN) */}
+              <div style={{ background: "#162818", border: "1px solid rgba(90,158,90,0.3)", borderRadius: "16px", padding: "28px" }}>
+                <div style={{ fontFamily: "var(--font-space-mono),monospace", fontSize: "10px", fontWeight: 700, letterSpacing: "0.14em", color: "rgba(90,158,90,0.7)", textTransform: "uppercase", marginBottom: "18px" }}>Industries</div>
+                <div style={{ fontSize: "18px", fontWeight: 700, color: "#f0ece3", marginBottom: "18px" }}>Every team that ships globally.</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px" }}>
                   {[
-                    { dot: "#e08a6f", text: "OpenAI GPT + DeepL in parallel" },
-                    { dot: "#4a70e0", text: "Segment-level consensus check" },
-                    { dot: "#4ade80", text: "Disagreements routed to human review" },
-                  ].map((s) => (
-                    <div key={s.text} style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                      <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: s.dot, flexShrink: 0 }} />
-                      <span style={{ fontSize: "13px", color: "rgba(240,236,227,0.6)" }}>{s.text}</span>
+                    { color: "#e08a6f", label: "Marketing Agencies" },
+                    { color: "#c8a820", label: "Publishers & Magazines" },
+                    { color: "#4a9e8a", label: "Legal & Compliance" },
+                    { color: "#8b6fbf", label: "Film & Subtitle Studios" },
+                    { color: "#5a9e5a", label: "Product & SaaS Teams" },
+                    { color: "#4a70e0", label: "E-commerce Brands" },
+                  ].map(u => (
+                    <div key={u.label} style={{ display: "flex", alignItems: "center", gap: "8px", background: "#1e3520", borderRadius: "8px", padding: "8px 10px" }}>
+                      <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: u.color, flexShrink: 0 }} />
+                      <span style={{ fontSize: "11.5px", color: "rgba(240,236,227,0.65)", lineHeight: 1.3 }}>{u.label}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Compact engine diagram */}
-              <div style={{ fontFamily: "var(--font-space-mono), monospace", padding: "28px", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: "12px" }}>
-                <div style={{ textAlign: "center", marginBottom: "10px" }}>
-                  <span style={{ display: "inline-block", padding: "6px 18px", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "6px", fontSize: "11px", color: "rgba(255,255,255,0.6)" }}>Your file</span>
+            </div>
+
+            {/* ── RIGHT COLUMN ── */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+
+              {/* Top row: 2 small cards */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                {/* Card D — Languages stat */}
+                <div style={{ background: "#0e2240", border: "1px solid rgba(74,112,224,0.3)", borderRadius: "16px", padding: "28px 24px" }}>
+                  <div style={{ fontSize: "56px", fontWeight: 700, color: "#4a70e0", lineHeight: 1, marginBottom: "4px" }}>40+</div>
+                  <div style={{ fontSize: "15px", fontWeight: 700, color: "#f0ece3", marginBottom: "8px" }}>Languages</div>
+                  <div style={{ fontSize: "12px", color: "rgba(240,236,227,0.45)", lineHeight: 1.6 }}>Arabic, Chinese, RTL — all handled natively.</div>
+                  <div style={{ marginTop: "16px", display: "flex", flexWrap: "wrap", gap: "4px" }}>
+                    {["AR","ZH","JA","DE","FR","ES","PT","RU"].map(l => (
+                      <span key={l} style={{ fontSize: "9.5px", fontFamily: "var(--font-space-mono),monospace", color: "#7a9ee8", background: "#162d52", padding: "2px 6px", borderRadius: "3px" }}>{l}</span>
+                    ))}
+                  </div>
                 </div>
-                <div style={{ textAlign: "center", color: "rgba(255,255,255,0.2)", marginBottom: "10px" }}>↓</div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "10px" }}>
-                  <div style={{ textAlign: "center", padding: "10px 14px", border: "1px solid rgba(224,138,111,0.4)", borderRadius: "6px", fontSize: "11px", color: "#e08a6f", background: "rgba(224,138,111,0.08)" }}>OpenAI GPT</div>
-                  <div style={{ textAlign: "center", padding: "10px 14px", border: "1px solid rgba(74,112,224,0.4)", borderRadius: "6px", fontSize: "11px", color: "#4a70e0", background: "rgba(74,112,224,0.08)" }}>DeepL Neural</div>
-                </div>
-                <div style={{ textAlign: "center", color: "rgba(255,255,255,0.2)", marginBottom: "10px" }}>↓</div>
-                <div style={{ textAlign: "center", marginBottom: "10px" }}>
-                  <span style={{ display: "inline-block", padding: "8px 22px", border: "1px solid rgba(255,255,255,0.15)", borderRadius: "6px", fontSize: "11px", color: "rgba(255,255,255,0.6)" }}>Consensus check</span>
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                  <div style={{ textAlign: "center", padding: "8px 12px", border: "1px solid rgba(74,222,128,0.3)", borderRadius: "6px", fontSize: "10px", color: "#4ade80", background: "rgba(74,222,128,0.08)" }}>✓ Match → ships</div>
-                  <div style={{ textAlign: "center", padding: "8px 12px", border: "1px solid rgba(248,113,113,0.3)", borderRadius: "6px", fontSize: "10px", color: "#f87171", background: "rgba(248,113,113,0.08)" }}>⚠ Flagged</div>
+                {/* Card E — Async (PINK/MAGENTA) */}
+                <div style={{ background: "#3a0e22", border: "1px solid rgba(200,70,120,0.3)", borderRadius: "16px", padding: "28px 24px" }}>
+                  <div style={{ fontSize: "28px", marginBottom: "10px" }}>⟳</div>
+                  <div style={{ fontSize: "15px", fontWeight: 700, color: "#f0ece3", marginBottom: "8px" }}>It keeps going.</div>
+                  <div style={{ fontSize: "13px", fontWeight: 600, color: "#d64882", marginBottom: "8px" }}>Runs and finishes on its own.</div>
+                  <div style={{ fontSize: "12px", color: "rgba(240,236,227,0.45)", lineHeight: 1.6 }}>Upload and go. Translation runs in the background. File lands in your inbox.</div>
                 </div>
               </div>
+
+              {/* Card F — Integrations (DARK TEAL/BLUE) */}
+              <div style={{ background: "#0c2030", border: "1px solid rgba(74,158,138,0.3)", borderRadius: "16px", padding: "28px" }}>
+                <div style={{ fontFamily: "var(--font-space-mono),monospace", fontSize: "10px", fontWeight: 700, letterSpacing: "0.14em", color: "rgba(74,158,138,0.7)", textTransform: "uppercase", marginBottom: "14px" }}>Integrations</div>
+                <div style={{ fontSize: "20px", fontWeight: 700, color: "#f0ece3", marginBottom: "8px" }}>Works with your stack.</div>
+                <div style={{ fontSize: "13px", color: "rgba(240,236,227,0.48)", lineHeight: 1.65, marginBottom: "20px" }}>
+                  Translated files open directly in InDesign, Premiere, WordPress. No re-linking. No conversion. No broken layers.
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px" }}>
+                  {[
+                    { name: "Adobe InDesign",    live: true  },
+                    { name: "Adobe Illustrator", live: true  },
+                    { name: "Adobe Photoshop",   live: true  },
+                    { name: "YouTube Studio",    live: true  },
+                    { name: "Premiere Pro",      live: true  },
+                    { name: "Final Cut Pro",     live: false },
+                    { name: "WordPress",         live: false },
+                    { name: "Slack",             live: false },
+                  ].map(i => (
+                    <div key={i.name} style={{ display: "flex", alignItems: "center", gap: "7px", background: i.live ? "#133a2e" : "#0f2535", border: `1px solid ${i.live ? "#1d5040" : "#163040"}`, borderRadius: "8px", padding: "8px 10px" }}>
+                      <span style={{ width: "5px", height: "5px", borderRadius: "50%", background: i.live ? "#4a9e8a" : "rgba(255,255,255,0.2)", flexShrink: 0 }} />
+                      <span style={{ fontSize: "11.5px", color: i.live ? "rgba(240,236,227,0.72)" : "rgba(240,236,227,0.32)" }}>{i.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Bottom row: 2 cards */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                {/* Card G — QA Consensus (DARK INDIGO) */}
+                <div style={{ background: "#12123c", border: "1px solid rgba(74,112,224,0.28)", borderRadius: "16px", padding: "24px" }}>
+                  <div style={{ fontFamily: "var(--font-space-mono),monospace", fontSize: "10px", fontWeight: 700, letterSpacing: "0.14em", color: "rgba(74,112,224,0.6)", textTransform: "uppercase", marginBottom: "14px" }}>Quality</div>
+                  <div style={{ fontSize: "16px", fontWeight: 700, color: "#f0ece3", marginBottom: "8px" }}>Two engines.<br />One consensus.</div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "6px", marginTop: "16px" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "#241840", border: "1px solid #382255", borderRadius: "7px", padding: "8px 10px" }}>
+                      <span style={{ width: "5px", height: "5px", borderRadius: "50%", background: "#e08a6f" }} />
+                      <span style={{ fontSize: "11px", fontFamily: "var(--font-space-mono),monospace", color: "#e08a6f" }}>OpenAI GPT</span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "#181848", border: "1px solid #222260", borderRadius: "7px", padding: "8px 10px" }}>
+                      <span style={{ width: "5px", height: "5px", borderRadius: "50%", background: "#4a70e0" }} />
+                      <span style={{ fontSize: "11px", fontFamily: "var(--font-space-mono),monospace", color: "#4a70e0" }}>DeepL Neural</span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", background: "#162040", border: "1px solid #1e3050", borderRadius: "7px", padding: "8px 10px" }}>
+                      <span style={{ fontSize: "11px", color: "#4ade80" }}>✓</span>
+                      <span style={{ fontSize: "11px", fontFamily: "var(--font-space-mono),monospace", color: "#4ade80" }}>Consensus — ships</span>
+                    </div>
+                  </div>
+                </div>
+                {/* Card H — Formats + Glossary (AMBER) */}
+                <div style={{ background: "#261a08", border: "1px solid rgba(200,168,32,0.3)", borderRadius: "16px", padding: "24px" }}>
+                  <div style={{ fontFamily: "var(--font-space-mono),monospace", fontSize: "10px", fontWeight: 700, letterSpacing: "0.14em", color: "rgba(200,168,32,0.6)", textTransform: "uppercase", marginBottom: "14px" }}>Formats</div>
+                  <div style={{ fontSize: "48px", fontWeight: 700, color: "#c8a820", lineHeight: 1, marginBottom: "4px" }}>8</div>
+                  <div style={{ fontSize: "14px", fontWeight: 700, color: "#f0ece3", marginBottom: "14px" }}>Native formats.</div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "5px", marginBottom: "16px" }}>
+                    {[".idml",".pdf",".srt",".vtt",".ai",".psd",".eps",".html"].map(f => (
+                      <span key={f} style={{ fontSize: "9.5px", fontFamily: "var(--font-space-mono),monospace", color: "#c8a820", background: "#342210", border: "1px solid #4a3018", padding: "2px 7px", borderRadius: "4px" }}>{f}</span>
+                    ))}
+                  </div>
+                  <div style={{ height: "1px", background: "#342210", marginBottom: "14px" }} />
+                  <div style={{ fontSize: "11.5px", fontWeight: 600, color: "rgba(240,236,227,0.65)", marginBottom: "4px" }}>Lock brand terms.</div>
+                  <div style={{ fontFamily: "var(--font-space-mono),monospace", fontSize: "9.5px", color: "#8a7040", background: "#342210", borderRadius: "5px", padding: "5px 8px" }}>glossary.csv → 48 locked terms</div>
+                </div>
+              </div>
+
             </div>
           </div>
         </div>
       </section>
 
+
       {/* ─── §4 PRODUCT DIAGRAMS ─── */}
       <ProductDiagram />
       <IntegrationFlow />
 
-      {/* ─── §5 FORMATS TICKER ─── */}
-      <section style={{ background: "#0a0908", borderTop: "1px solid rgba(255,255,255,0.04)", overflow: "hidden", padding: "14px 0" }}>
-        <style>{`
-          @keyframes pb-ticker {
-            from { transform: translateX(0); }
-            to { transform: translateX(-50%); }
-          }
-          .pb-ticker-track {
-            display: flex;
-            width: max-content;
-            animation: pb-ticker 28s linear infinite;
-          }
-          .pb-ticker-track:hover {
-            animation-play-state: paused;
-          }
-        `}</style>
-        <div className="pb-ticker-track">
-          {[...FORMATS_EXTENDED, ...FORMATS_EXTENDED].map((f, i) => (
-            <span key={i} style={{
-              fontFamily: "var(--font-space-mono), monospace",
-              fontSize: "11px",
-              color: f.soon ? "rgba(240,236,227,0.18)" : "rgba(240,236,227,0.38)",
-              letterSpacing: "0.08em",
-              padding: "0 28px",
-              whiteSpace: "nowrap",
-              borderRight: "1px solid rgba(255,255,255,0.06)",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "6px",
-            }}>
-              {f.label}
-              {f.soon && (
-                <span style={{ fontSize: "8px", letterSpacing: "0.1em", color: "rgba(240,236,227,0.2)", textTransform: "uppercase" }}>soon</span>
-              )}
-            </span>
-          ))}
-        </div>
-      </section>
 
       {/* ─── §6 CTA ─── */}
       <section style={{

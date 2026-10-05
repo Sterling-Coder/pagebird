@@ -31,5 +31,6 @@ export async function downloadAuthed(url: string, filename: string): Promise<voi
   document.body.appendChild(a);
   a.click();
   a.remove();
-  URL.revokeObjectURL(blobUrl);
+  // Let the browser begin consuming the blob before releasing its URL.
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
 }
