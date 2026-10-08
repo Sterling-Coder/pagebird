@@ -17,9 +17,12 @@ line fragments. Lines carrying a math-font span become their own segment.
 
 from __future__ import annotations
 
+import json
 import re
 from collections import Counter
 from dataclasses import replace
+from functools import lru_cache
+from pathlib import Path
 
 from pagebirdy.models import BBox, Line, Segment
 
@@ -32,6 +35,82 @@ _NUM = (
 _BLANK = r"[_—–-]{2,}"
 _TOKEN_RE = re.compile(f"(?:{_COORD})|(?:{_NUM})|(?:{_BLANK})")
 
+# The letter that labels a sub-part -- "a.", "b)", "iii." -- is structure, not
+# prose. Part (a) is called (a) in the answer key, in the teacher's edition and
+# in the sentence three questions later that refers back to it, and a target
+# script's own alphabet does not answer to that: translated, "a." came back as
+# "أ." and the reference was gone.
+#
+# Taken only at the start of a run, and only as a single letter or a roman
+# numeral, which is what separates a label from the abbreviation that opens a
+# sentence ("Mr. Patel drew figure A") or the word that ends one ("...for 3
+# days. Explain"). Both shapes really occur in these books, so the rule has to
+# be narrow rather than clever. Digits need no rule of their own: `_NUM`
+# already protects the "1" in "1." as a value.
+#
+# A run that is nothing but the label is common -- the label is set bold in its
+# own run and the sentence follows in the next -- so the mark may also end the
+# run rather than being followed by its text.
+#
+# A multiple-choice answer is labelled the same way but with no punctuation at
+# all -- `A<tab>Line a represents...`, through `D`. The tab is what makes it a
+# label rather than a word: "A graph shows..." opens a sentence with the
+# article and must still be translated, so a bare letter counts only when a
+# tab follows it, which is how these books separate a label from its text.
+# Left unprotected the choices came back as Arabic abjad and no longer matched
+# the letters the question stem and the answer key refer to.
+_ROMAN = "viii|vii|xii|iii|ix|iv|vi|xi|ii|VIII|VII|XII|III|IX|IV|VI|XI|II"
+_ITEM_MARK = re.compile(
+    rf"^(\s*)(?:((?:{_ROMAN}|[A-Za-z])[.)])(?=\s|$)|((?:{_ROMAN}|[A-Za-z]))(?=	))")
+# A run that is *nothing but* a single Latin letter is an identifier the book
+# refers to by name -- `a` and `b` naming the lines on a graph, `x` and `y` its
+# axes, each set in its own italic run. It reaches an engine as a one-character
+# call with no sentence around it, so there is nothing to translate and no
+# context to translate it from; what came back was an Arabic letter, and the
+# question's reference to line `a` no longer pointed at anything. The whole run
+# has to be the letter: mid-sentence, `a` is the article and stays prose.
+_LONE_IDENTIFIER = re.compile(r"^(\s*)([A-Za-z])(\s*)$")
+
+
+@lru_cache(maxsize=1)
+def load_never_translate() -> tuple[str, ...]:
+    """Literals that ship exactly as the source wrote them, longest first.
+
+    Not per-language, unlike the glossary: a legal entity in a copyright notice
+    is the same string in Arabic as it is in Spanish. Every Latin-script target
+    already left "Curriculum Associates, LLC" alone; Arabic transliterated it,
+    because the prompt asks for proper nouns in the target script — right for a
+    character called Cameron, wrong for the company that owns the copyright.
+    """
+    path = Path(__file__).with_name("donottranslate.json")
+    if not path.exists():
+        return ()
+    names = json.loads(path.read_text(encoding="utf-8")).get("names", ())
+    # Longest first so "Curriculum Associates, LLC" wins over the short form it
+    # begins with, which would otherwise leave a bare ", LLC" to be translated.
+    return tuple(sorted((n for n in names if n), key=len, reverse=True))
+
+
+@lru_cache(maxsize=1)
+def _name_re() -> re.Pattern | None:
+    """Case-sensitive alternation over the never-translate list.
+
+    Case matters: a brand is a brand, and folding case would protect the common
+    noun "curriculum" everywhere it appears in the prose.
+
+    The boundaries are lookarounds over `[\\w-]` rather than `\\b`, for two
+    reasons. `\\b` is defined against word characters, so it never fires beside
+    an entry that ends in punctuation (`…, LLC`) and would let "LLCs" match.
+    Excluding the hyphen as well keeps "i-Ready" from matching inside
+    "semi-i-Ready"-style compounds, and keeps a hyphenated word from having its
+    tail protected.
+    """
+    names = load_never_translate()
+    if not names:
+        return None
+    body = "|".join(re.escape(n) for n in names)
+    return re.compile(rf"(?<![\w-])(?:{body})(?![\w-])")
+
 
 class Allocator:
     """Hands out placeholder tokens for one segment and records their literals."""
@@ -43,6 +122,80 @@ class Allocator:
         self.boxes: dict[str, BBox] = {}
         self.has_math_font = False
         self._n = 0
+
+    def take_math(self, span) -> str:
+        """Protect a math run. `span` may be a Span (PDF path, carries geometry)
+        or a bare string (IDML path, where the layout engine handles setting)."""
+        token = f"⟦m{self._n}⟧"
+        self._n += 1
+        self.has_math_font = True
+        if isinstance(span, str):
+            self.map[token] = span
+            return token
+        self.map[token] = span.text
+        size = span.size or 1.0
+        self.widths[token] = (span.bbox[2] - span.bbox[0]) / size
+        self.boxes[token] = tuple(span.bbox)
+        # A symbolic face is addressed by glyph slot, and the character code it
+        # reports maps to nothing a text engine can set — asking for it draws an
+        # empty box. Withholding the face name sends the run down the same path
+        # a stacked fraction takes: lifted off the page as an image, which
+        # reproduces the mark exactly as it was drawn.
+        if not getattr(span, "atomic", False) and not getattr(span, "symbolic", False):
+            # A simple glyph run can be redrawn from its own face; an atomic run
+            # (a stacked fraction) has no character sequence and must be lifted
+            # off the page as an image instead.
+            self.fonts[token] = span.font
+        return token
+
+    def take_value(self, literal: str) -> str:
+        # Value-derived: identical numbers collapse to one token (fine — same restore).
+        token = f"⟦={literal}⟧"
+        self.map[token] = literal
+        return token
+
+    def take_break(self, literal: str) -> str:
+        """Protect a forced line/paragraph separator (U+2028/U+2029) — an
+        InDesign soft-return embedded mid-run. Sent to an LLM raw, at least
+        one model reliably corrupts it into unrelated control bytes (backspace,
+        vertical tab) in its JSON reply, which then fails IDML's XML writer.
+        Fixed token, not numbered: every occurrence restores to the same
+        literal, so collapsing repeats onto one key is safe (unlike take_math,
+        this never needs a distinct token per occurrence)."""
+        token = "⟦br⟧"
+        self.map[token] = literal
+        return token
+
+    def take_name(self, literal: str) -> str:
+        """Protect a literal that must ship exactly as written — a brand, a legal
+        entity. Value-visible like a number, so the engine can still see what the
+        sentence is about and inflect around it, and value-derived, so the same
+        name twice is one token."""
+        token = f"⟦~{literal}⟧"
+        self.map[token] = literal
+        return token
+
+
+class Allocator:
+    """Hands out placeholder tokens for one segment and records their literals."""
+
+    def __init__(self) -> None:
+        self.map: dict[str, str] = {}
+        self.fonts: dict[str, str] = {}
+        self.widths: dict[str, float] = {}
+        self.boxes: dict[str, BBox] = {}
+        self.has_math_font = False
+        self._n = 0
+
+    def take_name(self, literal: str) -> str:
+        """Protect a literal that must ship exactly as written — a brand, a legal
+        entity. Value-visible like a number, so the engine can still see what the
+        sentence is about and inflect around it, and value-derived, so the same
+        name twice is one token."""
+        token = f"⟦~{literal}⟧"
+        self.map[token] = literal
+        return token
+
 
     def take_math(self, span) -> str:
         """Protect a math run. `span` may be a Span (PDF path, carries geometry)
@@ -81,6 +234,25 @@ class Allocator:
         token = "⟦br⟧"
         self.map[token] = literal
         return token
+
+
+def protect_text(text: str, alloc: Allocator) -> str:
+    """Lift protected literals out of one run of prose — the shared entry point
+    for both document paths.
+
+    Names go first: a name can contain the digits and punctuation the numeric
+    scan matches ("Grade 8 Math"), and running that scan first would bite a
+    piece out of the middle and leave half a brand behind for the engine. The
+    sub-part label goes before the numeric scan for the same reason.
+    """
+    pattern = _name_re()
+    if pattern is not None:
+        text = pattern.sub(lambda m: alloc.take_name(m.group(0)), text)
+    text = _ITEM_MARK.sub(
+        lambda m: m.group(1) + alloc.take_name(m.group(2) or m.group(3)), text)
+    text = _LONE_IDENTIFIER.sub(
+        lambda m: m.group(1) + alloc.take_name(m.group(2)) + m.group(3), text)
+    return _TOKEN_RE.sub(lambda m: alloc.take_value(m.group(0)), text)
 
 
 def _is_badge(span) -> bool:

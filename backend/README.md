@@ -29,6 +29,13 @@ pagebirdy/
   idml/           IDML package read/write, linked-graphic translation, XML render preview,
                   rule-driven RTL stage (rtl*.py), layout validation, InDesign export
   reassemble/     rebuild a translated PDF from segments
+  office/         .docx / .pptx / .xlsx / .txt adapters (extract, write back, validate) and the
+                  shared driver `office/pipeline.py`; RTL direction for Word and PowerPoint
+  image/          PNG / JPEG / WEBP / PSD / AI: validate, OCR, classify, translate, repaint
+                  (vector .ai stays vector; .psd comes back as PNG)
+  web/            public web page: SSRF-safe fetch, sanitize, HTML adapter, static read-only copy
+  image_api.py    /api/image-translation* routes (mounted by api.py)
+  web_api.py      /api/translate/website* routes (mounted by api.py)
   review/         Postgres-backed job/segment/QA-report store (Supabase) — the human review layer
   eval/           on-demand QA — COMET/MQM scoring, layout scoring, scorecards; runs in a
                   child process (eval/isolated.py)
@@ -37,6 +44,8 @@ pagebirdy/
 ```
 
 Each stage of a job: extract text → protect math/placeholders → LLM translate (+ glossary check) → RTL layout for RTL targets → reassemble → persist to object storage. There is no post-translation verify pass or `needs_human` quality routing — both were removed; quality is measured by the separate, on-demand QA report.
+
+`POST /api/translate` also takes `.docx`, `.pptx`, `.xlsx` and `.txt` (`GET /api/formats` lists what is accepted; legacy `.doc`/`.ppt`/`.xls` get a "re-save as" message). Image upload is `POST /api/image-translation`, website is `POST /api/translate/website`; both return `202` with a job id like documents, and the page polls `GET /api/jobs/{id}` or the `/api/image-translation/{id}` and `/api/translate/website/{id}/result` routes. Edits to office and website segments are applied by `POST /api/jobs/{id}/rebuild`; image jobs have no rebuild.
 
 Uploads return `202` with a job id as soon as the job row exists; translation runs on a background thread pool (`PAGEBIRDY_JOB_WORKERS`, default 3) and the UI polls the job row. Progress is reported incrementally via a `progress_cb` threaded through the pipeline. A failed job records its error on the row so the UI can show why.
 
@@ -54,6 +63,7 @@ Not committed (`.env`, `.env.production`). Required/used, by area:
 - **QA** (optional): `BABEL_EVAL_JUDGE_PROVIDER` / `BABEL_EVAL_JUDGE_MODEL` for the MQM judge, `BABEL_EVAL_COMET_MODEL` / `BABEL_EVAL_KIWI_MODEL`, `PAGEBIRDY_EVAL_TIMEOUT` (seconds, default 240) and `PAGEBIRDY_EVAL_MAX_MB` (child memory cap, default 3072, Linux only).
 - **InDesign** (optional): `INDESIGN_SERVER` to export `.indd`. Not set in production, so `.indd` uploads are rejected with a 400 asking for IDML.
 - **Jobs**: `PAGEBIRDY_JOB_WORKERS` (background translation threads), `PAGEBIRDY_SYNC_JOBS=1` runs jobs inline in the request (tests, scripts).
+- **Office / image / website** (all optional, read per job): `BABEL_OFFICE_IMAGE_OCR` (`0` stops OCR of pictures inside .pptx/.docx), `BABEL_OFFICE_IMAGE_MAX`; `BABEL_IMAGE_MAX_BYTES`, `BABEL_IMAGE_MAX_PIXELS`, `BABEL_IMAGE_MIN_CONFIDENCE`, `BABEL_IMAGE_OCR_ENGINE`, `BABEL_IMAGE_VERIFY_OCR`, `BABEL_IMAGE_FONT`, `BABEL_IMAGE_PROTECTED_TERMS`; `BABEL_WEB_RATE_LIMIT` / `BABEL_WEB_RATE_WINDOW_SEC` (per user) and `BABEL_WEB_MAX_RUNNING` (global), `BABEL_WEB_MAX_SEGMENTS`, `BABEL_WEB_MAX_CHARS`.
 - **Misc**: `FRONTEND_ORIGIN` (CORS), `BABEL_UPLOAD_DIR` / `BABEL_OUT_DIR` (local scratch dirs, safe to clear).
 
 (Older env vars still say `BABEL_*` — kept deliberately since they're set in the real deployment environment; storage vars were renamed to `PAGEBIRDY_S3_*`. See the root README's note on the package rename.)

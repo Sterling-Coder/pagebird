@@ -39,6 +39,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from pydantic import BaseModel, UUID4
 
 from pagebirdy import languages, storage
+from pagebirdy.office import formats as doc_formats
 from pagebirdy.auth import (effective_owner_ids, get_or_create_profile, get_profile_names,
                         invalidate_owner_ids_cache, require_trial_active, require_user)
 from pagebirdy.pipeline import (rebuild_from_edits, translate_idml,
@@ -122,6 +123,18 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PATCH", "DELETE"],
     allow_headers=["Authorization", "Content-Type"],
 )
+
+
+# Image and website translation live in their own modules and share this app's
+# helpers (job store, storage, executor); they import them lazily, so they are
+# mounted here rather than imported at the top.
+from pagebirdy.image_api import router as _image_router  # noqa: E402
+from pagebirdy.text_api import router as _text_router  # noqa: E402
+from pagebirdy.web_api import router as _web_router  # noqa: E402
+
+app.include_router(_image_router)
+app.include_router(_web_router)
+app.include_router(_text_router)
 
 
 def _store() -> ReviewStore:
@@ -736,13 +749,28 @@ async def rebuild_job(job_id: str, user: dict = Depends(require_user)) -> dict:
     if str(job.get("output", "")).lower().endswith(".idml"):
         raise HTTPException(status_code=400, detail="rebuild is not supported for IDML jobs")
 
+    fmt_key = (job.get("meta") or {}).get("format")
+    if fmt_key == "image":
+        raise HTTPException(status_code=400, detail="rebuild is not supported for image jobs")
+    office_fmt = next((f for f in doc_formats.OFFICE.values() if f.key == fmt_key), None)
+
     output_key = str(job["output"])
 
     def _run() -> str:
         local_source, local_output = _materialize_job_files(job)
-        rebuild_from_edits(
-            job_id, review_db=_REVIEW_DB, source_path=local_source, output_path=local_output
-        )
+        if fmt_key == "website":
+            from pagebirdy.web.pipeline import rebuild_from_review as rebuild_website
+
+            rebuild_website({**job, "source": local_source, "output": local_output}, _REVIEW_DB)
+        elif office_fmt is not None:
+            from pagebirdy.office.pipeline import rebuild_from_review as rebuild_office
+
+            rebuild_office({**job, "source": local_source, "output": local_output}, _REVIEW_DB,
+                           fmt=office_fmt)
+        else:
+            rebuild_from_edits(
+                job_id, review_db=_REVIEW_DB, source_path=local_source, output_path=local_output
+            )
         storage.upload_file(local_output, output_key)
         return output_key
 
@@ -937,6 +965,12 @@ async def download_eval(job_id: str, format: str = "pdf", refresh: bool = False,
 _UI_DEFAULT_LANG = "zh"  # UI-only default; pipeline's implicit fallback stays languages.DEFAULT
 
 
+@app.get("/api/formats")
+def list_formats() -> dict:
+    """Document formats the upload accepts, offered only once an adapter ships."""
+    return doc_formats.listing()
+
+
 @app.get("/api/languages")
 def list_languages() -> dict:
     """Target languages the UI may offer, and which ones the PDF path renders."""
@@ -1024,8 +1058,11 @@ async def translate_upload(
             detail=".indd files aren't supported — in InDesign use File → Export → "
                    "InDesign Markup (IDML) and upload the .idml instead",
         )
-    if ext not in (".pdf", ".idml"):
-        raise HTTPException(status_code=400, detail="upload a .pdf or .idml file")
+    try:
+        doc_formats.check_extension(name)
+    except doc_formats.UnsupportedFile as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    office_fmt = doc_formats.lookup(name)
     try:
         lang = languages.get(target_lang or None)
     except ValueError as e:
@@ -1043,6 +1080,12 @@ async def translate_upload(
     data = await file.read()
     with open(saved, "wb") as f:
         f.write(data)
+
+    if office_fmt is not None:
+        try:
+            await run_in_threadpool(doc_formats.check_content, office_fmt, saved)
+        except doc_formats.UnsupportedFile as e:
+            raise HTTPException(status_code=400, detail=str(e))
 
     file_hash = hashlib.sha256(data).hexdigest()
     file_size = len(data)
@@ -1083,6 +1126,16 @@ async def translate_upload(
     # so a single upload doesn't freeze the whole server for other requests.
     def _run() -> dict:
         from pagebirdy.idml.export import convert_to_idml, export
+
+        if office_fmt is not None:
+            from pagebirdy.office.pipeline import translate_document
+
+            logger.info("upload: %s path, running translate_document for %s", office_fmt.key, name)
+            report = translate_document(saved, _out_dir(), target_lang=lang.code,
+                                        review_db=_REVIEW_DB, job_id=job_id,
+                                        original_filename=name, on_stage=_progress_cb)
+            report["has_output_pdf"] = False
+            return report
 
         if ext == ".pdf":
             logger.info("upload: .pdf path, running translate_pdf directly for %s", name)
