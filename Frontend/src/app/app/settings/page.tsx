@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AppNavRail } from "@/components/app/AppNavRail";
 import { AppTopBar } from "@/components/app/AppTopBar";
 import { createClient } from "@/lib/supabase/client";
 import { getMe } from "@/lib/team";
@@ -15,7 +14,6 @@ type Profile = {
 };
 
 export default function AccountSettingsPage() {
-  const [navOpen, setNavOpen] = useState(true);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [signingOut, setSigningOut] = useState(false);
   const router = useRouter();
@@ -46,10 +44,9 @@ export default function AccountSettingsPage() {
     : null;
 
   return (
-    <div className="flex h-full w-full bg-paper">
-      {navOpen ? <AppNavRail /> : null}
+    <div className="flex h-full w-full bg-white">
       <div className="flex min-w-0 flex-1 flex-col">
-        <AppTopBar navOpen={navOpen} onToggleNav={() => setNavOpen((v) => !v)} breadcrumb="Settings" />
+        <AppTopBar breadcrumb="Settings" />
         <div className="flex min-h-0 flex-1 overflow-auto p-6">
           <div className="w-full max-w-md">
             <h1 className="mb-6 text-lg font-bold text-ink">Account</h1>

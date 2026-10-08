@@ -1,16 +1,10 @@
 import { LogsPanel } from "./LogsPanel";
+import { useAppShell } from "./AppShell";
 
-export function AppTopBar({
-  navOpen,
-  onToggleNav,
-  breadcrumb,
-}: {
-  navOpen: boolean;
-  onToggleNav: () => void;
-  breadcrumb?: React.ReactNode;
-}) {
+export function AppTopBar({ breadcrumb }: { breadcrumb?: React.ReactNode }) {
+  const { navOpen, toggleNav: onToggleNav } = useAppShell();
   return (
-    <div className="flex h-12 shrink-0 items-center justify-between border-b border-ink bg-paper px-4">
+    <div className="flex h-12 shrink-0 items-center justify-between border-b border-rule bg-white px-4">
       <div className="flex items-center">
         <button
           type="button"

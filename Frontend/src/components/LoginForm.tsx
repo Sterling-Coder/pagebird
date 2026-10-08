@@ -3,15 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Fraunces } from "next/font/google";
 import { createClient } from "@/lib/supabase/client";
-
-const fraunces = Fraunces({
-  variable: "--font-login-display",
-  subsets: ["latin"],
-  weight: ["500", "600"],
-  style: ["normal", "italic"],
-});
 
 type Mode = "login" | "signup";
 
@@ -111,58 +103,29 @@ export function LoginForm() {
   }
 
   return (
-    <div
-      className={`${fraunces.variable} relative min-h-screen overflow-hidden bg-[#153a2e] text-[#f2ede0]`}
-    >
-      <svg
-        className="pointer-events-none absolute inset-0 h-full w-full opacity-40"
-        viewBox="0 0 1600 1000"
-        preserveAspectRatio="xMidYMid slice"
-        fill="none"
-        aria-hidden="true"
-      >
-        <path
-          d="M420 -50 C 700 150, 250 500, 550 850 C 800 1080, 1200 900, 1350 650"
-          stroke="#8a9a5b"
-          strokeWidth="2.5"
-        />
-        <path
-          d="M950 -80 C 650 200, 1450 350, 1150 700 C 950 950, 500 950, 150 780"
-          stroke="#8a9a5b"
-          strokeWidth="2.5"
-        />
-        <path
-          d="M-100 700 C 300 550, 400 900, 750 1000"
-          stroke="#8a9a5b"
-          strokeWidth="2.5"
-        />
-      </svg>
-
+    <div className="flex min-h-screen flex-col bg-[#e2ddd6] p-2 text-ink">
+      <div className="flex flex-1 flex-col gap-2 lg:flex-row">
+      <div className="flex flex-1 flex-col rounded-[14px] bg-white">
       <Link
         href="/"
-        className="relative z-10 mt-6 ml-6 inline-flex items-center gap-2 text-[11px] font-semibold tracking-widest text-[#c9c4b0] uppercase transition-colors hover:text-[#f2ede0] sm:mt-8 sm:ml-10"
+        className="mt-6 ml-6 inline-flex items-center gap-2 text-[11px] font-semibold tracking-widest text-[#6b6560] uppercase transition-colors hover:text-ink sm:mt-8 sm:ml-10"
       >
         ← Back
       </Link>
 
-      <section className="relative z-10 mx-auto flex min-h-[calc(100vh-88px)] w-full max-w-md flex-col justify-center px-6 pb-16 sm:px-0">
-        <span
-          className="text-3xl italic"
-          style={{ fontFamily: "var(--font-login-display), Georgia, serif" }}
-        >
-          page<span className="text-[#e08a6f]">birdy</span>
+      <section className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center px-6 py-10 sm:px-0">
+        <span className="text-2xl tracking-[0.04em]" style={{ fontFamily: "var(--font-mono), monospace" }}>
+          <span className="text-[#3a3630]">page</span>
+          <span className="text-[#e08a6f]">birdy</span>
         </span>
 
         {awaitingOtp ? (
           <>
-            <h1
-              className="mt-10 text-5xl font-medium"
-              style={{ fontFamily: "var(--font-login-display), Georgia, serif" }}
-            >
+            <h1 className="mt-10 text-[40px] leading-[1.1] font-medium tracking-tight">
               Check your <span className="text-[#e08a6f] italic">email.</span>
             </h1>
-            <p className="mt-3 text-[15px] text-[#c9c4b0]">
-              We sent a 6-digit code to <span className="font-semibold text-[#f2ede0]">{email}</span>.
+            <p className="mt-3 text-[15px] text-[#6b6560]">
+              We sent a 6-digit code to <span className="font-semibold text-ink">{email}</span>.
             </p>
 
             <form onSubmit={handleVerifyOtp} className="mt-10">
@@ -179,11 +142,11 @@ export function LoginForm() {
                 placeholder="000000"
                 value={otp}
                 onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
-                className="mt-2 w-full rounded-lg border border-[#3d5847] bg-[#1e4536] px-4 py-3 text-center text-lg tracking-[0.5em] text-[#f2ede0] placeholder-[#8fa090] outline-none focus-visible:border-[#e08a6f]"
+                className="mt-2 w-full rounded-lg border border-[#e2d6c8] bg-[#f6f2ea] px-4 py-3 text-center text-lg tracking-[0.5em] text-ink placeholder-[#a39b8d] outline-none focus-visible:border-[#c86018]"
               />
 
               {error ? (
-                <p className="mt-3 text-xs text-[#e08a6f]" role="alert">
+                <p className="mt-3 text-xs text-[#a8321a]" role="alert">
                   {error}
                 </p>
               ) : null}
@@ -191,18 +154,18 @@ export function LoginForm() {
               <button
                 type="submit"
                 disabled={verifying || otp.length !== 6}
-                className="mt-4 w-full rounded-full bg-[#e08a6f] px-6 py-3.5 text-sm font-bold text-[#153a2e] transition-opacity hover:opacity-90 disabled:opacity-50"
+                className="mt-4 w-full rounded-full bg-[#c86018] px-6 py-3.5 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
               >
                 {verifying ? "Verifying…" : "Verify email"}
               </button>
 
-              <p className="mt-4 text-center text-xs text-[#c9c4b0]">
+              <p className="mt-4 text-center text-xs text-[#6b6560]">
                 Didn&rsquo;t get it?{" "}
                 <button
                   type="button"
                   onClick={handleResendOtp}
                   disabled={resending}
-                  className="font-semibold text-[#f2ede0] underline decoration-[#3d5847] underline-offset-4 hover:decoration-[#f2ede0] disabled:opacity-50"
+                  className="font-semibold text-ink underline decoration-[#d9c9b6] underline-offset-4 hover:decoration-ink disabled:opacity-50"
                 >
                   {resending ? "Sending…" : "Resend code"}
                 </button>
@@ -211,10 +174,7 @@ export function LoginForm() {
           </>
         ) : (
           <>
-            <h1
-              className="mt-10 text-5xl font-medium"
-              style={{ fontFamily: "var(--font-login-display), Georgia, serif" }}
-            >
+            <h1 className="mt-10 text-[40px] leading-[1.1] font-medium tracking-tight">
               {mode === "login" ? (
                 <>
                   Welcome <span className="text-[#e08a6f] italic">back.</span>
@@ -225,7 +185,7 @@ export function LoginForm() {
                 </>
               )}
             </h1>
-            <p className="mt-3 text-[15px] text-[#c9c4b0]">
+            <p className="mt-3 text-[15px] text-[#6b6560]">
               {mode === "signup" ? "14-day free trial, no card required." : "Three ways in."}
             </p>
 
@@ -244,7 +204,7 @@ export function LoginForm() {
                   placeholder="Jane"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
-                  className="mt-2 w-full rounded-lg border border-[#3d5847] bg-[#1e4536] px-4 py-3 text-sm text-[#f2ede0] placeholder-[#8fa090] outline-none focus-visible:border-[#e08a6f]"
+                  className="mt-2 w-full rounded-lg border border-[#e2d6c8] bg-[#f6f2ea] px-4 py-3 text-sm text-ink placeholder-[#a39b8d] outline-none focus-visible:border-[#c86018]"
                 />
               </div>
               <div>
@@ -259,7 +219,7 @@ export function LoginForm() {
                   placeholder="Doe"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
-                  className="mt-2 w-full rounded-lg border border-[#3d5847] bg-[#1e4536] px-4 py-3 text-sm text-[#f2ede0] placeholder-[#8fa090] outline-none focus-visible:border-[#e08a6f]"
+                  className="mt-2 w-full rounded-lg border border-[#e2d6c8] bg-[#f6f2ea] px-4 py-3 text-sm text-ink placeholder-[#a39b8d] outline-none focus-visible:border-[#c86018]"
                 />
               </div>
             </div>
@@ -276,7 +236,7 @@ export function LoginForm() {
             placeholder="you@somewhere"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="mt-2 w-full rounded-lg border border-[#3d5847] bg-[#1e4536] px-4 py-3 text-sm text-[#f2ede0] placeholder-[#8fa090] outline-none focus-visible:border-[#e08a6f]"
+            className="mt-2 w-full rounded-lg border border-[#e2d6c8] bg-[#f6f2ea] px-4 py-3 text-sm text-ink placeholder-[#a39b8d] outline-none focus-visible:border-[#c86018]"
           />
 
           <label htmlFor="password" className="mt-5 block text-[11px] font-semibold tracking-widest uppercase">
@@ -292,13 +252,13 @@ export function LoginForm() {
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-lg border border-[#3d5847] bg-[#1e4536] px-4 py-3 pr-11 text-sm text-[#f2ede0] placeholder-[#8fa090] outline-none focus-visible:border-[#e08a6f]"
+              className="w-full rounded-lg border border-[#e2d6c8] bg-[#f6f2ea] px-4 py-3 pr-11 text-sm text-ink placeholder-[#a39b8d] outline-none focus-visible:border-[#c86018]"
             />
             <button
               type="button"
               onClick={() => setShowPassword((v) => !v)}
               aria-label={showPassword ? "Hide password" : "Show password"}
-              className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-[#8fa090] hover:text-[#f2ede0]"
+              className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-[#a39b8d] hover:text-ink"
             >
               {showPassword ? (
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="h-4 w-4">
@@ -315,7 +275,7 @@ export function LoginForm() {
           </div>
 
           {error ? (
-            <p className="mt-3 text-xs text-[#e08a6f]" role="alert">
+            <p className="mt-3 text-xs text-[#a8321a]" role="alert">
               {error}
             </p>
           ) : null}
@@ -323,12 +283,12 @@ export function LoginForm() {
           <button
             type="submit"
             disabled={loading}
-            className="mt-4 w-full rounded-full bg-[#e08a6f] px-6 py-3.5 text-sm font-bold text-[#153a2e] transition-opacity hover:opacity-90 disabled:opacity-50"
+            className="mt-4 w-full rounded-full bg-[#c86018] px-6 py-3.5 text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
           >
             {loading ? "Please wait…" : mode === "login" ? "Log in" : "Create account"}
           </button>
 
-          <p className="mt-4 text-center text-xs text-[#c9c4b0]">
+          <p className="mt-4 text-center text-xs text-[#6b6560]">
             {mode === "login" ? "New to Pagebirdy?" : "Already have an account?"}{" "}
             <button
               type="button"
@@ -336,25 +296,25 @@ export function LoginForm() {
                 setError(null);
                 setMode(mode === "login" ? "signup" : "login");
               }}
-              className="font-semibold text-[#f2ede0] underline decoration-[#3d5847] underline-offset-4 hover:decoration-[#f2ede0]"
+              className="font-semibold text-ink underline decoration-[#d9c9b6] underline-offset-4 hover:decoration-ink"
             >
               {mode === "login" ? "Sign up" : "Log in"}
             </button>
           </p>
 
           <div className="mt-7 flex items-center gap-3">
-            <span className="h-px flex-1 bg-[#3d5847]" />
-            <span className="text-[10px] font-semibold tracking-widest text-[#8fa090] uppercase">
+            <span className="h-px flex-1 bg-[#e2d6c8]" />
+            <span className="text-[10px] font-semibold tracking-widest text-[#a39b8d] uppercase">
               Or, faster
             </span>
-            <span className="h-px flex-1 bg-[#3d5847]" />
+            <span className="h-px flex-1 bg-[#e2d6c8]" />
           </div>
 
           <div className="mt-5 flex flex-col gap-3">
             <button
               type="button"
               onClick={handleApple}
-              className="flex items-center justify-center gap-2.5 rounded-full bg-[#f2ede0] px-6 py-3.5 text-sm font-semibold text-[#153a2e] transition-opacity hover:opacity-90"
+              className="flex items-center justify-center gap-2.5 rounded-full border border-[#e2d6c8] bg-white px-6 py-3.5 text-sm font-semibold text-ink transition-opacity hover:opacity-90"
             >
               <svg viewBox="0 0 384 512" className="h-4 w-4" fill="currentColor">
                 <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z" />
@@ -364,7 +324,7 @@ export function LoginForm() {
             <button
               type="button"
               onClick={handleGoogle}
-              className="flex items-center justify-center gap-2.5 rounded-full bg-[#f2ede0] px-6 py-3.5 text-sm font-semibold text-[#153a2e] transition-opacity hover:opacity-90"
+              className="flex items-center justify-center gap-2.5 rounded-full border border-[#e2d6c8] bg-white px-6 py-3.5 text-sm font-semibold text-ink transition-opacity hover:opacity-90"
             >
               <svg viewBox="0 0 24 24" className="h-4 w-4">
                 <path
@@ -391,6 +351,22 @@ export function LoginForm() {
           </>
         )}
       </section>
+      </div>
+
+      <aside className="hidden flex-1 flex-col justify-between rounded-[14px] p-10 lg:flex" style={{ background: "linear-gradient(180deg,#cac9c8 0,#ac9f73 9%,#bb5706 19%,#8b3335 46%,#544b75 82%,#45699a 100%)" }}>
+        <p className="text-[11px] font-bold tracking-[0.15em] text-black/55 uppercase">Layout-preserving translation</p>
+        <div>
+          <h2 className="max-w-[420px] text-[38px] leading-[1.08] font-medium tracking-tight text-white">
+            Translate the document. Keep the design.
+          </h2>
+          <ul className="mt-6 space-y-2 text-[14px] text-white/80">
+            <li>InDesign, PDF, Word, PowerPoint, Excel and images</li>
+            <li>40+ languages, right-to-left included</li>
+            <li>Fonts, columns, tables and page breaks stay put</li>
+          </ul>
+        </div>
+      </aside>
+      </div>
     </div>
   );
 }

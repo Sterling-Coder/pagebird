@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AppNavRail } from "@/components/app/AppNavRail";
 import { AppTopBar } from "@/components/app/AppTopBar";
 import {
   acceptTeamInvite,
@@ -13,7 +12,6 @@ import {
 } from "@/lib/team";
 
 export default function TeamPage() {
-  const [navOpen, setNavOpen] = useState(true);
   const [team, setTeam] = useState<TeamInfo | null>(null);
   const [email, setEmail] = useState("");
   const [inviting, setInviting] = useState(false);
@@ -76,10 +74,9 @@ export default function TeamPage() {
   }
 
   return (
-    <div className="flex h-full w-full bg-paper">
-      {navOpen ? <AppNavRail /> : null}
+    <div className="flex h-full w-full bg-white">
       <div className="flex min-w-0 flex-1 flex-col">
-        <AppTopBar navOpen={navOpen} onToggleNav={() => setNavOpen((v) => !v)} breadcrumb="Team" />
+        <AppTopBar breadcrumb="Team" />
         <div className="flex min-h-0 flex-1 overflow-auto p-6">
           <div className="w-full max-w-xl">
             <h1 className="mb-1 text-lg font-bold text-ink">Team</h1>

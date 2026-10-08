@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname, useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getProject, type Project } from "@/lib/projects";
-import { AppNavRail } from "@/components/app/AppNavRail";
 import { AppTopBar } from "@/components/app/AppTopBar";
 
 const TABS = [
@@ -18,19 +17,15 @@ export default function ProjectLayout({ children }: { children: React.ReactNode 
   const pathname = usePathname();
   const params = useParams<{ projectId: string }>();
   const [project, setProject] = useState<Project | null>(null);
-  const [navOpen, setNavOpen] = useState(true);
 
   useEffect(() => {
     getProject(params.projectId).then(setProject).catch(() => setProject(null));
   }, [params.projectId]);
 
   return (
-    <div className="flex h-full w-full bg-paper">
-      {navOpen ? <AppNavRail /> : null}
+    <div className="flex h-full w-full bg-white">
       <div className="flex min-w-0 flex-1 flex-col">
         <AppTopBar
-          navOpen={navOpen}
-          onToggleNav={() => setNavOpen((v) => !v)}
           breadcrumb={
             <span>
               Projects / {project?.name ?? "…"} /{" "}
