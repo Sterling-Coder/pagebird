@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "Pagebirdy Translate",
+  "version": "0.1.0",
+  "description": "Select text to translate it, or translate the whole page. Powered by Pagebirdy.",
+  "icons": { "16": "icons/icon16.png", "48": "icons/icon48.png", "128": "icons/icon128.png" },
+  "action": {
+    "default_title": "Pagebirdy Translate",
+    "default_popup": "popup.html",
+    "default_icon": { "16": "icons/icon16.png", "48": "icons/icon48.png" }
+  },
+  "background": { "service_worker": "background.js", "type": "module" },
+  "content_scripts": [
+    { "matches": ["http://*/*", "https://*/*"], "js": ["content.js"], "run_at": "document_idle" }
+  ],
+  "permissions": ["storage", "contextMenus", "activeTab"],
+  "host_permissions": ["http://localhost:8000/*", "https://*.supabase.co/*", "https://*.up.railway.app/*"]
+}

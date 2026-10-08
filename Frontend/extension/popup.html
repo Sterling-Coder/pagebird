@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Pagebirdy Translate</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header><span class="logo">page<b>birdy</b></span><span id="who"></span></header>
+
+  <section id="signedOut" hidden>
+    <p class="muted">Sign in with your Pagebirdy account to translate.</p>
+    <form id="loginForm">
+      <input id="email" type="email" placeholder="Email" autocomplete="username" required>
+      <input id="password" type="password" placeholder="Password" autocomplete="current-password" required>
+      <button type="submit" class="primary">Sign in</button>
+    </form>
+    <p class="muted small">No account? <a id="signupLink" href="#" target="_blank" rel="noopener">Create one free</a></p>
+  </section>
+
+  <section id="signedIn" hidden>
+    <label for="lang">Translate into</label>
+    <select id="lang"></select>
+
+    <label class="check"><input id="selectionButton" type="checkbox"> Show a translate button when I select text</label>
+
+    <div class="actions">
+      <button id="translatePage" class="primary">Translate this page</button>
+      <button id="showOriginal" hidden>Show original</button>
+    </div>
+    <p class="muted small">Tip: select any word or sentence and click the <b>文</b> button, or right-click it.</p>
+    <button id="signOut" class="link">Sign out</button>
+  </section>
+
+  <p id="msg" role="status"></p>
+  <script type="module" src="popup.js"></script>
+</body>
+</html>
