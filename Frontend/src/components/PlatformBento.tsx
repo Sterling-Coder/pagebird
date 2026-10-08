@@ -13,15 +13,15 @@ type CardProps = {
 function Card({ title, desc, bg, hue, className = "", side = false, children }: CardProps) {
   return (
     <div
-      className={`flex flex-col overflow-hidden rounded-[20px] ${side ? "md:flex-row" : ""} ${className}`}
+      className={`flex flex-col overflow-hidden rounded-[24px] ${side ? "md:flex-row" : ""} ${className}`}
       style={{ background: bg, color: hue }}
     >
       <div className={`p-6 ${side ? "md:w-[36%] md:shrink-0" : "pb-0"}`}>
-        <h3 className="text-[15px] font-semibold">{title}</h3>
-        <p className="mt-2 text-[13.5px] leading-relaxed opacity-80">{desc}</p>
+        <h3 className="text-[15px] font-medium">{title}</h3>
+        <p className="mt-2 text-[14px] leading-relaxed opacity-90">{desc}</p>
       </div>
       <div
-        className={`mt-5 flex-1 border-t border-l border-white/[0.07] bg-[#141311] p-4 text-[#f0ece3] ${
+        className={`mt-5 flex-1 border-t border-l border-white/[0.06] bg-[#1c1b19] p-4 text-[#f0ece3] ${
           side ? "ml-6 rounded-tl-xl md:mt-6 md:ml-0 md:rounded-l-xl md:border-b-0" : "ml-6 rounded-tl-xl"
         }`}
       >
@@ -97,20 +97,24 @@ export default function PlatformBento() {
   return (
     <section style={{ background: "#0a0908", position: "relative", zIndex: 20, isolation: "isolate" }}>
       <div className="mx-auto max-w-[1100px] px-8 py-24 lg:px-14">
-        <h2
-          className="pb-stencil mb-12 max-w-[560px]"
-          style={{ fontSize: "clamp(2rem,3.5vw,3.2rem)", lineHeight: 1.05 }}
-        >
-          Everything your global<br />team needs.
-        </h2>
+        <div className="mb-10 max-w-[520px]">
+          <h2 className="text-[24px] font-normal leading-snug text-[#f0ece3]">
+            Everything your global team needs
+          </h2>
+          <p className="mt-4 text-[15px] leading-relaxed text-[#a8a49a]">
+            Agents built for each format, every language you ship in, and the
+            tools your team already opens. Not another dashboard waiting for
+            you to fill it.
+          </p>
+        </div>
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-6">
           {/* Agents — violet */}
           <Card
             side
             className="md:col-span-4 md:min-h-[360px]"
-            bg="#3a1a8c"
-            hue="#d2bcff"
+            bg="#3b1655"
+            hue="#c493ff"
             title="Translation agents"
             desc="One agent per format, each built around how that file actually works."
           >
@@ -131,8 +135,8 @@ export default function PlatformBento() {
           {/* Languages — navy */}
           <Card
             className="md:col-span-2 md:min-h-[360px]"
-            bg="#0d2d5e"
-            hue="#9cc2ff"
+            bg="#0f3256"
+            hue="#7fb2ec"
             title="40+ languages"
             desc="Right-to-left scripts are mirrored inside the page, not just reversed."
           >
@@ -149,15 +153,15 @@ export default function PlatformBento() {
 
           {/* Workflow — neutral dotted */}
           <div
-            className="flex flex-col overflow-hidden rounded-[20px] p-6 md:col-span-3 md:min-h-[300px]"
+            className="flex flex-col overflow-hidden rounded-[24px] p-6 md:col-span-3 md:min-h-[300px]"
             style={{
-              background: "#1c1b19",
+              background: "#1f1e1c",
               color: "#f0ece3",
               backgroundImage: "radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px)",
               backgroundSize: "20px 20px",
             }}
           >
-            <h3 className="text-[15px] font-semibold">Upload to delivery, hands-off</h3>
+            <h3 className="text-[15px] font-medium">Upload to delivery, hands-off</h3>
             <p className="mt-2 max-w-[340px] text-[13.5px] leading-relaxed text-white/60">
               Drop a file in. Each step runs in order and the result comes back in the same format.
             </p>
@@ -169,7 +173,7 @@ export default function PlatformBento() {
                 { k: "Deliver", v: "Return", c: "#6f9cff" },
               ].map((n, i, arr) => (
                 <div key={n.k} className="flex min-w-0 flex-1 items-center gap-2">
-                  <div className="min-w-0 flex-1 rounded-xl border border-white/10 bg-[#141311] px-3 py-2.5">
+                  <div className="min-w-0 flex-1 rounded-xl border border-white/10 bg-[#2a2927] px-3 py-2.5">
                     <div className="text-[11px] font-medium" style={{ color: n.c }}>{n.k}</div>
                     <div className="mt-0.5 truncate text-[12.5px]">{n.v}</div>
                   </div>
@@ -183,8 +187,8 @@ export default function PlatformBento() {
           <div className="relative md:col-span-3 md:min-h-[300px]">
             <Card
               className="h-full"
-              bg="#6b1741"
-              hue="#ff9cc4"
+              bg="#4d1a38"
+              hue="#ee6a8c"
               title="It keeps going"
               desc="Translation runs in the background. Close the tab, and the finished file lands in your inbox."
             >
@@ -209,15 +213,15 @@ export default function PlatformBento() {
             <span
               aria-hidden
               className="pointer-events-none absolute top-0 right-0 h-10 w-10"
-              style={{ background: "linear-gradient(225deg, #0a0908 50%, #8f2358 50%)", borderTopRightRadius: "20px" }}
+              style={{ background: "linear-gradient(225deg, #0a0908 50%, #6a2449 50%)", borderTopRightRadius: "24px" }}
             />
           </div>
 
           {/* Formats — umber */}
           <Card
             className="md:col-span-2 md:min-h-[380px]"
-            bg="#5c2c0c"
-            hue="#ffc27a"
+            bg="#3d2410"
+            hue="#f0b46a"
             title="Formats"
             desc="Native files in, native files out. More are on the way."
           >
@@ -239,8 +243,8 @@ export default function PlatformBento() {
           {/* Integrations — teal */}
           <Card
             className="md:col-span-2 md:min-h-[380px]"
-            bg="#0c3a3c"
-            hue="#7fe0d0"
+            bg="#0f3537"
+            hue="#6fd0c0"
             title="Works with your tools"
             desc="Open translated files straight in the apps your team already uses."
           >
@@ -266,8 +270,8 @@ export default function PlatformBento() {
           {/* Glossary — olive */}
           <Card
             className="md:col-span-2 md:min-h-[380px]"
-            bg="#2f4a12"
-            hue="#c4e684"
+            bg="#2c3d0f"
+            hue="#a4c862"
             title="Glossary"
             desc="Lock brand terms so they are never translated or reworded."
           >
@@ -296,13 +300,13 @@ export default function PlatformBento() {
 
           {/* Industries — neutral */}
           <div
-            className="overflow-hidden rounded-[20px] p-6 md:col-span-4"
-            style={{ background: "#1c1b19", color: "#f0ece3" }}
+            className="overflow-hidden rounded-[24px] p-6 md:col-span-4"
+            style={{ background: "#1f1e1c", color: "#f0ece3" }}
           >
-            <h3 className="text-[15px] font-semibold">For every team that ships in more than one language</h3>
+            <h3 className="text-[15px] font-medium">For every team that ships in more than one language</h3>
             <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {INDUSTRIES.map((i) => (
-                <div key={i.label} className="flex items-center gap-2.5 rounded-lg bg-[#141311] px-3 py-3 text-[13px]">
+                <div key={i.label} className="flex items-center gap-2.5 rounded-xl bg-[#2a2927] px-3 py-3 text-[13px]">
                   <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: i.color }} />
                   {i.label}
                 </div>
@@ -313,8 +317,8 @@ export default function PlatformBento() {
           {/* QA — indigo */}
           <Card
             className="md:col-span-2"
-            bg="#1f1f6b"
-            hue="#aab0ff"
+            bg="#1c1f52"
+            hue="#9aa4ff"
             title="QA report"
             desc="Run a report on any finished job. Flagged segments are listed for review."
           >

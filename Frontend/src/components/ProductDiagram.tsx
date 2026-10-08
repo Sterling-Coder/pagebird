@@ -220,7 +220,7 @@ export default function ProductDiagram() {
   const product = PRODUCTS[active];
 
   return (
-    <section style={{ background: "#0c0b09", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+    <section style={{ background: "#0a0908" }}>
       <div className="mx-auto max-w-[1100px] px-8 py-24 lg:px-14 lg:py-36">
 
         <div className="mb-14">

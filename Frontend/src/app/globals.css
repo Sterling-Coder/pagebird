@@ -276,3 +276,106 @@ body {
 }
 
 .footer-link:hover { color: rgba(240,236,227,0.75) !important; }
+
+/* Hero background: a warm light ramp (grey-olive edge, a bright yellow band,
+   orange, rust, wine, plum, then blue) that stays put while the page scrolls. */
+.pb-hero {
+  --pb-col: calc(100vw * 1102 / 6 / 1440); /* the text column in six */
+  --pb-reed: calc(100vw / 14); /* one glass reed, narrower than the text columns */
+  --pb-ramp: linear-gradient(180deg,
+    #8f8b78 0, #9c9672 7vh, #c4b850 10vh, #e3d03c 12.5vh, #d49a36 15vh, #c26a2c 19vh,
+    #b85a2a 28vh, #a64e30 42vh, #904237 54vh, #783e56 66vh, #5c4a7a 78vh, #44609c 90vh, #3a6aa8 100vh);
+}
+.pb-backdrop { background: var(--pb-ramp); }
+/* As the visitor scrolls on, the reeds dissolve into the flat ramp and the
+   hairline rules return, carrying the columns into the next section. */
+.pb-wall { opacity: calc(1 - var(--pb-scroll, 0)); filter: saturate(1.06); }
+.pb-hero-rules {
+  background-image: repeating-linear-gradient(90deg,
+    rgba(255, 255, 255, 0.16) 0, rgba(255, 255, 255, 0.16) 1px,
+    transparent 1px, transparent var(--pb-reed));
+  background-position: 50% 0;
+  opacity: calc(var(--pb-scroll, 0) * 0.6);
+}
+/* One reed: the ramp at its own vertical offset. Flat on arrival, formed once
+   the app window has built, then swaying slowly. */
+.pb-reed {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  /* Neighbouring reeds overlap and feather into each other, so a seam reads as
+     a soft bend in the light, not a drawn line. */
+  width: calc(var(--pb-reed) + 28px);
+  margin-left: -14px;
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 22px, #000 calc(100% - 22px), transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 22px, #000 calc(100% - 22px), transparent 100%);
+  background: var(--pb-ramp);
+  background-size: 100% 104vh;
+  background-position: 0 var(--off);
+  animation-name: pb-reed-form, pb-reed-sway;
+  animation-timing-function: cubic-bezier(.2, .7, .2, 1), ease-in-out;
+  animation-iteration-count: 1, infinite;
+  animation-direction: normal, alternate;
+  animation-fill-mode: both, none;
+}
+@keyframes pb-reed-form {
+  from { background-position: 0 0; background-size: 100% 100vh; }
+  to   { background-position: 0 var(--off); background-size: 100% 104vh; }
+}
+@keyframes pb-reed-sway {
+  from { background-position: 0 var(--off); }
+  to   { background-position: 0 var(--off2); }
+}
+/* The glass: darker toward each seam, a soft highlight mid-panel, a bright
+   shoulder and a faint colour split at the seam itself. */
+.pb-reed-glass {
+  /* Soft glass, no hard seam lines: each reed just darkens a little toward its
+     edges and catches a gentle highlight off-centre. */
+  position: absolute;
+  inset: 0 -6px;
+  background: linear-gradient(90deg,
+    rgba(0, 0, 0, 0.10) 0, rgba(0, 0, 0, 0.03) 14%, rgba(255, 255, 255, 0.07) 38%,
+    rgba(255, 255, 255, 0.03) 62%, rgba(0, 0, 0, 0.04) 86%, rgba(0, 0, 0, 0.11) 100%);
+  filter: blur(6px);
+  animation: pb-fade 1.4s ease-out both;
+}
+/* Hairline columns, a seam on the page's centre line. Visible on arrival,
+   gone once the app window has filled in. */
+.pb-hero-grid {
+  background-image: repeating-linear-gradient(90deg,
+    rgba(255, 255, 255, 0.16) 0, rgba(255, 255, 255, 0.16) 1px,
+    transparent 1px, transparent var(--pb-reed));
+  background-position: 50% 0;
+  animation: pb-hero-grid 3.2s ease-in-out both;
+}
+@keyframes pb-hero-grid {
+  0%   { opacity: 0; }
+  10%  { opacity: 1; }
+  55%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+/* App window builds in: an outline first, then the panels fill, then content. */
+.pb-mock { animation: pb-mock-frame 1.6s ease-out 0.5s both; }
+.pb-mock-fill { animation: pb-mock-fill 0.7s ease-out both; }
+.pb-mock-fill-1 { animation-delay: 1.3s; }
+.pb-mock-fill-2 { animation-delay: 1.8s; }
+.pb-mock-content { animation: pb-fade 0.6s ease-out 2.3s both; }
+@keyframes pb-mock-frame {
+  from { background-color: transparent; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.45); }
+  45%  { background-color: transparent; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.45); }
+  to   { }
+}
+@keyframes pb-mock-fill {
+  from { background-color: transparent; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35); }
+  to   { }
+}
+@keyframes pb-fade { from { opacity: 0; } to { opacity: 1; } }
+.pb-hero-grain {
+  opacity: 0.10;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+@media (prefers-reduced-motion: reduce) {
+  .pb-reed, .pb-reed-glass, .pb-mock, .pb-mock-fill, .pb-mock-content { animation: none; }
+  .pb-hero-grid { animation: none; opacity: 0; }
+}

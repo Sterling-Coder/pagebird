@@ -256,7 +256,7 @@ export default function IntegrationFlow() {
   return (
     <section
       ref={secRef}
-      style={{ background: "#0a0908", borderTop: "1px solid rgba(255,255,255,0.05)", position: "relative", overflow: "hidden" }}
+      style={{ background: "#0a0908", position: "relative", overflow: "hidden" }}
     >
       <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-28" style={{ position: "relative" }}>
 

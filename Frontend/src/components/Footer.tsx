@@ -17,7 +17,7 @@ export default function Footer() {
   return (
     <footer
       style={{
-        background: "rgba(8,7,6,0.98)",
+        background: "#0a0908",
         backdropFilter: "blur(20px)",
         WebkitBackdropFilter: "blur(20px)",
       }}

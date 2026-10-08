@@ -38,7 +38,7 @@ const inter = Inter({
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
   return (
     <div
-      className={`${fraunces.variable} ${spaceMono.variable} ${shareTechMono.variable} ${inter.variable} relative flex min-h-screen shrink-0 flex-col bg-pb-bg text-pb-text antialiased`}
+      className={`${fraunces.variable} ${spaceMono.variable} ${shareTechMono.variable} ${inter.variable} relative flex min-h-screen shrink-0 flex-col bg-[#0a0908] text-pb-text antialiased`}
     >
       {/* Full-page vertical grid lines — fixed overlay like giga.ai */}
       <div className="pointer-events-none fixed inset-0 z-10" aria-hidden="true">
