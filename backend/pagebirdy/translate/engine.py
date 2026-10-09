@@ -217,7 +217,7 @@ _EXAMPLES = {
 }
 
 
-def _system_prompt(doc_context: str, lang) -> str:
+def _system_prompt(doc_context: str, lang, extra_rules: str = "") -> str:
     ctx = f" Document context: {doc_context}." if doc_context else ""
     terms = glossary.prompt_block(lang.code)
     block = f"2. Use this glossary authoritatively (source -> target):\n{terms}\n" if terms else ""
@@ -226,7 +226,7 @@ def _system_prompt(doc_context: str, lang) -> str:
         glossary=block,
         context=ctx,
         examples=_EXAMPLES.get(lang.code, ""),
-    )
+    ) + extra_rules
 
 
 def _parse_batch(text: str, chunk: list[str]) -> list[str]:
@@ -251,7 +251,8 @@ def _parse_batch(text: str, chunk: list[str]) -> list[str]:
 
 
 class OpenAIEngine(_ChunkedEngine):
-    def __init__(self, model: str = "gpt-5.2", doc_context: str = "", lang=None):
+    def __init__(self, model: str = "gpt-5.2", doc_context: str = "", lang=None,
+                 extra_rules: str = ""):
         import openai  # lazy: optional dep
 
         super().__init__()
@@ -261,7 +262,7 @@ class OpenAIEngine(_ChunkedEngine):
         self.client = openai.OpenAI(max_retries=8)
         self.model = model
         self.name = f"openai:{model}"
-        self._system = _system_prompt(doc_context, lang or languages.get(None))
+        self._system = _system_prompt(doc_context, lang or languages.get(None), extra_rules)
 
     def _translate_chunk(self, chunk: list[str]) -> list[str]:
         # gpt-5 family only supports the default temperature (1) — passing 0
@@ -280,14 +281,15 @@ class OpenAIEngine(_ChunkedEngine):
 
 
 class AnthropicEngine(_ChunkedEngine):
-    def __init__(self, model: str = "claude-sonnet-5", doc_context: str = "", lang=None):
+    def __init__(self, model: str = "claude-sonnet-5", doc_context: str = "", lang=None,
+                 extra_rules: str = ""):
         import anthropic  # imported lazily so the dep is optional
 
         super().__init__()
         self.client = anthropic.Anthropic()
         self.model = model
         self.name = f"anthropic:{model}"
-        self._system = _system_prompt(doc_context, lang or languages.get(None))
+        self._system = _system_prompt(doc_context, lang or languages.get(None), extra_rules)
 
     def _translate_chunk(self, chunk: list[str]) -> list[str]:
         payload = json.dumps({"inputs": chunk}, ensure_ascii=False)
@@ -378,7 +380,8 @@ def _strip_fence(text: str) -> str:
     return t.strip()
 
 
-def build_engines(doc_context: str = "", target_lang: str | None = None
+def build_engines(doc_context: str = "", target_lang: str | None = None,
+                  extra_rules: str = ""
                   ) -> tuple[Engine, Optional[Engine]]:
     """(primary, secondary) chosen from available API keys; identity fallback.
 
@@ -399,11 +402,15 @@ def build_engines(doc_context: str = "", target_lang: str | None = None
             primary = OpenAIEngine(
                 os.environ.get("BABEL_LLM_MODEL", "gpt-5.2"),
                 doc_context=doc_context, lang=lang,
+                # Only when set: the call every existing path makes is unchanged.
+                **({"extra_rules": extra_rules} if extra_rules else {}),
             )
         elif provider == "anthropic" and has_anthropic:
             primary = AnthropicEngine(
                 os.environ.get("BABEL_LLM_MODEL", "claude-sonnet-5"),
                 doc_context=doc_context, lang=lang,
+                # Only when set: the call every existing path makes is unchanged.
+                **({"extra_rules": extra_rules} if extra_rules else {}),
             )
     except Exception:  # SDK missing or client init failed — stay offline, don't crash
         primary = IdentityEngine()

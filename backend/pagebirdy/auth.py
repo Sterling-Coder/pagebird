@@ -6,6 +6,7 @@ rejected immediately rather than trusting a locally-cached signing key.
 
 from __future__ import annotations
 
+import logging
 import os
 import time
 
@@ -13,6 +14,8 @@ import requests
 from fastapi import HTTPException, Request
 
 from pagebirdy.config import load_env
+
+log = logging.getLogger("pagebirdy.auth")
 
 load_env()
 
@@ -115,18 +118,35 @@ def get_or_create_profile(user: dict) -> dict:
     if not _SUPABASE_URL or not _SUPABASE_SERVICE_ROLE_KEY:
         raise HTTPException(status_code=500, detail="Supabase is not configured on the server")
 
+    base_select = "email,created_at,trial_ends_at,first_name,last_name,full_name"
     resp = requests.get(
         f"{_SUPABASE_URL}/rest/v1/profiles",
-        params={"id": f"eq.{user['id']}", "select": "email,created_at,trial_ends_at,first_name,last_name,full_name"},
+        params={"id": f"eq.{user['id']}", "select": base_select + ",avatar_url"},
         headers=_service_headers(),
         timeout=10,
     )
+    if resp.status_code == 400 and "avatar_url" in resp.text:
+        # profiles.avatar_url arrives with migration f3a9c2d1e8b4. Until it has
+        # run, load the profile without it instead of failing every page.
+        log.warning("profiles.avatar_url is missing; run `alembic upgrade head`")
+        resp = requests.get(
+            f"{_SUPABASE_URL}/rest/v1/profiles",
+            params={"id": f"eq.{user['id']}", "select": base_select},
+            headers=_service_headers(),
+            timeout=10,
+        )
     resp.raise_for_status()
     rows = resp.json()
     if rows and rows[0].get("trial_ends_at"):
         return rows[0]
     trial_ends_at = _create_profile(user)
-    return {"email": user.get("email"), "created_at": None, "trial_ends_at": trial_ends_at}
+    return {"email": user.get("email"), "created_at": None, "trial_ends_at": trial_ends_at,
+            "first_name": None, "last_name": None, "full_name": None, "avatar_url": None}
+
+
+def invalidate_profile_name_cache(user_id: str) -> None:
+    """Call after a profile's name changes so "created by" labels pick it up."""
+    _profile_name_cache.pop(user_id, None)
 
 
 def get_profile_names(user_ids: list[str]) -> dict[str, str]:

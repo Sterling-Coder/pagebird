@@ -1,0 +1,15 @@
+:root { color-scheme: light; }
+body { width: 300px; margin: 0; padding: 14px; font: 13px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; background: #fffaf4; color: #15130f; }
+header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+.logo { font-weight: 600; font-size: 16px; } .logo b { color: #c86018; }
+#who { font-size: 11px; color: #8a6a4a; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+label { display: block; margin: 8px 0 4px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: #8a6a4a; }
+label.check { text-transform: none; letter-spacing: 0; font-size: 12.5px; color: #15130f; margin: 10px 0; display: flex; gap: 6px; align-items: center; }
+input[type=email], input[type=password], select { width: 100%; box-sizing: border-box; padding: 7px 8px; margin-bottom: 8px; border: 1px solid #d9c9b6; border-radius: 6px; background: #fff; font: inherit; }
+button { font: inherit; border: 1px solid #d9c9b6; background: #fff; border-radius: 6px; padding: 7px 10px; cursor: pointer; }
+button.primary { background: #c86018; border-color: #c86018; color: #fff; font-weight: 600; width: 100%; }
+button.link { border: 0; background: none; color: #8a6a4a; text-decoration: underline; padding: 4px 0; }
+.actions { display: grid; gap: 6px; margin-top: 6px; }
+.muted { color: #8a6a4a; margin: 6px 0; } .small { font-size: 11.5px; }
+#msg { min-height: 16px; margin: 8px 0 0; font-size: 12px; } #msg.err { color: #a8321a; }
+[hidden] { display: none !important; }

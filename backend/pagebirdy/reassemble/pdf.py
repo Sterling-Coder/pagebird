@@ -1024,7 +1024,13 @@ def _strip_ai_private_data(doc) -> None:
 
 
 def rebuild_pdf(src_pdf: str, segments: list[Segment], out_path: str,
-                target_lang: str | None = None) -> list[LineOutcome]:
+                target_lang: str | None = None,
+                keep_orientation: bool = False) -> list[LineOutcome]:
+    """`keep_orientation` says this file is a picture (an Illustrator artboard)
+    rather than a page: an RTL page is mirrored so what sat against the left
+    margin sits against the right one, but an artboard has no margins and no
+    reading direction, and mirroring a graph would reverse its axes. The text
+    itself still gets its RTL shaping and direction."""
     lang = languages.get(target_lang)
     if not _font_for(Segment("probe", 0, (0, 0, 1, 1), "", 11, 0, "x"), lang):
         raise ValueError(
@@ -1146,7 +1152,7 @@ def rebuild_pdf(src_pdf: str, segments: list[Segment], out_path: str,
                 replace = [clipped.get(s.id, s) for s in replace]
                 page_segs = [clipped.get(s.id, s) for s in page_segs]
 
-            if lang.direction == "rtl":
+            if lang.direction == "rtl" and not keep_orientation:
                 page, replace, page_segs = _mirror_for_rtl(
                     page, replace, page_segs, artwork.values())
             # Images carrying a soft mask (rounded corners, drop shadows —

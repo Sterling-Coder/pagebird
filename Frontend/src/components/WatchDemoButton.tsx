@@ -5,9 +5,9 @@ export function WatchDemoButton() {
     <button
       type="button"
       onClick={() => window.dispatchEvent(new Event("pb-open-demo-video"))}
-      className="flex h-14 items-center border-[3px] border-l-0 border-pb-ink px-6.5 text-[15px] font-bold"
+      className="font-pb-mono text-[12px] tracking-widest text-pb-text-secondary uppercase transition-colors hover:text-pb-text"
     >
-      Watch demo
+      Watch demo →
     </button>
   );
 }

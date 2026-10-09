@@ -1,106 +1,136 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Fraunces } from "next/font/google";
+import { ME_UPDATED_EVENT, getMe, type Me } from "@/lib/team";
+import { Avatar } from "./Avatar";
+import { useAppShell } from "./AppShell";
+import { SidebarIcon } from "./AppTopBar";
+import { ThemeToggle } from "./ThemeToggle";
+import { ICON, Icon } from "./ui";
 
-const fraunces = Fraunces({
-  variable: "--font-navrail-display",
-  subsets: ["latin"],
-  weight: ["600"],
-  style: ["italic"],
-});
+type Item = {
+  label: string;
+  href: string;
+  icon: string;
+  badge?: string;
+  isActive: (path: string) => boolean;
+};
 
-const NAV_ITEMS = [
+// Project detail pages live under /app/jobs/<projectId>/..., so "Jobs" is the
+// board at /app/jobs exactly and everything below it belongs to "Projects".
+const GROUPS: { heading?: string; items: Item[] }[] = [
+  { items: [{ label: "Home", href: "/app", icon: ICON.home, isActive: (p) => p === "/app" }] },
   {
-    label: "Jobs",
-    href: "/app",
-    enabled: true,
-    isActive: (path: string) => path === "/app" || path.startsWith("/app/jobs"),
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="h-5 w-5">
-        <path d="M6 2h9l5 5v15H6z" />
-        <path d="M15 2v5h5" />
-      </svg>
-    ),
+    items: [
+      { label: "Inbox", href: "/app/inbox", icon: ICON.inbox, isActive: (p) => p === "/app/inbox" },
+      { label: "Jobs", href: "/app/jobs", icon: ICON.jobs, isActive: (p) => p === "/app/jobs" },
+      {
+        label: "Projects", href: "/app/projects", icon: ICON.projects,
+        isActive: (p) => p.startsWith("/app/projects") || (p.startsWith("/app/jobs/") && p !== "/app/jobs"),
+      },
+    ],
   },
   {
-    label: "Team",
-    href: "/app/team",
-    enabled: true,
-    isActive: (path: string) => path === "/app/team",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="h-5 w-5">
-        <circle cx="9" cy="8" r="3" />
-        <path d="M2 21c0-3.9 3.1-7 7-7s7 3.1 7 7" />
-        <path d="M16 4.2a3 3 0 0 1 0 5.8" />
-        <path d="M22 21c0-3.3-2.3-6-5.5-6.8" />
-      </svg>
-    ),
+    items: [
+      { label: "Agents", href: "/app/agents", icon: ICON.agents, isActive: (p) => p.startsWith("/app/agents") },
+      { label: "Glossary", href: "/app/glossary", icon: ICON.glossary, isActive: (p) => p === "/app/glossary" },
+      { label: "Workflows", href: "/app/workflows", icon: ICON.flow, badge: "Beta", isActive: (p) => p === "/app/workflows" },
+    ],
   },
   {
-    label: "Settings",
-    href: "/app/settings",
-    enabled: true,
-    isActive: (path: string) => path === "/app/settings",
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="h-5 w-5">
-        <circle cx="12" cy="12" r="3" />
-        <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
-      </svg>
-    ),
+    heading: "Labs",
+    items: [{ label: "Extension", href: "/app/extension", icon: ICON.puzzle, badge: "New", isActive: (p) => p === "/app/extension" }],
   },
 ];
 
+const FOOTER: Item[] = [
+  // /app/settings redirects to /app/profile, so Profile is the one entry for both.
+  {
+    label: "Profile", href: "/app/profile", icon: ICON.user,
+    isActive: (p) => p.startsWith("/app/profile") || p.startsWith("/app/settings"),
+  },
+  { label: "Team", href: "/app/team", icon: ICON.team, isActive: (p) => p === "/app/team" },
+];
+
+function NavLink({ item, pathname }: { item: Item; pathname: string }) {
+  const active = item.isActive(pathname);
+  return (
+    <Link
+      href={item.href}
+      data-tour={"nav-" + item.label.toLowerCase()}
+      aria-current={active ? "page" : undefined}
+      className={`flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13px] transition-colors ${
+        active
+          ? "bg-[var(--app-nav-active)] font-semibold text-[color:var(--app-ink)]"
+          : "text-[color:var(--app-nav-ink)] hover:bg-[var(--app-nav-hover)] hover:text-[color:var(--app-ink)]"
+      }`}
+    >
+      <span className={active ? "text-[color:var(--app-ink)]" : "text-[color:var(--app-muted)]"}><Icon d={item.icon} /></span>
+      {item.label}
+      {item.badge ? <span className="ml-auto text-[11px] font-normal text-[color:var(--app-muted)]">{item.badge}</span> : null}
+    </Link>
+  );
+}
+
 export function AppNavRail() {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "";
+  const { toggleNav } = useAppShell();
+  const [me, setMe] = useState<Partial<Me> | null>(null);
+
+  useEffect(() => {
+    getMe().then(setMe).catch(() => setMe(null));
+    const onUpdate = (e: Event) => setMe((prev) => ({ ...prev, ...(e as CustomEvent<Partial<Me>>).detail }));
+    window.addEventListener(ME_UPDATED_EVENT, onUpdate);
+    return () => window.removeEventListener(ME_UPDATED_EVENT, onUpdate);
+  }, []);
+
+  const name = me?.full_name || me?.email || null;
 
   return (
-    <div className="flex h-full w-56 shrink-0 flex-col border-r-[3px] border-[#0f2a20] bg-[#153a2e] py-4">
-      <div className="mb-6 px-4">
-        <span
-          className={`${fraunces.variable} text-lg italic text-[#f2ede0]`}
-          style={{ fontFamily: "var(--font-navrail-display), Georgia, serif" }}
+    <aside className="hidden w-[214px] shrink-0 flex-col px-2 pb-3 pt-3 md:flex">
+      <div className="flex items-center justify-between pb-4 pl-2.5 pr-1 pt-1">
+        <Link href="/app" aria-label="Pagebirdy home">
+          <span className="text-[14px] tracking-[0.04em]" style={{ fontFamily: "var(--font-mono), monospace" }}>
+            <span className="text-[color:var(--app-ink-soft)]">page</span>
+            <span className="text-[#e08a6f]">birdy</span>
+          </span>
+        </Link>
+        <button
+          type="button"
+          onClick={toggleNav}
+          aria-label="Collapse sidebar"
+          className="rounded-md p-1 text-[color:var(--app-muted)] transition-colors hover:bg-[var(--app-nav-hover)] hover:text-[color:var(--app-ink)]"
         >
-          page<span className="text-[#e08a6f]">birdy</span>
-        </span>
+          <SidebarIcon />
+        </button>
       </div>
 
-      <nav className="flex flex-1 flex-col gap-1 px-2">
-        {NAV_ITEMS.map((item) => {
-          const active = item.enabled && item.isActive(pathname ?? "");
-          const className = `relative flex items-center gap-3 px-3 py-2 text-sm transition-colors ${
-            active
-              ? "bg-[#e08a6f]/15 text-[#e08a6f]"
-              : item.enabled
-                ? "text-[#c9c4b0] hover:bg-[#1e4536] hover:text-[#f2ede0]"
-                : "text-[#c9c4b0]/40"
-          }`;
-          const content = (
-            <>
-              {active ? (
-                <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 bg-[#e08a6f]" />
-              ) : null}
-              {item.icon}
-              <span>{item.label}</span>
-            </>
-          );
-
-          if (!item.enabled || !item.href) {
-            return (
-              <span key={item.label} aria-label={item.label} aria-disabled="true" className={className}>
-                {content}
-              </span>
-            );
-          }
-
-          return (
-            <Link key={item.label} href={item.href} aria-label={item.label} className={className}>
-              {content}
-            </Link>
-          );
-        })}
+      <nav className="flex flex-1 flex-col gap-3.5">
+        {GROUPS.map((group, i) => (
+          <div key={i} className="flex flex-col gap-0.5">
+            {group.heading ? <p className="px-2.5 pb-1 pt-2 text-[11px] text-[color:var(--app-muted)]">{group.heading}</p> : null}
+            {group.items.map((item) => <NavLink key={item.label} item={item} pathname={pathname} />)}
+          </div>
+        ))}
+        <div className="mt-auto flex flex-col gap-0.5">
+          {FOOTER.map((item) => <NavLink key={item.label} item={item} pathname={pathname} />)}
+        </div>
       </nav>
-    </div>
+
+      <div className="mt-2 flex items-center gap-2 border-t border-[color:var(--app-rail-rule)] pb-1 pl-2.5 pr-1 pt-3">
+        <Link
+          href="/app/profile"
+          data-tour="nav-user"
+          aria-label="Your profile"
+          className="flex min-w-0 flex-1 items-center gap-2.5 transition-colors hover:text-[color:var(--app-ink)]"
+        >
+          <Avatar url={me?.avatar_url} name={name ?? "?"} seed={me?.email ?? undefined} size={24} />
+          <span className="truncate text-[12.5px] text-[color:var(--app-ink)]">{name ?? "Account"}</span>
+        </Link>
+        <ThemeToggle className="shrink-0" />
+      </div>
+    </aside>
   );
 }

@@ -21,6 +21,45 @@ _CONTROL_CHARS_RE = re.compile(
 )
 
 
+# Code points XML 1.0 cannot carry at all. Tab, newline and carriage return are
+# legal and not listed. Written as numbers, not escapes, so no editor or tool can
+# turn one into the invisible character it names.
+_XML_ILLEGAL = frozenset([*range(0x00, 0x09), 0x0B, 0x0C, *range(0x0E, 0x20),
+                          0xFFFE, 0xFFFF])
+# Invisible characters that do layout work in a document: InDesign's forced line
+# break inside a paragraph (U+2028) and its paragraph separator (U+2029).
+_LAYOUT_BREAKS = frozenset([0x2028, 0x2029])
+
+
+def xml_safe(text: str, source: str = "") -> str:
+    """`text` with every character XML cannot hold taken out.
+
+    An engine can hand back a control character the source never had — gpt-5-mini
+    was seen writing a NUL byte where the English held an invisible line break,
+    ' ⟦=5⟧<U+2028>⟦=8 + 5 = 13⟧' coming back as ' ⟦=5⟧<NUL>⟦=8 + 5 = 13⟧'. A NUL
+    cannot be written into IDML at all, so one such run failed the entire job at
+    write-back, and because the reply was cached, every re-run failed the same way.
+
+    Deleting it is not quite enough: that NUL was standing in for a break the
+    designer put there. So a layout break the source has and the translation lost
+    is put back in its place, in order; anything left over is simply removed.
+    """
+    if not any(ord(ch) in _XML_ILLEGAL for ch in text):
+        return text
+    lost = [ch for ch in source if ord(ch) in _LAYOUT_BREAKS]
+    for ch in text:
+        if ch in lost:
+            lost.remove(ch)
+    out = []
+    for ch in text:
+        if ord(ch) in _XML_ILLEGAL:
+            if lost:
+                out.append(lost.pop(0))
+            continue
+        out.append(ch)
+    return "".join(out)
+
+
 def _strip_control_chars(text: str) -> str:
     """Drop XML-illegal control chars an OCR pass or LLM occasionally emits."""
     return _CONTROL_CHARS_RE.sub("", text)
@@ -217,7 +256,7 @@ class Segment:
             out = out.replace(token, literal)
         # Clean up any hallucinated numeric placeholders that the LLM added
         # (e.g. converting the word "Five" to "⟦=5⟧").
-        out = re.sub(r"⟦=([^⟧]*)⟧", r"\1", out)
+        out = re.sub(r"⟦[=~]([^⟧]*)⟧", r"\1", out)
         return _strip_control_chars(out)
 
     def restored_source(self) -> str:
@@ -225,5 +264,5 @@ class Segment:
         out = self.source
         for token, literal in self.placeholders.items():
             out = out.replace(token, literal)
-        out = re.sub(r"⟦=([^⟧]*)⟧", r"\1", out)
+        out = re.sub(r"⟦[=~]([^⟧]*)⟧", r"\1", out)
         return _strip_control_chars(out)

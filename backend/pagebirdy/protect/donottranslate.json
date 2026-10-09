@@ -1,0 +1,27 @@
+{
+  "_comment": [
+    "Literals that must reach the page exactly as the source wrote them, in every",
+    "target language. Add a name here; no code changes.",
+    "",
+    "This is not the glossary. The glossary is per-language and settles what a term",
+    "must become; this settles that a string becomes nothing at all. It is lifted",
+    "out before the engine sees it and restored verbatim afterwards, the same",
+    "machinery that protects 3/4, so it does not depend on the model obeying a",
+    "prompt rule.",
+    "",
+    "Keep entries in their exact published capitalisation: matching is",
+    "case-sensitive so the brand 'Curriculum Associates' is protected while the",
+    "common noun 'curriculum' in the prose is not. Longer entries win over shorter",
+    "ones that prefix them, so listing both a full legal name and its short form is",
+    "safe."
+  ],
+  "names": [
+    "Curriculum Associates, LLC",
+    "Curriculum Associates",
+    "i-Ready",
+    "Ready Classroom Mathematics",
+    "Ready Classroom",
+    "Magnetic Reading",
+    "BRIGANCE"
+  ]
+}

@@ -36,6 +36,7 @@ from urllib.parse import unquote, urlparse
 
 import fitz
 
+from pagebirdy import script
 from pagebirdy.fonts import resolve
 from pagebirdy.ingest.ocr import merge_ocr_lines, ocr_image_regions
 from pagebirdy.ingest.pdf import extract_lines
@@ -78,6 +79,29 @@ def _worth_translating(line, apply_size_floor: bool = True) -> bool:
     if not apply_size_floor:
         return True
     return all(s.size >= _MIN_LIVE_TEXT_SIZE for s in line.spans)
+
+
+def _is_math_label(line) -> bool:
+    """A label that is nothing but an expression: `y = 8x`, `40`, `(0, 0)`.
+
+    A graph's furniture is mathematics, not prose. It has no words to
+    translate, and its left-to-right order *is* the mathematics, so the whole
+    round trip through an engine can only cost it something. Offered anyway,
+    `y = 8x` came back with its variables read as nouns and a proportional
+    relationship's own equation stopped saying what it says. Held back here
+    the line is never redacted either, so it stays exactly the artwork it was.
+
+    A caption is not furniture and still goes: `is_math_expression` fails on
+    any two Latin letters running, so "People", "Cars Filled", "origin" and a
+    word-art "SAY" all pass through untouched by this.
+
+    Asked of the raw line, deliberately. By the time `build_segments` has run,
+    the operator is `⟦m0⟧` and the number `⟦=8⟧`, whose brackets are not
+    characters an expression may contain -- so the same question asked one
+    step later always answers no.
+    """
+    return script.is_math_expression(
+        "".join(s.text for s in line.spans).strip())
 
 
 def _is_badge_canvas(path: str) -> bool:

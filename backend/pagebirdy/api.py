@@ -24,6 +24,7 @@ import os
 import os.path
 import re
 import threading
+import uuid
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor
 
@@ -36,11 +37,13 @@ from fastapi import Depends, FastAPI, Form, HTTPException, UploadFile, File
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response
-from pydantic import BaseModel, UUID4
+from pydantic import BaseModel, Field, UUID4, field_validator
 
 from pagebirdy import languages, storage
+from pagebirdy.office import formats as doc_formats
 from pagebirdy.auth import (effective_owner_ids, get_or_create_profile, get_profile_names,
-                        invalidate_owner_ids_cache, require_trial_active, require_user)
+                        invalidate_owner_ids_cache, invalidate_profile_name_cache,
+                        require_trial_active, require_user)
 from pagebirdy.pipeline import (rebuild_from_edits, translate_idml,
                             translate_links_folder, translate_pdf)
 from pagebirdy.review.store import ReviewStore
@@ -122,6 +125,18 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PATCH", "DELETE"],
     allow_headers=["Authorization", "Content-Type"],
 )
+
+
+# Image and website translation live in their own modules and share this app's
+# helpers (job store, storage, executor); they import them lazily, so they are
+# mounted here rather than imported at the top.
+from pagebirdy.image_api import router as _image_router  # noqa: E402
+from pagebirdy.text_api import router as _text_router  # noqa: E402
+from pagebirdy.web_api import router as _web_router  # noqa: E402
+
+app.include_router(_image_router)
+app.include_router(_web_router)
+app.include_router(_text_router)
 
 
 def _store() -> ReviewStore:
@@ -736,13 +751,28 @@ async def rebuild_job(job_id: str, user: dict = Depends(require_user)) -> dict:
     if str(job.get("output", "")).lower().endswith(".idml"):
         raise HTTPException(status_code=400, detail="rebuild is not supported for IDML jobs")
 
+    fmt_key = (job.get("meta") or {}).get("format")
+    if fmt_key == "image":
+        raise HTTPException(status_code=400, detail="rebuild is not supported for image jobs")
+    office_fmt = next((f for f in doc_formats.OFFICE.values() if f.key == fmt_key), None)
+
     output_key = str(job["output"])
 
     def _run() -> str:
         local_source, local_output = _materialize_job_files(job)
-        rebuild_from_edits(
-            job_id, review_db=_REVIEW_DB, source_path=local_source, output_path=local_output
-        )
+        if fmt_key == "website":
+            from pagebirdy.web.pipeline import rebuild_from_review as rebuild_website
+
+            rebuild_website({**job, "source": local_source, "output": local_output}, _REVIEW_DB)
+        elif office_fmt is not None:
+            from pagebirdy.office.pipeline import rebuild_from_review as rebuild_office
+
+            rebuild_office({**job, "source": local_source, "output": local_output}, _REVIEW_DB,
+                           fmt=office_fmt)
+        else:
+            rebuild_from_edits(
+                job_id, review_db=_REVIEW_DB, source_path=local_source, output_path=local_output
+            )
         storage.upload_file(local_output, output_key)
         return output_key
 
@@ -937,6 +967,27 @@ async def download_eval(job_id: str, format: str = "pdf", refresh: bool = False,
 _UI_DEFAULT_LANG = "zh"  # UI-only default; pipeline's implicit fallback stays languages.DEFAULT
 
 
+@app.get("/api/formats")
+def list_formats() -> dict:
+    """Document formats the upload accepts, offered only once an adapter ships."""
+    return doc_formats.listing()
+
+
+@app.get("/api/glossary")
+def list_glossaries(user: dict = Depends(require_user)) -> dict:
+    """The term lists the engine is held to, per target language. Read-only:
+    glossaries ship with the backend (`pagebirdy/glossary/*.json`)."""
+    from pagebirdy.glossary.glossary import load_terms
+
+    out = []
+    for lang in languages.listing():
+        terms = load_terms(lang["code"])
+        if terms:
+            out.append({"code": lang["code"], "name": lang["name"],
+                        "terms": [{"source": k, "target": v} for k, v in sorted(terms.items())]})
+    return {"glossaries": out}
+
+
 @app.get("/api/languages")
 def list_languages() -> dict:
     """Target languages the UI may offer, and which ones the PDF path renders."""
@@ -1024,8 +1075,11 @@ async def translate_upload(
             detail=".indd files aren't supported — in InDesign use File → Export → "
                    "InDesign Markup (IDML) and upload the .idml instead",
         )
-    if ext not in (".pdf", ".idml"):
-        raise HTTPException(status_code=400, detail="upload a .pdf or .idml file")
+    try:
+        doc_formats.check_extension(name)
+    except doc_formats.UnsupportedFile as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    office_fmt = doc_formats.lookup(name)
     try:
         lang = languages.get(target_lang or None)
     except ValueError as e:
@@ -1043,6 +1097,12 @@ async def translate_upload(
     data = await file.read()
     with open(saved, "wb") as f:
         f.write(data)
+
+    if office_fmt is not None:
+        try:
+            await run_in_threadpool(doc_formats.check_content, office_fmt, saved)
+        except doc_formats.UnsupportedFile as e:
+            raise HTTPException(status_code=400, detail=str(e))
 
     file_hash = hashlib.sha256(data).hexdigest()
     file_size = len(data)
@@ -1083,6 +1143,16 @@ async def translate_upload(
     # so a single upload doesn't freeze the whole server for other requests.
     def _run() -> dict:
         from pagebirdy.idml.export import convert_to_idml, export
+
+        if office_fmt is not None:
+            from pagebirdy.office.pipeline import translate_document
+
+            logger.info("upload: %s path, running translate_document for %s", office_fmt.key, name)
+            report = translate_document(saved, _out_dir(), target_lang=lang.code,
+                                        review_db=_REVIEW_DB, job_id=job_id,
+                                        original_filename=name, on_stage=_progress_cb)
+            report["has_output_pdf"] = False
+            return report
 
         if ext == ".pdf":
             logger.info("upload: .pdf path, running translate_pdf directly for %s", name)
@@ -1617,16 +1687,57 @@ def download_links(job_id: str, user: dict = Depends(require_user)) -> Response:
 
 
 
-class TeamInvite(BaseModel):
-    email: str
+# ---------------------------------------------------------------------------
+# Supabase helpers for the account and team endpoints. They read the env at
+# call time and turn upstream failures into a 502 that says what failed, so
+# the Profile and Team pages can show a reason instead of "Request failed (500)".
+
+def _supabase_base() -> str:
+    base = os.environ.get("SUPABASE_URL", "").rstrip("/")
+    if not base or not os.environ.get("SUPABASE_SERVICE_ROLE_KEY"):
+        raise HTTPException(status_code=500, detail="Supabase is not configured on the server")
+    return base
 
 
-@app.get("/api/me")
-def get_me(user: dict = Depends(require_user)) -> dict:
-    """Signed-in user's profile — email, member-since, trial status.
-    Self-heals a missing profile row (accounts created before the trial
-    trigger existed)."""
-    profile = get_or_create_profile(user)
+def _team_headers() -> dict:
+    service_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
+    return {"apikey": service_key, "Authorization": f"Bearer {service_key}"}
+
+
+def _upstream_message(resp) -> str:
+    try:
+        body = resp.json()
+    except ValueError:
+        return ""
+    if not isinstance(body, dict):
+        return ""
+    for key in ("msg", "message", "error_description", "error"):
+        value = body.get(key)
+        if isinstance(value, str) and value:
+            return value
+    return ""
+
+
+def _sb(method: str, url: str, what: str, **kwargs):
+    """One Supabase call. Raises a 502 naming `what` (and Supabase's own
+    message) on a network error or an error status."""
+    kwargs.setdefault("timeout", 10)
+    try:
+        resp = requests.request(method, url, **kwargs)
+    except requests.RequestException as exc:
+        raise HTTPException(status_code=502, detail=f"{what}: could not reach Supabase") from exc
+    if resp.status_code >= 400:
+        msg = _upstream_message(resp)
+        detail = f"{what} ({resp.status_code}{': ' + msg if msg else ''})"
+        logger.warning("supabase %s %s failed: %s", method, url.split("?")[0], detail)
+        raise HTTPException(status_code=502, detail=detail)
+    return resp
+
+
+# ---------------------------------------------------------------------------
+# Account
+
+def _me_payload(user: dict, profile: dict) -> dict:
     return {
         "id": user["id"],
         "email": profile.get("email") or user.get("email"),
@@ -1635,17 +1746,156 @@ def get_me(user: dict = Depends(require_user)) -> dict:
         "first_name": profile.get("first_name"),
         "last_name": profile.get("last_name"),
         "full_name": profile.get("full_name"),
+        "avatar_url": profile.get("avatar_url"),
     }
 
+
+@app.get("/api/me")
+def get_me(user: dict = Depends(require_user)) -> dict:
+    """Signed-in user's profile — email, member-since, trial status, name and
+    picture. Self-heals a missing profile row (accounts created before the
+    trial trigger existed)."""
+    return _me_payload(user, get_or_create_profile(user))
+
+
+class ProfileUpdate(BaseModel):
+    first_name: str | None = Field(default=None, max_length=80)
+    last_name: str | None = Field(default=None, max_length=80)
+
+    @field_validator("first_name", "last_name", mode="before")
+    @classmethod
+    def _strip(cls, value):
+        if isinstance(value, str):
+            value = value.strip()
+            return value or None
+        return value
+
+
+def _patch_profile(base: str, user_id: str, fields: dict, what: str) -> dict:
+    resp = _sb(
+        "PATCH", f"{base}/rest/v1/profiles", what,
+        params={"id": f"eq.{user_id}"},
+        json=fields,
+        headers={**_team_headers(), "Prefer": "return=representation"},
+    )
+    rows = resp.json()
+    return rows[0] if rows else {}
+
+
+@app.patch("/api/me")
+def update_me(body: ProfileUpdate, user: dict = Depends(require_user)) -> dict:
+    """Saves the user's name. The profiles table is what /api/me reads, so it
+    is written first; auth user_metadata is kept in step on a best-effort
+    basis (it only seeds the profile row at signup)."""
+    base = _supabase_base()
+    profile = get_or_create_profile(user)  # make sure the row exists
+    full_name = " ".join(p for p in (body.first_name, body.last_name) if p) or None
+    fields = {"first_name": body.first_name, "last_name": body.last_name, "full_name": full_name}
+    saved = _patch_profile(base, user["id"], fields, "Could not save your name")
+    try:
+        _sb("PUT", f"{base}/auth/v1/admin/users/{user['id']}", "Could not update account metadata",
+            json={"user_metadata": {k: v or "" for k, v in fields.items()}},
+            headers=_team_headers())
+    except HTTPException as exc:
+        logger.warning("profile name saved but user_metadata not updated for %s: %s", user["id"], exc.detail)
+    invalidate_profile_name_cache(user["id"])
+    return _me_payload(user, {**profile, **fields, **saved})
+
+
+_AVATAR_MAX_BYTES = 2 * 1024 * 1024
+
+
+def _avatar_bucket() -> str:
+    return os.environ.get("PAGEBIRDY_AVATAR_BUCKET", "").strip() or "avatars"
+
+
+def _sniff_image(data: bytes) -> tuple[str, str] | None:
+    """(extension, mime type) from the file's magic bytes, or None."""
+    if data.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "png", "image/png"
+    if data.startswith(b"\xff\xd8\xff"):
+        return "jpg", "image/jpeg"
+    if data[:6] in (b"GIF87a", b"GIF89a"):
+        return "gif", "image/gif"
+    if len(data) >= 12 and data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        return "webp", "image/webp"
+    return None
+
+
+def _own_avatar_path(base: str, bucket: str, user_id: str, url: str | None) -> str | None:
+    """The object path of `url` if it is one of this user's pictures in our
+    bucket; None for anything else (never delete what we didn't upload)."""
+    prefix = f"{base}/storage/v1/object/public/{bucket}/"
+    if not url or not url.startswith(prefix):
+        return None
+    path = url[len(prefix):].split("?")[0]
+    if not path.startswith(f"{user_id}/") or ".." in path:
+        return None
+    return path
+
+
+def _delete_avatar_object(base: str, bucket: str, path: str | None) -> None:
+    if not path:
+        return
+    try:
+        _sb("DELETE", f"{base}/storage/v1/object/{bucket}/{path}", "Could not delete the old picture",
+            headers=_team_headers())
+    except HTTPException as exc:
+        logger.warning("avatar cleanup failed for %s: %s", path, exc.detail)
+
+
+@app.post("/api/me/avatar")
+def upload_avatar(file: UploadFile = File(...), user: dict = Depends(require_user)) -> dict:
+    """Stores a profile picture (PNG, JPEG, WebP or GIF, at most 2 MB) in the
+    public avatars bucket and saves its URL on the profile."""
+    data = file.file.read(_AVATAR_MAX_BYTES + 1)
+    if len(data) > _AVATAR_MAX_BYTES:
+        raise HTTPException(status_code=413, detail="That picture is larger than 2 MB.")
+    kind = _sniff_image(data)
+    if kind is None:
+        raise HTTPException(status_code=415, detail="Use a PNG, JPEG, WebP or GIF image.")
+    ext, mime = kind
+
+    base = _supabase_base()
+    bucket = _avatar_bucket()
+    previous = get_or_create_profile(user).get("avatar_url")
+    path = f"{user['id']}/{uuid.uuid4().hex}.{ext}"
+    _sb("POST", f"{base}/storage/v1/object/{bucket}/{path}", "Could not store the picture",
+        data=data, headers={**_team_headers(), "Content-Type": mime, "x-upsert": "true"}, timeout=30)
+    url = f"{base}/storage/v1/object/public/{bucket}/{path}"
+    try:
+        _patch_profile(base, user["id"], {"avatar_url": url}, "Could not save the picture on your profile")
+    except HTTPException:
+        _delete_avatar_object(base, bucket, path)
+        raise
+    _delete_avatar_object(base, bucket, _own_avatar_path(base, bucket, user["id"], previous))
+    return {"avatar_url": url}
+
+
+@app.delete("/api/me/avatar")
+def delete_avatar(user: dict = Depends(require_user)) -> dict:
+    base = _supabase_base()
+    bucket = _avatar_bucket()
+    previous = get_or_create_profile(user).get("avatar_url")
+    _patch_profile(base, user["id"], {"avatar_url": None}, "Could not remove the picture")
+    _delete_avatar_object(base, bucket, _own_avatar_path(base, bucket, user["id"], previous))
+    return {"avatar_url": None}
+
+
+# ---------------------------------------------------------------------------
+# Team
+
+class TeamInvite(BaseModel):
+    email: str
 
 
 class TeamAccept(BaseModel):
     owner_id: UUID4
 
 
-def _team_headers() -> dict:
-    service_key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
-    return {"apikey": service_key, "Authorization": f"Bearer {service_key}"}
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+_USER_PAGE_SIZE = 200
+_USER_PAGE_LIMIT = 10
 
 
 @app.get("/api/team")
@@ -1653,22 +1903,19 @@ def list_team(user: dict = Depends(require_user)) -> dict:
     """The caller's workspace: people they've invited (any status — pending
     shows as "invited, not yet accepted"), the pending invites addressed to
     them, and the accepted owner(s) whose workspace they're actually in."""
-    base = os.environ.get("SUPABASE_URL", "").rstrip("/")
+    base = _supabase_base()
     headers = _team_headers()
 
-    invited = requests.get(
-        f"{base}/rest/v1/team_members",
+    invited = _sb(
+        "GET", f"{base}/rest/v1/team_members", "Could not load your team",
         params={"owner_id": f"eq.{user['id']}", "select": "member_id,email,status,created_at"},
-        headers=headers, timeout=10,
+        headers=headers,
     )
-    invited.raise_for_status()
-
-    involving_me = requests.get(
-        f"{base}/rest/v1/team_members",
+    involving_me = _sb(
+        "GET", f"{base}/rest/v1/team_members", "Could not load your invitations",
         params={"member_id": f"eq.{user['id']}", "select": "owner_id,email,status,created_at"},
-        headers=headers, timeout=10,
+        headers=headers,
     )
-    involving_me.raise_for_status()
     involving_me_rows = involving_me.json()
 
     return {
@@ -1678,50 +1925,89 @@ def list_team(user: dict = Depends(require_user)) -> dict:
     }
 
 
+def _find_user_id_by_email(base: str, email: str) -> str | None:
+    """Exact (case-insensitive) match only. GoTrue's admin user list ignores
+    an `email` query parameter and returns everyone, so taking its first row
+    would attach the invite to an arbitrary account."""
+    rows = _sb(
+        "GET", f"{base}/rest/v1/profiles", "Could not look up that email",
+        params={"email": f"eq.{email}", "select": "id"},
+        headers=_team_headers(),
+    ).json()
+    if rows:
+        return rows[0]["id"]
+    for page in range(1, _USER_PAGE_LIMIT + 1):
+        body = _sb(
+            "GET", f"{base}/auth/v1/admin/users", "Could not look up that email",
+            params={"page": page, "per_page": _USER_PAGE_SIZE},
+            headers=_team_headers(),
+        ).json()
+        users = body.get("users", []) if isinstance(body, dict) else []
+        for u in users:
+            if (u.get("email") or "").strip().lower() == email:
+                return u["id"]
+        if len(users) < _USER_PAGE_SIZE:
+            break
+    return None
+
+
 @app.post("/api/team/invite")
 def invite_team_member(body: TeamInvite, user: dict = Depends(require_user)) -> dict:
     """Creates a *pending* invite — grants no access until the invitee
     explicitly accepts it via POST /api/team/accept. Anyone could otherwise
     add an arbitrary email and (previously) get standing access to that
     person's data without their consent."""
-    base = os.environ.get("SUPABASE_URL", "").rstrip("/")
+    email = body.email.strip().lower()
+    if len(email) > 254 or not _EMAIL_RE.match(email):
+        raise HTTPException(status_code=422, detail="Enter a valid email address.")
+    if email == (user.get("email") or "").strip().lower():
+        raise HTTPException(status_code=400, detail="You can't invite yourself.")
+
+    base = _supabase_base()
     headers = _team_headers()
-    frontend_origin = _frontend_origins[0] if _frontend_origins else None
 
-    resp = requests.post(
-        f"{base}/auth/v1/invite",
-        json={"email": body.email, "data": {}, **(
-            {"redirect_to": f"{frontend_origin}/auth/callback"} if frontend_origin else {}
-        )},
-        headers=headers, timeout=10,
-    )
+    member_id = _find_user_id_by_email(base, email)
+    if member_id is None:
+        # New to Pagebirdy: Supabase creates the account and emails a link.
+        # GoTrue's invite link uses the implicit flow (session in the URL
+        # hash), which only a client page can read, so it lands on
+        # /auth/set-password rather than the server-side /auth/callback.
+        frontend_origin = _frontend_origins[0] if _frontend_origins else None
+        try:
+            resp = requests.post(
+                f"{base}/auth/v1/invite",
+                json={"email": email, "data": {}, **(
+                    {"redirect_to": f"{frontend_origin}/auth/set-password?invited=1"} if frontend_origin else {}
+                )},
+                headers=headers, timeout=10,
+            )
+        except requests.RequestException as exc:
+            raise HTTPException(status_code=502, detail="Invite failed: could not reach Supabase") from exc
+        if resp.status_code in (200, 201):
+            member_id = resp.json()["id"]
+        else:
+            # Registered between the lookup and the invite: look again.
+            member_id = _find_user_id_by_email(base, email)
+            if member_id is None:
+                raise HTTPException(status_code=400, detail=_upstream_message(resp) or "Invite failed")
 
-    if resp.status_code in (200, 201):
-        member_id = resp.json()["id"]
-    else:
-        # Already-registered users can't be re-invited by email — look them
-        # up so we can still record the (still-pending) invite.
-        lookup = requests.get(
-            f"{base}/auth/v1/admin/users", params={"email": body.email},
-            headers=headers, timeout=10,
-        )
-        lookup.raise_for_status()
-        users = lookup.json().get("users", [])
-        if not users:
-            raise HTTPException(status_code=400, detail=resp.json().get("msg", "Invite failed"))
-        member_id = users[0]["id"]
+    if member_id == user["id"]:
+        raise HTTPException(status_code=400, detail="You can't invite yourself.")
 
-    upsert = requests.post(
-        f"{base}/rest/v1/team_members",
+    existing = _sb(
+        "GET", f"{base}/rest/v1/team_members", "Could not check your team",
+        params={"owner_id": f"eq.{user['id']}", "member_id": f"eq.{member_id}", "select": "status"},
+        headers=headers,
+    ).json()
+    if any(r.get("status") == "accepted" for r in existing):
+        raise HTTPException(status_code=400, detail=f"{email} is already on your team.")
+
+    _sb(
+        "POST", f"{base}/rest/v1/team_members", "Could not save the invite",
         params={"on_conflict": "owner_id,member_id"},
-        json={
-            "owner_id": user["id"], "member_id": member_id, "email": body.email,
-            "status": "pending",
-        },
+        json={"owner_id": user["id"], "member_id": member_id, "email": email, "status": "pending"},
         headers={**headers, "Prefer": "resolution=merge-duplicates"},
-        timeout=10,
     )
-    upsert.raise_for_status()
     return {"ok": True}
 
 
@@ -1730,27 +2016,25 @@ def accept_team_invite(body: TeamAccept, user: dict = Depends(require_user)) -> 
     """The invitee accepts — only now does the owner's workspace become
     visible to them. Scoped to member_id = the caller, so you can only
     accept invites actually addressed to you."""
-    base = os.environ.get("SUPABASE_URL", "").rstrip("/")
-    resp = requests.patch(
-        f"{base}/rest/v1/team_members",
+    base = _supabase_base()
+    _sb(
+        "PATCH", f"{base}/rest/v1/team_members", "Could not accept the invitation",
         params={"owner_id": f"eq.{body.owner_id}", "member_id": f"eq.{user['id']}"},
         json={"status": "accepted"},
-        headers=_team_headers(), timeout=10,
+        headers=_team_headers(),
     )
-    resp.raise_for_status()
     invalidate_owner_ids_cache(user["id"])
     return {"ok": True}
 
 
 @app.post("/api/team/decline")
 def decline_team_invite(body: TeamAccept, user: dict = Depends(require_user)) -> dict:
-    base = os.environ.get("SUPABASE_URL", "").rstrip("/")
-    resp = requests.delete(
-        f"{base}/rest/v1/team_members",
+    base = _supabase_base()
+    _sb(
+        "DELETE", f"{base}/rest/v1/team_members", "Could not decline the invitation",
         params={"owner_id": f"eq.{body.owner_id}", "member_id": f"eq.{user['id']}"},
-        headers=_team_headers(), timeout=10,
+        headers=_team_headers(),
     )
-    resp.raise_for_status()
     invalidate_owner_ids_cache(user["id"])
     return {"ok": True}
 
@@ -1764,19 +2048,18 @@ def remove_team_member(other_user_id: UUID4, user: dict = Depends(require_user))
     FastAPI's UUID4 path type already rejects anything that isn't a
     well-formed UUID, but avoiding hand-built PostgREST filter syntax
     entirely means there's no filter-injection surface to reason about."""
-    base = os.environ.get("SUPABASE_URL", "").rstrip("/")
+    base = _supabase_base()
     headers = _team_headers()
-    requests.delete(
-        f"{base}/rest/v1/team_members",
+    _sb(
+        "DELETE", f"{base}/rest/v1/team_members", "Could not remove that person",
         params={"owner_id": f"eq.{user['id']}", "member_id": f"eq.{other_user_id}"},
-        headers=headers, timeout=10,
-    ).raise_for_status()
-    resp = requests.delete(
-        f"{base}/rest/v1/team_members",
-        params={"owner_id": f"eq.{other_user_id}", "member_id": f"eq.{user['id']}"},
-        headers=headers, timeout=10,
+        headers=headers,
     )
-    resp.raise_for_status()
+    _sb(
+        "DELETE", f"{base}/rest/v1/team_members", "Could not leave that workspace",
+        params={"owner_id": f"eq.{other_user_id}", "member_id": f"eq.{user['id']}"},
+        headers=headers,
+    )
     invalidate_owner_ids_cache(user["id"])
     invalidate_owner_ids_cache(str(other_user_id))
     return {"ok": True}
