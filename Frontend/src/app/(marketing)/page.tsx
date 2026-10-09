@@ -34,12 +34,12 @@ export default function Home() {
   return (
     <>
       {/* ─── §1 HERO ─── */}
-      {/* The light ramp stays put behind the hero while content scrolls over
-          it, and the glass wall flattens into hairline rules on the way out. */}
+      {/* The light ramp is part of the hero and scrolls away with it; the glass
+          wall flattens into hairline rules on the way out. */}
       <div className="pb-hero relative">
       <HeroScroll />
       <div className="pointer-events-none absolute inset-0" aria-hidden>
-        <div className="pb-backdrop sticky top-0 h-screen overflow-hidden">
+        <div className="pb-backdrop absolute inset-0 overflow-hidden">
           <HeroWall />
           {/* Hairline column grid: drawn first on load, then fades once the app window has built */}
           <div className="pb-hero-grid absolute inset-0" />

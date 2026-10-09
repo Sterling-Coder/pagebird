@@ -1,10 +1,22 @@
 import Link from "next/link";
 import ClosingBand from "@/components/ClosingBand";
 
+// Plain dark: one solid ground, hairline rules instead of boxes, colour only as solid fills.
+const BG = "#0e0d0c";
+const RULE = "#2a2826";
+const TEXT = "#f0ece3";
+const SECONDARY = "#a8a49a";
+const MUTED = "#8a8478";
+const CORAL = "#e08a6f";
+const PURPLE = "#8b6fbf";
+const TEAL = "#4fc4a8";
+const BLUE = "#6f9cff";
+const PRIMARY = "#c86018";
+
 const INTEGRATIONS = [
   {
     category: "Print & Layout",
-    color: "#e08a6f",
+    color: CORAL,
     items: [
       {
         name: "Adobe InDesign",
@@ -31,7 +43,7 @@ const INTEGRATIONS = [
   },
   {
     category: "Video & Subtitles",
-    color: "#c94040",
+    color: BLUE,
     items: [
       {
         name: "YouTube Studio",
@@ -58,7 +70,7 @@ const INTEGRATIONS = [
   },
   {
     category: "Web & CMS",
-    color: "#5a9e5a",
+    color: TEAL,
     items: [
       {
         name: "WordPress",
@@ -85,7 +97,7 @@ const INTEGRATIONS = [
   },
   {
     category: "Productivity",
-    color: "#8b6fbf",
+    color: PURPLE,
     items: [
       {
         name: "Figma",
@@ -114,148 +126,126 @@ const INTEGRATIONS = [
 
 export default function IntegrationsPage() {
   return (
-    <div style={{ background: "#0c0b09", minHeight: "100vh" }}>
-
+    <div style={{ background: BG, minHeight: "100vh" }}>
       {/* Hero */}
-      <section style={{
-        background: "linear-gradient(180deg, #0d3a52 0%, #0f4a68 4%, #1a5a80 8%, #1f6b95 14%, #2178a8 20%, #1e7fb3 28%, #1b86b5 36%, #1a7faa 46%, #176fa0 56%, #145a95 66%, #0f4578 76%, #0a2e52 86%, #050a18 100%)",
-        borderBottom: "1px solid rgba(255,255,255,0.06)",
-        paddingTop: "120px",
-        paddingBottom: "80px",
-      }}>
-        <div className="mx-auto max-w-[1100px] px-8 lg:px-14">
-          <div className="flex items-center gap-3 mb-6">
-            <span className="inline-block h-2 w-2 bg-pb-accent" />
-            <span className="font-pb-mono text-[11px] font-bold tracking-widest text-pb-accent uppercase">Integrations</span>
-          </div>
-          <h1 className="pb-stencil pb-enter" style={{ fontSize: "clamp(2.8rem, 5vw, 5rem)", lineHeight: 1.0, maxWidth: "700px" }}>
-            Works with the<br />tools you already use.
+      <section style={{ borderBottom: `1px solid ${RULE}` }}>
+        <div className="mx-auto max-w-[1100px] px-4 pt-28 pb-16 sm:px-8 lg:px-14 lg:pt-36 lg:pb-20">
+          <span className="pb-enter-label text-[12px] font-semibold tracking-[0.15em] uppercase" style={{ color: CORAL }}>
+            Integrations
+          </span>
+          <h1
+            className="pb-enter mt-5 font-semibold tracking-[-0.02em]"
+            style={{ fontSize: "clamp(2.25rem, 5vw, 4rem)", lineHeight: 1.05, maxWidth: "720px", color: TEXT, textWrap: "balance" }}
+          >
+            Works with the tools you already use.
           </h1>
-          <p className="pb-enter pb-enter-delay-1 mt-6 max-w-xl text-[16px] leading-relaxed text-pb-text-muted">
-            Pagebirdy reads and writes native file formats. No export step, no conversion, no re-linking. Open the translated file exactly where you left off.
+          <p className="pb-enter pb-enter-delay-1 mt-6 max-w-xl text-[17px] leading-relaxed" style={{ color: SECONDARY }}>
+            Pagebirdy reads and writes native file formats. No export step, no conversion, no re-linking. Open the
+            translated file exactly where you left off.
           </p>
-          <div className="pb-enter pb-enter-delay-2 mt-10 flex flex-wrap gap-3">
-            {["Adobe CC", "YouTube", "Premiere", "WordPress", "Figma", "Slack"].map(t => (
-              <span key={t} className="font-pb-mono rounded-full border border-white/10 px-4 py-1.5 text-[11px] text-pb-text-muted">
-                {t}
-              </span>
+          <ul className="pb-enter pb-enter-delay-2 mt-10 flex flex-wrap gap-x-6 gap-y-3">
+            {INTEGRATIONS.map((cat) => (
+              <li key={cat.category}>
+                <a href={`#${slug(cat.category)}`} className="flex items-center gap-2 text-[14px] transition-colors hover:text-[#f0ece3]" style={{ color: SECONDARY }}>
+                  <span aria-hidden className="h-2 w-2 rounded-full" style={{ background: cat.color }} />
+                  {cat.category}
+                </a>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       </section>
 
-      {/* Integration categories */}
-      {INTEGRATIONS.map((cat, ci) => (
-        <section key={cat.category} style={{
-          borderBottom: "1px solid rgba(255,255,255,0.04)",
-          background: ci % 2 === 0 ? "#0c0b09" : "#0e0d0b",
-        }}>
-          <div className="mx-auto max-w-[1100px] px-8 py-16 lg:px-14 lg:py-20">
-            {/* Category header */}
-            <div className="mb-10 flex items-center gap-4">
-              <div style={{ width: "3px", height: "28px", background: cat.color, borderRadius: "2px" }} />
-              <h2 className="font-pb-mono text-[22px] font-bold text-pb-text">{cat.category}</h2>
-            </div>
-
-            {/* Items grid */}
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              {cat.items.map((item) => (
-                <div key={item.name} style={{
-                  background: "#131210",
-                  border: `1px solid ${item.soon ? "rgba(255,255,255,0.06)" : `${cat.color}25`}`,
-                  borderRadius: "10px",
-                  padding: "24px",
-                  opacity: item.soon ? 0.6 : 1,
-                  position: "relative",
-                  overflow: "hidden",
-                }}>
-                  {/* Color glow top */}
-                  {!item.soon && (
-                    <div style={{
-                      position: "absolute", top: 0, left: 0, right: 0, height: "2px",
-                      background: cat.color,
-                    }} />
-                  )}
-
-                  <div className="flex items-start justify-between mb-3">
-                    <h3 style={{ fontSize: "16px", fontWeight: 700, color: "#f0ece3" }}>{item.name}</h3>
-                    {item.soon ? (
-                      <span className="font-pb-mono rounded-full border border-white/10 px-2 py-0.5 text-[8px] tracking-widest text-pb-text-muted uppercase">Soon</span>
-                    ) : (
-                      <span className="font-pb-mono rounded-full border px-2 py-0.5 text-[8px] tracking-widest uppercase" style={{ color: cat.color, borderColor: `${cat.color}50` }}>Live</span>
-                    )}
-                  </div>
-
-                  <p style={{ fontSize: "13px", color: "rgba(240,236,227,0.55)", lineHeight: 1.6, marginBottom: "14px" }}>
-                    {item.desc}
-                  </p>
-
-                  <p style={{ fontSize: "12px", color: "rgba(240,236,227,0.35)", lineHeight: 1.6, marginBottom: "16px" }}>
-                    {item.detail}
-                  </p>
-
-                  {item.formats.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5">
-                      {item.formats.map(f => (
-                        <span key={f} className="font-pb-mono rounded px-2 py-0.5 text-[10px]" style={{
-                          background: `${cat.color}12`,
-                          color: cat.color,
-                          border: `1px solid ${cat.color}30`,
-                        }}>{f}</span>
-                      ))}
-                    </div>
-                  )}
+      {/* Integration categories: category on the left, a ruled list of tools on the right */}
+      {INTEGRATIONS.map((cat) => {
+        const live = cat.items.filter((i) => !i.soon).length;
+        return (
+          <section key={cat.category} id={slug(cat.category)} className="scroll-mt-20" style={{ borderBottom: `1px solid ${RULE}` }}>
+            <div className="mx-auto grid max-w-[1100px] grid-cols-1 gap-8 px-4 py-14 sm:px-8 lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-16 lg:px-14 lg:py-20">
+              <div className="lg:sticky lg:top-28 lg:self-start">
+                <div className="flex items-center gap-3">
+                  <span aria-hidden className="h-3 w-3 rounded-full" style={{ background: cat.color }} />
+                  <h2 className="text-[22px] font-semibold tracking-tight" style={{ color: TEXT }}>{cat.category}</h2>
                 </div>
-              ))}
+                <p className="mt-2 text-[13px]" style={{ color: MUTED }}>
+                  {live} live{cat.items.length > live ? ` · ${cat.items.length - live} coming soon` : ""}
+                </p>
+              </div>
+
+              <ul className="min-w-0">
+                {cat.items.map((item, i) => (
+                  <li
+                    key={item.name}
+                    className="grid grid-cols-1 gap-x-10 gap-y-3 py-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]"
+                    style={{ borderTop: i === 0 ? "none" : `1px solid ${RULE}`, paddingTop: i === 0 ? 0 : undefined }}
+                  >
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <h3 className="text-[17px] font-semibold" style={{ color: item.soon ? SECONDARY : TEXT }}>{item.name}</h3>
+                        {item.soon ? (
+                          <span className="text-[12px]" style={{ color: MUTED }}>Coming soon</span>
+                        ) : (
+                          <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: cat.color, color: BG }}>Live</span>
+                        )}
+                      </div>
+                      <p className="mt-2 text-[14px] leading-relaxed" style={{ color: SECONDARY }}>{item.desc}</p>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[13.5px] leading-relaxed" style={{ color: MUTED }}>{item.detail}</p>
+                      {item.formats.length > 0 ? (
+                        <p className="font-pb-mono mt-3 text-[12px]" style={{ color: item.soon ? MUTED : cat.color }}>
+                          {item.formats.join("  ")}
+                        </p>
+                      ) : null}
+                    </div>
+                  </li>
+                ))}
+              </ul>
             </div>
-          </div>
-        </section>
-      ))}
+          </section>
+        );
+      })}
 
       {/* API section teaser */}
-      <section style={{ background: "#0e0d0b", borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
-        <div className="mx-auto max-w-[1100px] px-8 py-16 lg:px-14 lg:py-20">
-          <div className="grid grid-cols-1 gap-12 lg:grid-cols-2 items-center">
-            <div>
-              <div className="flex items-center gap-3 mb-6">
-                <span className="inline-block h-2 w-2 bg-pb-accent" />
-                <span className="font-pb-mono text-[11px] font-bold tracking-widest text-pb-accent uppercase">API Access</span>
-              </div>
-              <h2 className="pb-stencil" style={{ fontSize: "clamp(1.8rem,3vw,2.8rem)", lineHeight: 1.05 }}>
-                Build it into<br />your pipeline.
-              </h2>
-              <p className="mt-6 text-[15px] leading-relaxed text-pb-text-muted max-w-md">
-                Automate translation jobs, poll job status, and download results — all via REST. Fits any CI/CD or publishing workflow.
-              </p>
-              <div className="mt-8 flex gap-3">
-                <Link href="/contact" className="font-pb-mono rounded-full bg-pb-accent px-6 py-2.5 text-[11px] font-bold tracking-widest text-pb-bg uppercase transition-all hover:brightness-110">
-                  Join waitlist →
-                </Link>
-                <span className="font-pb-mono rounded-full border border-white/10 px-6 py-2.5 text-[11px] text-pb-text-muted">Coming soon</span>
-              </div>
-            </div>
-
-            {/* Code mock */}
-            <div style={{
-              background: "#0a0908", borderRadius: "10px", padding: "24px",
-              border: "1px solid rgba(255,255,255,0.08)",
-              fontFamily: "var(--font-space-mono), monospace",
-            }}>
-              <div className="flex items-center gap-2 mb-4">
-                <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#ff5f57" }} />
-                <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#febc2e" }} />
-                <div style={{ width: "10px", height: "10px", borderRadius: "50%", background: "#28c840" }} />
-              </div>
-              <div style={{ fontSize: "11px", lineHeight: 1.8 }}>
-                <div style={{ color: "rgba(255,255,255,0.3)" }}># Upload a file</div>
-                <div><span style={{ color: "#e08a6f" }}>POST</span> <span style={{ color: "rgba(255,255,255,0.7)" }}>/v1/jobs</span></div>
-                <div style={{ color: "rgba(255,255,255,0.3)", marginTop: "8px" }}># Poll status</div>
-                <div><span style={{ color: "#4a70e0" }}>GET</span> <span style={{ color: "rgba(255,255,255,0.7)" }}>/v1/jobs/&#123;id&#125;</span></div>
-                <div style={{ color: "rgba(255,255,255,0.3)", marginTop: "8px" }}># Download result</div>
-                <div><span style={{ color: "#4ade80" }}>GET</span> <span style={{ color: "rgba(255,255,255,0.7)" }}>/v1/jobs/&#123;id&#125;/download</span></div>
-              </div>
+      <section style={{ borderBottom: `1px solid ${RULE}` }}>
+        <div className="mx-auto grid max-w-[1100px] grid-cols-1 items-center gap-12 px-4 py-16 sm:px-8 lg:grid-cols-2 lg:px-14 lg:py-20">
+          <div>
+            <span className="text-[12px] font-semibold tracking-[0.15em] uppercase" style={{ color: CORAL }}>API access</span>
+            <h2 className="mt-5 font-semibold tracking-[-0.02em]" style={{ fontSize: "clamp(1.8rem,3vw,2.6rem)", lineHeight: 1.08, color: TEXT }}>
+              Build it into your pipeline.
+            </h2>
+            <p className="mt-6 max-w-md text-[15px] leading-relaxed" style={{ color: SECONDARY }}>
+              Automate translation jobs, poll job status, and download results, all via REST. Fits any CI/CD or
+              publishing workflow.
+            </p>
+            <div className="mt-8 flex flex-wrap items-center gap-5">
+              <Link
+                href="/contact"
+                className="rounded-full px-6 py-2.5 text-[14px] font-semibold text-white transition-[filter] hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#e08a6f]"
+                style={{ background: PRIMARY }}
+              >
+                Join the waitlist
+              </Link>
+              <span className="text-[13px]" style={{ color: MUTED }}>Coming soon</span>
             </div>
           </div>
+
+          {/* Endpoints as a ruled list, not a code window */}
+          <dl className="font-pb-mono min-w-0 text-[13px]">
+            {[
+              ["Upload a file", "POST", "/v1/jobs", CORAL],
+              ["Poll status", "GET", "/v1/jobs/{id}", BLUE],
+              ["Download result", "GET", "/v1/jobs/{id}/download", TEAL],
+            ].map(([label, verb, path, color], i) => (
+              <div key={path} className="flex flex-col gap-1 py-4" style={{ borderTop: i === 0 ? "none" : `1px solid ${RULE}` }}>
+                <dt className="text-[11px] tracking-widest uppercase" style={{ color: MUTED }}>{label}</dt>
+                <dd className="flex min-w-0 items-center gap-3">
+                  <span className="shrink-0 rounded px-1.5 py-0.5 text-[11px] font-bold" style={{ background: color, color: BG }}>{verb}</span>
+                  <span className="truncate" style={{ color: TEXT }}>{path}</span>
+                </dd>
+              </div>
+            ))}
+          </dl>
         </div>
       </section>
 
@@ -269,4 +259,8 @@ export default function IntegrationsPage() {
       />
     </div>
   );
+}
+
+function slug(s: string) {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 }
