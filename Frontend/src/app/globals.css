@@ -76,6 +76,77 @@ body {
   }
 }
 
+/* Product app (/app) light/dark theme. The AppShell root carries
+   `.app-theme` plus `data-theme="light"|"dark"`; everything inside reads the
+   --app-* tokens, and the legacy --paper/--ink/... tokens are redefined there
+   so text-ink, bg-paper, border-rule etc. follow the theme too. */
+.app-theme {
+  --app-frame: #e2ddd6;
+  --app-surface: #ffffff;
+  --app-surface-2: #f6f2ea;
+  --app-surface-3: #f0ece3;
+  --app-border: #ebe5da;
+  --app-border-strong: #e2dccf;
+  --app-border-hover: #d9d1c3;
+  --app-ink: #15130f;
+  --app-ink-soft: #4a463d;
+  --app-muted: #8a8274;
+  --app-accent: #c86018;
+  --app-nav-active: #d6d0c4;
+  --app-nav-hover: #dbd5ca;
+  --app-nav-ink: #6b6560;
+  --app-rail-rule: #d3ccbf;
+  --app-highlight: #f5d9bd;
+  --app-shadow: rgba(0, 0, 0, 0.05);
+  --app-dots: rgba(0, 0, 0, 0.07);
+  --app-success: #2e7d32;
+  --app-success-bg: #e8f5e9;
+  --app-warn: #9a5a14;
+  --app-warn-bg: #fbefe1;
+  --app-danger: #b3261e;
+  --app-danger-bg: #fdecea;
+  --app-neutral-bg: #f0ece3;
+  color-scheme: light;
+}
+
+.app-theme[data-theme="dark"] {
+  --app-frame: #0e0d0c;
+  --app-surface: #171614;
+  --app-surface-2: #211f1d;
+  --app-surface-3: #2a2826;
+  --app-border: rgba(255, 255, 255, 0.08);
+  --app-border-strong: rgba(255, 255, 255, 0.13);
+  --app-border-hover: rgba(255, 255, 255, 0.22);
+  --app-ink: #f0ece3;
+  --app-ink-soft: #c9c4b8;
+  --app-muted: #8a8478;
+  --app-accent: #c86018;
+  --app-nav-active: #2a2826;
+  --app-nav-hover: #222120;
+  --app-nav-ink: #a8a296;
+  --app-rail-rule: rgba(255, 255, 255, 0.08);
+  --app-highlight: rgba(200, 96, 24, 0.38);
+  --app-shadow: rgba(0, 0, 0, 0.4);
+  --app-dots: rgba(255, 255, 255, 0.07);
+  --app-success: #81c995;
+  --app-success-bg: rgba(76, 175, 80, 0.16);
+  --app-warn: #f0b46a;
+  --app-warn-bg: rgba(224, 138, 44, 0.16);
+  --app-danger: #f28b82;
+  --app-danger-bg: rgba(217, 83, 79, 0.18);
+  --app-neutral-bg: #2a2826;
+
+  /* legacy tokens */
+  --paper: #171614;
+  --paper-dim: #211f1d;
+  --ink: #f0ece3;
+  --ink-soft: #c9c4b8;
+  --muted: #958f83;
+  --rule: #34312d;
+  --red-dim: #3a2620;
+  color-scheme: dark;
+}
+
 /* Pagebirdy marketing site theme — dark, warm, editorial SaaS aesthetic.
    Scoped to (marketing) route group via pb- prefix so /login and /app stay unaffected. */
 @theme inline {
@@ -346,7 +417,7 @@ body {
     rgba(255, 255, 255, 0.16) 0, rgba(255, 255, 255, 0.16) 1px,
     transparent 1px, transparent var(--pb-reed));
   background-position: 50% 0;
-  animation: pb-hero-grid 3.2s ease-in-out both;
+  animation: pb-hero-grid 1.8s ease-in-out both;
 }
 @keyframes pb-hero-grid {
   0%   { opacity: 0; }
@@ -355,11 +426,11 @@ body {
   100% { opacity: 0; }
 }
 /* App window builds in: an outline first, then the panels fill, then content. */
-.pb-mock { animation: pb-mock-frame 1.6s ease-out 0.5s both; }
-.pb-mock-fill { animation: pb-mock-fill 0.7s ease-out both; }
-.pb-mock-fill-1 { animation-delay: 1.3s; }
-.pb-mock-fill-2 { animation-delay: 1.8s; }
-.pb-mock-content { animation: pb-fade 0.6s ease-out 2.3s both; }
+.pb-mock { animation: pb-mock-frame 0.8s ease-out 0.15s both; }
+.pb-mock-fill { animation: pb-mock-fill 0.45s ease-out both; }
+.pb-mock-fill-1 { animation-delay: 0.45s; }
+.pb-mock-fill-2 { animation-delay: 0.65s; }
+.pb-mock-content { animation: pb-fade 0.4s ease-out 0.9s both; }
 @keyframes pb-mock-frame {
   from { background-color: transparent; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.45); }
   45%  { background-color: transparent; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.45); }
@@ -378,4 +449,19 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .pb-reed, .pb-reed-glass, .pb-mock, .pb-mock-fill, .pb-mock-content { animation: none; }
   .pb-hero-grid { animation: none; opacity: 0; }
+}
+
+/* Integration flow: a dash travelling along the active connector, a soft
+   pulse on live dots, and a light sweep across the stage that is running. */
+.pb-flow-dash { stroke-dasharray: 4 6; animation: pb-flow-dash 0.6s linear infinite; }
+@keyframes pb-flow-dash { to { stroke-dashoffset: -20; } }
+.pb-pulse { animation: pb-pulse 1s ease-in-out infinite; }
+@keyframes pb-pulse { 50% { opacity: 0.35; } }
+.pb-stage-sweep {
+  background: linear-gradient(90deg, transparent, rgba(224, 138, 111, 0.18), transparent);
+  animation: pb-stage-sweep 0.38s ease-out both;
+}
+@keyframes pb-stage-sweep { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+@media (prefers-reduced-motion: reduce) {
+  .pb-flow-dash, .pb-pulse, .pb-stage-sweep { animation: none; }
 }

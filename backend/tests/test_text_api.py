@@ -88,3 +88,10 @@ def test_engine_failure_is_a_generic_502(client, monkeypatch):
 def test_requires_login():
     api.app.dependency_overrides.pop(api.require_user, None)
     assert TestClient(api.app).post("/api/translate/text", json={"texts": ["a"]}).status_code in (401, 500)
+
+
+def test_glossary_lists_only_languages_that_have_terms(client):
+    body = client.get("/api/glossary").json()
+    assert body["glossaries"], body
+    for g in body["glossaries"]:
+        assert g["terms"] and {"source", "target"} <= set(g["terms"][0])

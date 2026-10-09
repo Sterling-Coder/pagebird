@@ -1,190 +1,99 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { AppTopBar } from "@/components/app/AppTopBar";
-import { CreateJobModal } from "@/components/app/CreateJobModal";
-import { ConfirmDialog } from "@/components/app/ConfirmDialog";
-import { listProjects, deleteProject, type Project } from "@/lib/projects";
+import { ICON, PageHeader, Pill, PrimaryButton, STATUS_STYLE, Empty, timeAgo } from "@/components/app/ui";
+import { listJobs, jobKind, type JobRow } from "@/lib/agents";
 import { languageName } from "@/lib/languageNames";
 
-export default function JobsPage() {
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [deleting, setDeleting] = useState(false);
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const router = useRouter();
+const COLUMNS: { status: string; title: string }[] = [
+  { status: "processing", title: "Translating" },
+  { status: "failed", title: "Needs attention" },
+  { status: "complete", title: "Delivered" },
+];
+const KINDS = ["All", "Document", "Office", "Image", "Website", "Links"];
 
-  function refresh() {
-    return listProjects()
-      .then(setProjects)
-      .catch(() => setProjects([]));
-  }
+function jobHref(job: JobRow): string {
+  if (job.project_id) return `/app/jobs/${job.project_id}/files/${job.id}`;
+  return `/app/agents/${jobKind(job) === "Image" ? "image" : jobKind(job) === "Website" ? "website" : "document"}?job=${job.id}`;
+}
+
+function JobCard({ job }: { job: JobRow }) {
+  const lang = languageName(job.meta?.target_lang ?? null) ?? job.meta?.target_language;
+  const progress = job.status === "processing" ? job.meta?.progress : undefined;
+  return (
+    <Link href={jobHref(job)} className="block rounded-xl border border-[color:var(--app-border)] bg-[var(--app-surface)] p-3 shadow-[0_1px_2px_var(--app-shadow)] transition-colors hover:border-[color:var(--app-border-hover)]">
+      <div className="flex items-center gap-2 text-[11.5px] text-muted">
+        <span className="rounded bg-[var(--app-surface-3)] px-1.5 py-0.5 text-[10.5px] text-ink-soft">{jobKind(job)}</span>
+        <span className="ml-auto">{timeAgo(job.created_at)}</span>
+      </div>
+      <div className="mt-2 truncate text-[13px] font-medium text-ink" title={job.original_filename ?? job.id}>
+        {job.original_filename ?? job.id}
+      </div>
+      <div className="mt-1.5 flex items-center gap-2 text-[11.5px] text-ink-soft">
+        {lang ? <span className="rounded-md border border-[color:var(--app-border)] px-1.5 py-0.5">{lang}</span> : null}
+        {job.status === "processing" && job.meta?.stage ? <span className="truncate text-muted">{job.meta.stage}</span> : null}
+      </div>
+      {job.status === "failed" && job.error ? (
+        <p className="mt-2 line-clamp-2 text-[11.5px] text-[color:var(--app-danger)]">{job.error}</p>
+      ) : null}
+      {typeof progress === "number" ? (
+        <div className="mt-2 h-1 rounded-full bg-[var(--app-surface-3)]">
+          <div className="h-1 rounded-full bg-[#e08a2c]" style={{ width: `${Math.max(4, progress)}%` }} />
+        </div>
+      ) : null}
+    </Link>
+  );
+}
+
+export default function JobsBoardPage() {
+  const [jobs, setJobs] = useState<JobRow[] | null>(null);
+  const [kind, setKind] = useState("All");
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    refresh();
-    const pollInterval = setInterval(refresh, 5000);
-    return () => clearInterval(pollInterval);
+    const load = () => listJobs().then((j) => { setJobs(j); setError(null); }).catch((e) => setError(e.message));
+    load();
+    const poll = setInterval(load, 6000);
+    return () => clearInterval(poll);
   }, []);
 
-  function toggleSelected(id: string) {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
-  function toggleSelectAll() {
-    setSelected((prev) =>
-      prev.size === projects.length ? new Set() : new Set(projects.map((p) => p.id))
-    );
-  }
-
-  async function handleConfirmDelete() {
-    setDeleting(true);
-    try {
-      await Promise.all([...selected].map((id) => deleteProject(id)));
-      setSelected(new Set());
-      setConfirmOpen(false);
-      await refresh();
-    } finally {
-      setDeleting(false);
-    }
-  }
-
-  const selectedNames = projects.filter((p) => selected.has(p.id)).map((p) => p.name);
+  const shown = (jobs ?? []).filter((j) => kind === "All" || jobKind(j) === kind)
+    .sort((a, b) => b.created_at - a.created_at);
 
   return (
-    <div className="flex h-full w-full bg-white">
-      <div className="flex min-w-0 flex-1 flex-col">
-        <AppTopBar breadcrumb="Jobs" />
-        <div className="flex min-h-0 flex-1">
-          <div className="flex min-w-0 flex-1 flex-col overflow-auto p-6">
-            <div className="mb-4 flex items-center justify-between">
-              <h1 className="text-lg font-bold text-ink">Jobs</h1>
-              <div className="flex items-center gap-3">
-                {selected.size > 0 ? (
-                  <button
-                    type="button"
-                    onClick={() => setConfirmOpen(true)}
-                    disabled={deleting}
-                    aria-label="Delete selected projects"
-                    className="border border-rule p-2 text-ink-soft transition-colors hover:border-red hover:text-red disabled:opacity-40"
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="h-4 w-4">
-                      <path d="M3 6h18" />
-                      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                    </svg>
-                  </button>
-                ) : null}
-                <button
-                  type="button"
-                  onClick={() => setModalOpen(true)}
-                  className="flex items-center gap-2 rounded-full bg-red px-5 py-2 font-mono text-[11px] uppercase tracking-widest text-white hover:opacity-90"
-                >
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5">
-                    <path d="M12 5v14M5 12h14" />
-                  </svg>
-                  Create project
-                </button>
-              </div>
-            </div>
-
-            <table className="w-full border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-rule text-left font-mono text-[11px] uppercase tracking-widest text-muted">
-                  <th className="w-8 py-2">
-                    <input
-                      type="checkbox"
-                      checked={projects.length > 0 && selected.size === projects.length}
-                      onChange={toggleSelectAll}
-                      aria-label="Select all projects"
-                    />
-                  </th>
-                  <th className="py-2">Name</th>
-                  <th className="py-2">Status</th>
-                  <th className="py-2">Source</th>
-                  <th className="py-2">Client</th>
-                  <th className="py-2">Vendor</th>
-                  <th className="py-2">Deadline</th>
-                </tr>
-              </thead>
-              <tbody>
-                {projects.map((p) => (
-                  <tr
-                    key={p.id}
-                    onClick={() => router.push(`/app/jobs/${p.id}/files`)}
-                    className="cursor-pointer border-b border-rule hover:bg-paper-dim"
-                  >
-                    <td className="py-2" onClick={(e) => e.stopPropagation()}>
-                      <input
-                        type="checkbox"
-                        checked={selected.has(p.id)}
-                        onChange={() => toggleSelected(p.id)}
-                        aria-label={`Select ${p.name}`}
-                      />
-                    </td>
-                    <td className="py-2 text-ink">
-                      <span className="flex items-center gap-2">
-                        <svg
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="1.75"
-                          className="h-4 w-4 shrink-0 text-red"
-                        >
-                          <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                        </svg>
-                        {p.name}
-                      </span>
-                    </td>
-                    <td className="py-2 text-red">{p.status}</td>
-                    <td className="py-2 text-ink-soft">
-                      {languageName(p.source_lang) ?? "—"} → {languageName(p.target_lang) ?? "—"}
-                    </td>
-                    <td className="py-2 text-ink-soft">{p.client ?? "—"}</td>
-                    <td className="py-2 text-ink-soft">{p.vendor ?? "—"}</td>
-                    <td className="py-2 text-ink-soft">
-                      {p.deadline ? new Date(p.deadline * 1000).toLocaleDateString() : "—"}
-                    </td>
-                  </tr>
-                ))}
-                {projects.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="py-8 text-center text-muted">
-                      No jobs yet. Create one to get started.
-                    </td>
-                  </tr>
-                ) : null}
-              </tbody>
-            </table>
-          </div>
-        </div>
+    <div className="flex h-full w-full flex-col bg-[var(--app-surface)]">
+      <AppTopBar />
+      <PageHeader icon={ICON.jobs} title="Jobs" count={jobs?.length}
+        desc="Every translation across your projects and agents."
+        right={<Link href="/app/agents"><PrimaryButton>+ New translation</PrimaryButton></Link>} />
+      <div className="flex flex-wrap gap-2 px-6 pb-4">
+        {KINDS.map((k) => <Pill key={k} active={kind === k} onClick={() => setKind(k)}>{k}</Pill>)}
       </div>
-
-      <CreateJobModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        onCreated={() => {
-          setModalOpen(false);
-          refresh();
-        }}
-      />
-
-      <ConfirmDialog
-        open={confirmOpen}
-        title="Delete project"
-        message={`Delete ${selectedNames.length} project${selectedNames.length > 1 ? "s" : ""} (${selectedNames.join(", ")})? This also deletes their files. This cannot be undone.`}
-        confirmLabel="Delete"
-        destructive
-        busy={deleting}
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setConfirmOpen(false)}
-      />
+      {error ? <p className="px-6 pb-3 text-[12.5px] text-[color:var(--app-danger)]">{error}</p> : null}
+      <div className="min-h-0 flex-1 overflow-auto bg-[var(--app-surface-2)] px-6 py-5">
+        {jobs !== null && jobs.length === 0 ? (
+          <Empty>No translations yet. Start one from <Link href="/app/agents" className="underline">Agents</Link>.</Empty>
+        ) : (
+          <div className="grid min-w-[720px] grid-cols-3 gap-4">
+            {COLUMNS.map((col) => {
+              const items = shown.filter((j) => j.status === col.status);
+              return (
+                <div key={col.status} className="flex flex-col gap-2">
+                  <div className="flex items-center gap-2 px-1 pb-1 text-[13px] font-semibold text-ink">
+                    <span className="h-2 w-2 rounded-full" style={{ background: STATUS_STYLE[col.status].dot }} />
+                    {col.title}
+                    <span className="font-normal text-muted">{items.length}</span>
+                  </div>
+                  {jobs === null ? <p className="px-1 text-[12.5px] text-muted">Loading…</p> : null}
+                  {items.map((j) => <JobCard key={j.id} job={j} />)}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

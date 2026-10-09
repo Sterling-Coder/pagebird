@@ -1,30 +1,22 @@
-import { LogsPanel } from "./LogsPanel";
-import { useAppShell } from "./AppShell";
+"use client";
 
-export function AppTopBar({ breadcrumb }: { breadcrumb?: React.ReactNode }) {
-  const { navOpen, toggleNav: onToggleNav } = useAppShell();
+import NotificationBell from "./NotificationBell";
+
+/** Notifications bell pinned to the top-right corner of the main panel. It
+ * floats over the page so it takes no vertical space. */
+export function AppTopBar() {
   return (
-    <div className="flex h-12 shrink-0 items-center justify-between border-b border-rule bg-white px-4">
-      <div className="flex items-center">
-        <button
-          type="button"
-          onClick={onToggleNav}
-          aria-label={navOpen ? "Collapse sidebar" : "Expand sidebar"}
-          aria-pressed={navOpen}
-          className="border border-transparent p-1 text-ink-soft transition-colors hover:border-rule hover:text-ink"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="h-4 w-4">
-            <rect x="3" y="4" width="18" height="16" rx="1" />
-            <path d="M9 4v16" />
-          </svg>
-        </button>
-        {breadcrumb ? (
-          <div className="ml-3 font-mono text-[11px] uppercase tracking-widest text-ink-soft">
-            {breadcrumb}
-          </div>
-        ) : null}
-      </div>
-      <LogsPanel />
+    <div data-tour="notifications" className="absolute right-4 top-4 z-20 flex items-center">
+      <NotificationBell />
     </div>
+  );
+}
+
+export function SidebarIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" className="h-4 w-4">
+      <rect x="3" y="4" width="18" height="16" rx="1" />
+      <path d="M9 4v16" />
+    </svg>
   );
 }
