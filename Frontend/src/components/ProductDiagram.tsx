@@ -1,264 +1,268 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 
-interface Node {
-  ox: number; oy: number;
-  x: number;  y: number;
-  vx: number; vy: number;
-  r: number;
-  phase: number;
-  isKey: boolean;
+/* One tab per product. Each runs its own agent's steps in order, and the
+   preview turns from the original into the translation as the last step
+   lands. Tabs advance on their own while the section is on screen; hovering
+   or picking one holds it. */
+
+type Product = {
+  id: string;
+  n: string;
   label: string;
+  agent: string;
+  color: string;
+  input: string;
+  output: string;
+  steps: string[];
+  before: ReactNode;
+  after: ReactNode;
+};
+
+function Lines({ widths, accent }: { widths: number[]; accent?: number }) {
+  return (
+    <div className="space-y-1.5">
+      {widths.map((w, i) => (
+        <div key={i} className="h-1.5 rounded-full" style={{ width: `${w}%`, background: i === accent ? "#e08a6f" : "rgba(21,19,15,0.18)" }} />
+      ))}
+    </div>
+  );
 }
 
-const PRODUCTS = [
-  { id: "documents", n: "01", label: "Documents / PDF",     color: "#e08a6f", agent: "Layout Agent",
-    steps: [".idml/.pdf", "Parse frames",    "Extract text",    "AI Translate", "Rebuild layout",  "Output"] },
-  { id: "subtitles", n: "02", label: "SRT / VTT Subtitles",  color: "#8b6fbf", agent: "Timecode Agent",
-    steps: [".srt/.vtt",  "Parse cues",      "Extract text",    "AI Translate", "Sync timecodes",  "Output"] },
-  { id: "images",    n: "03", label: "Image Translator",     color: "#4a9e8a", agent: "OCR Agent",
-    steps: ["Image/PSD",  "Detect regions",  "OCR",             "AI Translate", "Render in place", "Output"] },
-  { id: "websites",  n: "04", label: "Website Translator",   color: "#5a9e5a", agent: "Web Crawler",
-    steps: ["URL",        "Crawl pages",     "Extract strings", "AI Translate", "Rebuild HTML",    "/fr/ /de/"] },
-  { id: "youtube",   n: "05", label: "YouTube Subtitles",    color: "#c94040", agent: "Caption Agent",
-    steps: ["YouTube URL","Fetch captions",  "Parse cues",      "AI Translate", "Export SRT",      "Upload-ready"] },
+function Page({ lang, title, body }: { lang: string; title: string; body: string }) {
+  return (
+    <div className="h-full rounded-lg bg-[#fbf8f2] p-4 text-[#15130f] shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
+      <div className="mb-2 flex items-center justify-between text-[9px] uppercase tracking-[0.1em] text-[#8a8478]">
+        <span>Annual report</span><span>{lang}</span>
+      </div>
+      <div className="mb-2 h-16 rounded-md bg-gradient-to-br from-[#e8ac2e] to-[#c95810]" />
+      <div className="text-[13px] font-semibold leading-tight">{title}</div>
+      <p className="mt-1 text-[10.5px] leading-snug text-[#4a463d]">{body}</p>
+      <div className="mt-3 grid grid-cols-2 gap-3">
+        <Lines widths={[100, 92, 96, 70]} />
+        <Lines widths={[95, 100, 88, 60]} />
+      </div>
+    </div>
+  );
+}
+
+function Slide({ title, bullets }: { title: string; bullets: string[] }) {
+  return (
+    <div className="flex h-full flex-col rounded-lg bg-[#15233d] p-4 text-white shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
+      <div className="text-[9px] uppercase tracking-[0.1em] text-white/50">Q4 deck · slide 3</div>
+      <div className="mt-2 text-[15px] font-semibold leading-tight">{title}</div>
+      <ul className="mt-3 space-y-1.5 text-[11px] text-white/80">
+        {bullets.map((b) => <li key={b} className="flex gap-2"><span className="text-[#6f9cff]">▪</span>{b}</li>)}
+      </ul>
+      <div className="mt-auto flex items-end gap-1.5 pt-3">
+        {[40, 62, 50, 78, 66].map((h, i) => <div key={i} className="w-4 rounded-sm bg-[#6f9cff]" style={{ height: h * 0.5 }} />)}
+        <span className="ml-2 font-mono text-[10px] text-white/50">=SUM(B2:B6)</span>
+      </div>
+    </div>
+  );
+}
+
+function Banner({ text, sub }: { text: string; sub: string }) {
+  return (
+    <div className="relative flex h-full items-center justify-center overflow-hidden rounded-lg shadow-[0_10px_30px_rgba(0,0,0,0.35)]"
+      style={{ background: "radial-gradient(circle at 30% 30%, #4fc4a8, #1f6f63 60%, #12403a)" }}>
+      <div className="absolute right-4 bottom-4 h-16 w-16 rounded-full bg-white/10" />
+      <div className="text-center">
+        <div className="text-[26px] font-black tracking-tight text-[#fff6d6] drop-shadow">{text}</div>
+        <div className="mt-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/80">{sub}</div>
+        <div className="mt-3 inline-block rounded-full bg-[#fff6d6] px-3 py-1 text-[11px] font-bold text-[#12403a]">-40%</div>
+      </div>
+    </div>
+  );
+}
+
+function Browser({ url, nav, title, cta }: { url: string; nav: string[]; title: string; cta: string }) {
+  return (
+    <div className="flex h-full flex-col overflow-hidden rounded-lg bg-white text-[#15130f] shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
+      <div className="flex items-center gap-1.5 border-b border-[#eee] bg-[#f4f2ee] px-3 py-1.5">
+        {["#ff5f57", "#febc2e", "#28c840"].map((c) => <span key={c} className="h-2 w-2 rounded-full" style={{ background: c }} />)}
+        <span className="ml-2 truncate rounded bg-white px-2 py-0.5 font-mono text-[9.5px] text-[#8a8478]">{url}</span>
+      </div>
+      <div className="flex gap-3 px-4 pt-3 text-[10px] text-[#6b6560]">{nav.map((n) => <span key={n}>{n}</span>)}</div>
+      <div className="px-4 pt-4">
+        <div className="text-[16px] font-semibold leading-tight">{title}</div>
+        <Lines widths={[90, 74]} />
+        <span className="mt-3 inline-block rounded-full bg-[#5a9e5a] px-3 py-1 text-[10px] font-semibold text-white">{cta}</span>
+      </div>
+    </div>
+  );
+}
+
+function Selection({ translated }: { translated: boolean }) {
+  return (
+    <div className="relative h-full rounded-lg bg-white p-4 text-[12px] leading-relaxed text-[#4a463d] shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
+      Our team reviews every order within one business day, and{" "}
+      <mark className="rounded bg-[#f5d9bd] px-0.5 text-[#15130f]">refunds go to the original payment method.</mark>{" "}
+      Contact support if anything looks wrong.
+      <div className={`absolute left-6 right-6 bottom-4 rounded-lg border border-[#e2d6c8] bg-[#fffaf4] p-3 shadow-[0_8px_24px_rgba(0,0,0,0.12)] transition-all duration-500 ${
+        translated ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"}`}>
+        <div className="text-[9px] uppercase tracking-[0.1em] text-[#8a6a4a]">Pagebirdy → ES</div>
+        <div className="mt-1 text-[12px] text-[#15130f]">Los reembolsos se emiten al método de pago original.</div>
+      </div>
+    </div>
+  );
+}
+
+const PRODUCTS: Product[] = [
+  {
+    id: "documents", n: "01", label: "InDesign & PDF", agent: "Layout agent", color: "#e08a6f",
+    input: "report.idml", output: "report.es.idml",
+    steps: ["Read frames", "Protect maths", "Translate", "Fit to frame", "Same file out"],
+    before: <Page lang="EN" title="A year of steady growth" body="Revenue grew in every region while costs held flat." />,
+    after: <Page lang="ES" title="Un año de crecimiento constante" body="Los ingresos crecieron en todas las regiones con costos estables." />,
+  },
+  {
+    id: "office", n: "02", label: "Word, PowerPoint, Excel", agent: "Office agent", color: "#6f9cff",
+    input: "q4_deck.pptx", output: "q4_deck.fr.pptx",
+    steps: ["Read runs", "Keep styles", "Translate", "Shrink to fit", "Same file out"],
+    before: <Slide title="What we shipped this quarter" bullets={["Faster onboarding", "Two new regions", "Half the support tickets"]} />,
+    after: <Slide title="Ce que nous avons livré ce trimestre" bullets={["Intégration plus rapide", "Deux nouvelles régions", "Moitié moins de tickets"]} />,
+  },
+  {
+    id: "images", n: "03", label: "Images", agent: "OCR agent", color: "#4fc4a8",
+    input: "banner.png", output: "banner.de.png",
+    steps: ["Read text", "Skip prices", "Translate", "Repaint", "Check pixels"],
+    before: <Banner text="SALE TODAY" sub="Summer collection" />,
+    after: <Banner text="HEUTE SALE" sub="Sommerkollektion" />,
+  },
+  {
+    id: "websites", n: "04", label: "Website link", agent: "Web agent", color: "#8fd14f",
+    input: "acme.com/pricing", output: "Read-only copy",
+    steps: ["Safe fetch", "Strip scripts", "Translate", "Keep markup", "Share copy"],
+    before: <Browser url="acme.com/pricing" nav={["Product", "Pricing", "Sign in"]} title="Simple pricing for every team" cta="Start free" />,
+    after: <Browser url="acme.com/pricing · DE" nav={["Produkt", "Preise", "Anmelden"]} title="Einfache Preise für jedes Team" cta="Kostenlos starten" />,
+  },
+  {
+    id: "extension", n: "05", label: "Chrome extension", agent: "In your browser", color: "#a98bf0",
+    input: "Any web page", output: "Translated in place",
+    steps: ["Select text", "Send", "Translate", "Show beside it", "Or whole page"],
+    before: <Selection translated={false} />,
+    after: <Selection translated />,
+  },
 ];
 
-// Key node positions as fractions of canvas
-const KEY_FX = [0.07, 0.25, 0.43, 0.57, 0.75, 0.93];
-const KEY_FY = [0.44, 0.28, 0.62, 0.28, 0.62, 0.44];
-
-// Ambient particle rest positions
-const AMB_F: [number, number][] = [
-  [0.14, 0.14], [0.32, 0.82], [0.50, 0.10], [0.68, 0.86], [0.85, 0.18],
-  [0.19, 0.62], [0.37, 0.40], [0.55, 0.68], [0.72, 0.36], [0.89, 0.76],
-  [0.09, 0.86], [0.28, 0.18], [0.51, 0.92], [0.68, 0.08], [0.88, 0.56],
-  [0.41, 0.18], [0.63, 0.80], [0.79, 0.22],
-];
-
-function bezierPt(x0: number, y0: number, cpx: number, cpy: number, x1: number, y1: number, t: number) {
-  const m = 1 - t;
-  return { x: m * m * x0 + 2 * m * t * cpx + t * t * x1, y: m * m * y0 + 2 * m * t * cpy + t * t * y1 };
-}
-
-function FlowCanvas({ color, steps }: { color: string; steps: string[] }) {
-  const cvRef   = useRef<HTMLCanvasElement>(null);
-  const rafRef  = useRef(0);
-  const nsRef   = useRef<Node[]>([]);
-  const mRef    = useRef({ x: -9999, y: -9999 });
-  const liveRef = useRef({ color, steps, W: 0, H: 0 });
-
-  // sync props without remounting
-  useEffect(() => {
-    liveRef.current.color = color;
-    liveRef.current.steps = steps;
-    let ki = 0;
-    for (const n of nsRef.current) if (n.isKey) n.label = steps[ki++] ?? "";
-  }, [color, steps]);
-
-  useEffect(() => {
-    const cvMaybe = cvRef.current;
-    if (!cvMaybe) return;
-    const cv  = cvMaybe as HTMLCanvasElement;
-    const ctx = cv.getContext("2d")!;
-    const dpr = window.devicePixelRatio || 1;
-
-    // 2 animated dots per path segment (5 segments between 6 key nodes)
-    const dotTs = Array.from({ length: 5 }, (_, si) => [si % 2 === 0 ? 0.0 : 0.5, si % 2 === 0 ? 0.5 : 0.0]);
-
-    function build(W: number, H: number, steps: string[]) {
-      const ns: Node[] = [];
-      KEY_FX.forEach((fx, i) => ns.push({
-        ox: fx * W, oy: KEY_FY[i] * H, x: fx * W, y: KEY_FY[i] * H,
-        vx: 0, vy: 0, r: 18, phase: i * 1.1, isKey: true, label: steps[i] ?? "",
-      }));
-      AMB_F.forEach(([fx, fy], i) => ns.push({
-        ox: fx * W, oy: fy * H, x: fx * W, y: fy * H,
-        vx: (Math.random() - 0.5) * 0.4, vy: (Math.random() - 0.5) * 0.4,
-        r: 2 + Math.random() * 2.2, phase: i * 0.53 + Math.random() * 2, isKey: false, label: "",
-      }));
-      nsRef.current = ns;
-    }
-
-    function resize() {
-      const par = cv.parentElement;
-      if (!par) return;
-      const { width, height } = par.getBoundingClientRect();
-      const W = Math.max(width, 200), H = Math.max(height, 300);
-      liveRef.current.W = W; liveRef.current.H = H;
-      cv.width = W * dpr; cv.height = H * dpr;
-      cv.style.width = W + "px"; cv.style.height = H + "px";
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      build(W, H, liveRef.current.steps);
-    }
-
-    resize();
-    const ro = new ResizeObserver(resize);
-    ro.observe(cv.parentElement!);
-
-    let alive = true;
-
-    function tick() {
-      if (!alive) return;
-      const { color, W, H } = liveRef.current;
-      const { x: mx, y: my } = mRef.current;
-      const t = performance.now() * 0.001;
-      const ns = nsRef.current;
-
-      ctx.clearRect(0, 0, W, H);
-
-      // ── Physics ──────────────────────────────────────────────
-      for (const n of ns) {
-        const sp = n.isKey ? 0.040 : 0.022;
-        n.vx += Math.sin(t * 0.55 + n.phase) * 0.05;
-        n.vy += Math.cos(t * 0.42 + n.phase * 1.3) * 0.05;
-        n.vx += (n.ox - n.x) * sp;
-        n.vy += (n.oy - n.y) * sp;
-        const dx = n.x - mx, dy = n.y - my, d = Math.sqrt(dx * dx + dy * dy);
-        if (d < 120 && d > 0.1) {
-          const f = ((120 - d) / 120) ** 1.5 * 3.2;
-          n.vx += (dx / d) * f; n.vy += (dy / d) * f;
-        }
-        n.vx *= 0.83; n.vy *= 0.83;
-        n.x += n.vx; n.y += n.vy;
-      }
-
-      const keys = ns.filter(n => n.isKey);
-
-      // ── Ambient proximity lines ───────────────────────────────
-      const CONN = W * 0.20;
-      ctx.lineWidth = 0.6;
-      for (let i = 0; i < ns.length; i++) {
-        for (let j = i + 1; j < ns.length; j++) {
-          const a = ns[i], b = ns[j];
-          if (a.isKey && b.isKey) continue;
-          const ddx = b.x - a.x, ddy = b.y - a.y, dd = Math.sqrt(ddx * ddx + ddy * ddy);
-          if (dd > CONN) continue;
-          ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
-          ctx.strokeStyle = color; ctx.globalAlpha = (1 - dd / CONN) * 0.10; ctx.stroke();
-        }
-      }
-      ctx.globalAlpha = 1;
-
-      // ── Sequential paths between key nodes ───────────────────
-      for (let si = 0; si < keys.length - 1; si++) {
-        const a = keys[si], b = keys[si + 1];
-        const cpx = (a.x + b.x) * 0.5;
-        const cpy = (a.y + b.y) * 0.5 + (a.oy < b.oy ? -22 : 22);
-
-        // dashed base
-        ctx.save();
-        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.quadraticCurveTo(cpx, cpy, b.x, b.y);
-        ctx.strokeStyle = color; ctx.globalAlpha = 0.16;
-        ctx.lineWidth = 1; ctx.setLineDash([3, 6]); ctx.stroke();
-        ctx.setLineDash([]); ctx.restore();
-
-        // animated dots
-        dotTs[si].forEach((dt, di) => {
-          dotTs[si][di] = (dt + 0.0035) % 1;
-          const pt = bezierPt(a.x, a.y, cpx, cpy, b.x, b.y, dotTs[si][di]);
-          const fade = dotTs[si][di] < 0.08 ? dotTs[si][di] / 0.08 : dotTs[si][di] > 0.92 ? (1 - dotTs[si][di]) / 0.08 : 1;
-          ctx.save();
-          ctx.shadowColor = color; ctx.shadowBlur = 10;
-          ctx.beginPath(); ctx.arc(pt.x, pt.y, 3, 0, Math.PI * 2);
-          ctx.fillStyle = color; ctx.globalAlpha = fade * 0.9; ctx.fill();
-          ctx.restore();
-        });
-      }
-      ctx.globalAlpha = 1;
-
-      // ── Key nodes ─────────────────────────────────────────────
-      for (const n of keys) {
-        ctx.save();
-        ctx.shadowColor = color; ctx.shadowBlur = 22;
-        ctx.beginPath(); ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
-        ctx.fillStyle = color + "1c"; ctx.fill();
-        ctx.strokeStyle = color + "cc"; ctx.lineWidth = 1.5; ctx.stroke();
-        ctx.restore();
-        // label
-        ctx.fillStyle = "rgba(240,236,227,0.65)";
-        ctx.font = `600 7.5px "Space Mono", monospace`;
-        ctx.textAlign = "center"; ctx.textBaseline = "top";
-        n.label.split(" ").forEach((word, wi) => ctx.fillText(word, n.x, n.y + n.r + 4 + wi * 10));
-      }
-
-      // ── Ambient nodes ─────────────────────────────────────────
-      for (const n of ns.filter(n => !n.isKey)) {
-        ctx.save();
-        ctx.shadowColor = color; ctx.shadowBlur = 5;
-        ctx.beginPath(); ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
-        ctx.fillStyle = color + "40"; ctx.fill();
-        ctx.restore();
-      }
-
-      rafRef.current = requestAnimationFrame(tick);
-    }
-
-    rafRef.current = requestAnimationFrame(tick);
-
-    const par = cv.parentElement!;
-    const onMove  = (e: MouseEvent) => { const r = cv.getBoundingClientRect(); mRef.current = { x: e.clientX - r.left, y: e.clientY - r.top }; };
-    const onLeave = () => { mRef.current = { x: -9999, y: -9999 }; };
-    par.addEventListener("mousemove", onMove);
-    par.addEventListener("mouseleave", onLeave);
-
-    return () => {
-      alive = false;
-      cancelAnimationFrame(rafRef.current);
-      ro.disconnect();
-      par.removeEventListener("mousemove", onMove);
-      par.removeEventListener("mouseleave", onLeave);
-    };
-  }, []);
-
-  return <canvas ref={cvRef} style={{ display: "block", position: "absolute", top: 0, left: 0 }} aria-hidden="true" />;
-}
+const STEP_MS = 650;
 
 export default function ProductDiagram() {
+  const ref = useRef<HTMLElement>(null);
   const [active, setActive] = useState(0);
+  const [step, setStep] = useState(0);
+  const [visible, setVisible] = useState(false);
+  const [held, setHeld] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const obs = new IntersectionObserver(([e]) => setVisible(e.isIntersecting), { threshold: 0.25 });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  // Steps tick forward; after the last one the preview rests on the
+  // translation, then (unless held) the next product starts.
+  useEffect(() => {
+    if (!visible) return;
+    const product = PRODUCTS[active];
+    const last = product.steps.length;
+    const id = setTimeout(() => {
+      if (step < last + 3) setStep(step + 1);
+      else if (!held) { setActive((active + 1) % PRODUCTS.length); setStep(0); }
+    }, STEP_MS);
+    return () => clearTimeout(id);
+  }, [visible, active, step, held]);
+
   const product = PRODUCTS[active];
+  const done = step >= product.steps.length;
 
   return (
-    <section style={{ background: "#0a0908" }}>
-      <div className="mx-auto max-w-[1100px] px-8 py-24 lg:px-14 lg:py-36">
-
-        <div className="mb-14">
-          <div className="flex items-center gap-3 mb-5">
+    <section ref={ref} style={{ background: "#0a0908" }}>
+      <div className="mx-auto max-w-[1100px] px-8 py-24 lg:px-14 lg:py-32">
+        <div className="mb-12">
+          <div className="mb-5 flex items-center gap-3">
             <span className="inline-block h-2 w-2 bg-pb-accent" />
-            <span className="font-pb-mono text-[11px] font-bold tracking-widest text-pb-accent uppercase">How each product works</span>
+            <span className="font-pb-mono text-[11px] font-bold uppercase tracking-widest text-pb-accent">How each product works</span>
           </div>
-          <h2 className="pb-stencil" style={{ fontSize: "clamp(2rem,3.5vw,3.2rem)", lineHeight: 1.05, maxWidth: "600px" }}>
+          <h2 className="pb-stencil" style={{ fontSize: "clamp(2rem,3.5vw,3.2rem)", lineHeight: 1.05, maxWidth: "640px" }}>
             Five products.<br />Five specialized agents.
           </h2>
         </div>
 
-        <div className="grid grid-cols-1 gap-10 lg:grid-cols-[280px_1fr]">
-
-          {/* LEFT: tabs */}
-          <div className="flex flex-col gap-1">
-            {PRODUCTS.map((p, i) => (
-              <button key={p.id} type="button" onClick={() => setActive(i)}
-                className="group flex items-start gap-4 rounded-xl px-4 py-4 text-left transition-all"
-                style={{ background: i === active ? `${p.color}12` : "transparent", border: i === active ? `1px solid ${p.color}35` : "1px solid transparent" }}>
-                <span className="font-pb-mono mt-0.5 shrink-0 text-[10px]" style={{ color: i === active ? p.color : "rgba(255,255,255,0.25)" }}>{p.n}</span>
-                <div>
-                  <div className="text-[14px] font-semibold" style={{ color: i === active ? "#f0ece3" : "rgba(240,236,227,0.45)" }}>{p.label}</div>
-                  {i === active && <div className="mt-1 font-pb-mono text-[9px] tracking-widest uppercase" style={{ color: p.color }}>{p.agent}</div>}
-                </div>
-              </button>
-            ))}
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[280px_1fr]"
+          onMouseEnter={() => setHeld(true)} onMouseLeave={() => setHeld(false)}>
+          {/* Tabs */}
+          <div className="flex flex-col gap-1.5">
+            {PRODUCTS.map((p, i) => {
+              const on = i === active;
+              const pct = on ? Math.min(100, (step / (p.steps.length + 3)) * 100) : 0;
+              return (
+                <button key={p.id} type="button" onClick={() => { setActive(i); setStep(0); }}
+                  className="relative overflow-hidden rounded-2xl px-4 py-3.5 text-left transition-colors"
+                  style={{ background: on ? "#171614" : "transparent", border: `1px solid ${on ? "rgba(255,255,255,0.08)" : "transparent"}` }}>
+                  <div className="flex items-baseline gap-3">
+                    <span className="font-pb-mono text-[10.5px]" style={{ color: on ? p.color : "rgba(255,255,255,0.3)" }}>{p.n}</span>
+                    <div>
+                      <div className="text-[14px]" style={{ color: on ? "#f0ece3" : "rgba(240,236,227,0.5)" }}>{p.label}</div>
+                      {on ? <div className="mt-0.5 text-[12px]" style={{ color: p.color }}>{p.agent}</div> : null}
+                    </div>
+                  </div>
+                  {on ? (
+                    <span className="absolute bottom-0 left-0 h-[2px] transition-[width] duration-500 ease-linear"
+                      style={{ width: `${pct}%`, background: p.color }} />
+                  ) : null}
+                </button>
+              );
+            })}
           </div>
 
-          {/* RIGHT: canvas flow diagram */}
-          <div style={{ position: "relative", height: "520px" }}>
-            <div className="absolute top-4 right-4 z-10 font-pb-mono text-[9px] font-bold tracking-[0.14em] uppercase px-3 py-1.5 rounded-full"
-              style={{ background: `${product.color}18`, border: `1px solid ${product.color}35`, color: product.color }}>
-              {product.agent}
+          {/* Stage */}
+          <div className="rounded-[24px] p-5 sm:p-6" style={{ background: "#141311", border: "1px solid rgba(255,255,255,0.07)" }}>
+            {/* in → out */}
+            <div className="font-pb-mono mb-5 flex flex-wrap items-center gap-2 text-[11.5px]">
+              <span className="rounded-full px-3 py-1 text-[#d8d3c8]" style={{ background: "rgba(255,255,255,0.05)" }}>{product.input}</span>
+              <span className="text-[#6e6a61]">→</span>
+              <span className="rounded-full px-3 py-1 transition-colors duration-300"
+                style={{ background: done ? `${product.color}22` : "rgba(255,255,255,0.03)", color: done ? product.color : "#6e6a61" }}>
+                {product.output}
+              </span>
             </div>
-            <FlowCanvas color={product.color} steps={product.steps} />
-          </div>
 
+            {/* Steps */}
+            <ol className="mb-6 grid grid-cols-5 gap-2">
+              {product.steps.map((s, i) => {
+                const state = i < step ? "done" : i === step ? "now" : "next";
+                return (
+                  <li key={s} className="min-w-0">
+                    <div className="h-1 overflow-hidden rounded-full" style={{ background: "rgba(255,255,255,0.08)" }}>
+                      <div className="h-full rounded-full transition-[width] duration-500 ease-out"
+                        style={{ width: state === "done" ? "100%" : state === "now" ? "55%" : "0%", background: product.color }} />
+                    </div>
+                    <div className="mt-2 truncate text-[11.5px] transition-colors"
+                      style={{ color: state === "next" ? "#6e6a61" : "#f0ece3" }}>{s}</div>
+                  </li>
+                );
+              })}
+            </ol>
+
+            {/* Preview: original fades out, translation fades in once the steps finish */}
+            <div key={product.id} className="relative h-[280px]">
+              <div className="absolute inset-0 transition-all duration-500"
+                style={{ opacity: done ? 0 : 1, transform: done ? "scale(0.98)" : "scale(1)" }}>{product.before}</div>
+              <div className="absolute inset-0 transition-all duration-500"
+                style={{ opacity: done ? 1 : 0, transform: done ? "scale(1)" : "scale(1.02)" }}>{product.after}</div>
+              <span className="font-pb-mono absolute top-3 right-3 rounded-full px-2.5 py-1 text-[10px] uppercase tracking-[0.1em]"
+                style={{ background: "rgba(10,9,8,0.75)", color: done ? product.color : "#a8a49a" }}>
+                {done ? "Translated" : "Original"}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
     </section>

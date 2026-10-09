@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ClosingBand from "@/components/ClosingBand";
 
 const INTEGRATIONS = [
   {
@@ -259,40 +260,13 @@ export default function IntegrationsPage() {
       </section>
 
       {/* CTA */}
-      <section style={{
-        background: "linear-gradient(135deg, #f5ede4 0%, #fdf6ef 50%, #f0e8dc 100%)",
-        borderTop: "1px solid rgba(200,150,100,0.15)",
-      }}>
-        <div style={{
-          maxWidth: "1100px", margin: "0 auto",
-          padding: "56px 56px",
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          gap: "40px",
-        }}>
-          <h2 style={{
-            fontFamily: "var(--font-share-tech-mono), monospace",
-            fontSize: "clamp(1.8rem, 3vw, 2.8rem)",
-            lineHeight: 1.1,
-            maxWidth: "600px",
-            letterSpacing: "-0.01em",
-            margin: 0,
-            color: "#15130f",
-          }}>
-            Your workflow,<br />40+ languages.
-          </h2>
-          <Link href="/login" style={{
-            fontFamily: "var(--font-space-mono), monospace",
-            fontSize: "11px", fontWeight: 700, letterSpacing: "0.12em",
-            color: "#fff", background: "#c86018",
-            padding: "16px 32px", whiteSpace: "nowrap",
-            textDecoration: "none", textTransform: "uppercase",
-            flexShrink: 0,
-            borderRadius: "4px",
-          }}>
-            TRANSLATE FREE →
-          </Link>
-        </div>
-      </section>
+      <ClosingBand
+        color="#b0306a"
+        title={<>Your workflow,<br />40+ languages.</>}
+        sub="Open the translated file in the app it came from."
+        cta="Translate free"
+        href="/login"
+      />
     </div>
   );
 }

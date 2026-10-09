@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ClosingBand from "@/components/ClosingBand";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -97,27 +98,13 @@ export default function AboutPage() {
       </section>
 
       {/* CTA */}
-      <section>
-        <div className="mx-auto max-w-[1100px] px-8 py-20 lg:px-14 lg:py-28">
-          <h2 className="pb-stencil mb-6" style={{ fontSize: "clamp(1.8rem, 3vw, 2.8rem)", lineHeight: 1.1 }}>
-            Try it on a real file.
-          </h2>
-          <p style={{ fontSize: "15px", color: "rgba(240,236,227,0.5)", marginBottom: "28px" }}>
-            5 free pages. No card. No time limit.
-          </p>
-          <div className="flex items-center gap-6">
-            <Link
-              href="/login"
-              className="font-pb-mono rounded-full bg-pb-accent px-7 py-3 text-[12px] font-bold tracking-widest text-pb-bg uppercase transition-all hover:brightness-110"
-            >
-              Translate free
-            </Link>
-            <Link href="/contact" className="font-pb-mono text-[13px] text-pb-text-muted hover:text-white transition-colors">
-              Talk to us →
-            </Link>
-          </div>
-        </div>
-      </section>
+      <ClosingBand
+        color="#3f45b8"
+        title={<>Try it on a real file.</>}
+        sub="Every account starts with a 14-day trial. No card needed."
+        cta="Translate free"
+        href="/login"
+      />
 
     </div>
   );

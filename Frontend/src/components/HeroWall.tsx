@@ -24,11 +24,11 @@ export default function HeroWall() {
               left: `calc(50% + ${k} * var(--pb-reed))`,
               ["--off" as string]: `${OFF[i]}px`,
               ["--off2" as string]: `${OFF2[i]}px`,
-              animationDelay: `${0.9 + Math.abs(k) * 0.025}s, ${2.4 + (i % 5) * 0.7}s`,
-              animationDuration: `1.4s, ${8 + (i % 4) * 1.5}s`,
+              animationDelay: `${0.5 + Math.abs(k) * 0.02}s, ${1.8 + (i % 5) * 0.7}s`,
+              animationDuration: `0.9s, ${8 + (i % 4) * 1.5}s`,
             }}
           >
-            <span className="pb-reed-glass" style={{ animationDelay: `${1.0 + Math.abs(k) * 0.025}s` }} />
+            <span className="pb-reed-glass" style={{ animationDelay: `${0.55 + Math.abs(k) * 0.02}s` }} />
           </div>
         );
       })}

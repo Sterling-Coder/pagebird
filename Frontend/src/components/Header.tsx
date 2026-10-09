@@ -122,7 +122,7 @@ export default function Header() {
                   className="w-[580px] overflow-hidden"
                   style={{
                     borderRadius: "16px",
-                    background: "rgba(15, 12, 10, 0.45)",
+                    background: "rgba(15, 12, 10, 0.62)",
                     backdropFilter: "blur(48px) saturate(1.4)",
                     WebkitBackdropFilter: "blur(48px) saturate(1.4)",
                     border: "1px solid rgba(255,255,255,0.18)",
@@ -139,10 +139,10 @@ export default function Header() {
                           href={p.href}
                           className="group flex items-start gap-3 rounded-lg px-4 py-3 transition-colors hover:bg-white/[0.06]"
                         >
-                          <span className="font-pb-mono mt-[2px] shrink-0 text-[10px] text-pb-text-muted">{p.n}</span>
+                          <span className="font-pb-mono mt-[2px] shrink-0 text-[10px] text-white/55">{p.n}</span>
                           <div className="min-w-0">
                             <span className="text-[13px] font-semibold text-white">{p.title}</span>
-                            <p className="text-[11px] leading-snug text-pb-text-muted mt-1">{p.desc}</p>
+                            <p className="text-[12px] leading-snug text-white/75 mt-1">{p.desc}</p>
                           </div>
                         </Link>
                       ))}
@@ -155,10 +155,10 @@ export default function Header() {
                           href={p.href}
                           className="group flex items-start gap-3 rounded-lg px-4 py-3 transition-colors hover:bg-white/[0.06]"
                         >
-                          <span className="font-pb-mono mt-[2px] shrink-0 text-[10px] text-pb-text-muted">{p.n}</span>
+                          <span className="font-pb-mono mt-[2px] shrink-0 text-[10px] text-white/55">{p.n}</span>
                           <div className="min-w-0">
                             <span className="text-[13px] font-semibold text-white">{p.title}</span>
-                            <p className="text-[11px] leading-snug text-pb-text-muted mt-1">{p.desc}</p>
+                            <p className="text-[12px] leading-snug text-white/75 mt-1">{p.desc}</p>
                           </div>
                         </Link>
                       ))}

@@ -32,7 +32,7 @@ export default function Footer() {
       {/* Link columns */}
       <div style={{
         display: "grid",
-        gridTemplateColumns: "1fr repeat(3, auto)",
+        gridTemplateColumns: "1fr repeat(4, auto)",
         gap: "48px",
         maxWidth: "1100px",
         margin: "0 auto",
@@ -47,20 +47,20 @@ export default function Footer() {
             </span>
           </Link>
           <p style={{ fontSize: "11px", color: "rgba(240,236,227,0.28)", fontFamily: "var(--font-space-mono), monospace", lineHeight: 1.6, maxWidth: "180px" }}>
-            Layout-preserving translation for documents, subtitles and more.
+            Layout-preserving translation for documents, images and websites.
           </p>
         </div>
 
-        {/* Right — 3 columns */}
+        {/* Right — 4 columns */}
         {[
           {
             title: "PLATFORM",
             links: [
-              { label: "Documents / PDF", href: "/platform/documents" },
-              { label: "SRT / VTT Subtitles", href: "/platform/subtitles" },
+              { label: "InDesign & PDF", href: "/platform/documents" },
+              { label: "Word, PowerPoint, Excel", href: "/platform/documents" },
               { label: "Image Translator", href: "/platform/images" },
-              { label: "Website Translator", href: "/platform/websites" },
-              { label: "YouTube Subtitles", href: "/platform/youtube" },
+              { label: "Website Translator", href: "/platform/websites#link" },
+              { label: "Chrome extension", href: "/platform/websites#extension" },
             ],
           },
           {
@@ -77,9 +77,18 @@ export default function Footer() {
             links: [
               { label: "About", href: "/about" },
               { label: "Pricing", href: "/pricing" },
-              { label: "Contact", href: "/contact" },
               { label: "Privacy", href: "#" },
               { label: "Terms", href: "#" },
+            ],
+          },
+          {
+            title: "CONTACT",
+            links: [
+              { label: "hello@pagebirdy.com", href: "mailto:hello@pagebirdy.com" },
+              { label: "Sales & pricing", href: "/contact" },
+              { label: "Support", href: "/contact" },
+              { label: "Extension early access", href: "/contact" },
+              { label: "Reply within 1 business day", href: "/contact" },
             ],
           },
         ].map((col) => (

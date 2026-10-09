@@ -3,27 +3,46 @@ import type { ReactNode } from "react";
 type CardProps = {
   title: string;
   desc: string;
-  bg: string;
-  hue: string;
+  /** Card fill; leave out for the neutral, outlined card. */
+  bg?: string;
+  /** Title and description colour on a coloured card. */
+  hue?: string;
   className?: string;
+  /** Text on the left, panel on the right, instead of text above the panel. */
   side?: boolean;
+  /** Width of the text column on a side card. */
+  textWidth?: string;
   children: ReactNode;
 };
 
-function Card({ title, desc, bg, hue, className = "", side = false, children }: CardProps) {
+const NEUTRAL = "#1d1c1a";
+const PANEL = "#1f1e1c";
+const PANEL_ON_NEUTRAL = "#292826";
+
+/** A bento card. The inner panel bleeds off the card's right and bottom edges,
+ * so each card reads as a window onto a larger screen. */
+function Card({ title, desc, bg, hue, className = "", side = false, textWidth = "36%", children }: CardProps) {
+  const neutral = !bg;
   return (
     <div
       className={`flex flex-col overflow-hidden rounded-[24px] ${side ? "md:flex-row" : ""} ${className}`}
-      style={{ background: bg, color: hue }}
+      style={{
+        background: bg ?? NEUTRAL,
+        border: neutral ? "1px solid rgba(255,255,255,0.08)" : undefined,
+      }}
     >
-      <div className={`p-6 ${side ? "md:w-[36%] md:shrink-0" : "pb-0"}`}>
-        <h3 className="text-[15px] font-medium">{title}</h3>
-        <p className="mt-2 text-[14px] leading-relaxed opacity-90">{desc}</p>
+      <div
+        className={`p-6 ${side ? "md:shrink-0 md:basis-[var(--pb-text-w)]" : "pb-0"}`}
+        style={side ? ({ "--pb-text-w": textWidth } as React.CSSProperties) : undefined}
+      >
+        <h3 className="text-[15px]" style={{ color: neutral ? "#f0ece3" : hue }}>{title}</h3>
+        <p className="mt-2 text-[14px] leading-relaxed" style={{ color: neutral ? "#a8a49a" : hue, opacity: neutral ? 1 : 0.85 }}>
+          {desc}
+        </p>
       </div>
       <div
-        className={`mt-5 flex-1 border-t border-l border-white/[0.06] bg-[#1c1b19] p-4 text-[#f0ece3] ${
-          side ? "ml-6 rounded-tl-xl md:mt-6 md:ml-0 md:rounded-l-xl md:border-b-0" : "ml-6 rounded-tl-xl"
-        }`}
+        className={`mt-5 flex-1 rounded-tl-[16px] p-4 text-[#f0ece3] ${side ? "ml-6 md:mt-6 md:ml-0" : "ml-6"}`}
+        style={{ background: neutral ? PANEL_ON_NEUTRAL : PANEL }}
       >
         {children}
       </div>
@@ -95,35 +114,33 @@ const INDUSTRIES = [
 
 export default function PlatformBento() {
   return (
-    <section style={{ background: "#0a0908", position: "relative", zIndex: 20, isolation: "isolate" }}>
+    <section id="platform" style={{ background: "#0a0908", position: "relative", zIndex: 20, isolation: "isolate" }}>
       <div className="mx-auto max-w-[1100px] px-8 py-24 lg:px-14">
-        <div className="mb-10 max-w-[520px]">
-          <h2 className="text-[24px] font-normal leading-snug text-[#f0ece3]">
-            Everything your global team needs
-          </h2>
-          <p className="mt-4 text-[15px] leading-relaxed text-[#a8a49a]">
-            Agents built for each format, every language you ship in, and the
-            tools your team already opens. Not another dashboard waiting for
-            you to fill it.
-          </p>
-        </div>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-6">
+          {/* Intro, sitting in the grid beside the first card */}
+          <div className="flex flex-col justify-center py-6 md:col-span-3 md:pr-10">
+            <h2 className="text-[24px] font-normal leading-snug text-[#f0ece3]">
+              Everything your global team needs
+            </h2>
+            <p className="mt-4 max-w-[440px] text-[15px] leading-relaxed text-[#a8a49a]">
+              Agents built for each format, every language you ship in, and the
+              tools your team already opens. Not another dashboard waiting for
+              you to fill it.
+            </p>
+          </div>
 
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-6">
-          {/* Agents — violet */}
+          {/* Agents — neutral, outlined */}
           <Card
-            side
-            className="md:col-span-4 md:min-h-[360px]"
-            bg="#3b1655"
-            hue="#c493ff"
+            className="md:col-span-3 md:h-[340px]"
             title="Translation agents"
             desc="One agent per format, each built around how that file actually works."
           >
             <div className="space-y-2">
               {AGENTS.map((a) => (
-                <div key={a.name} className="flex items-center gap-3 rounded-lg bg-white/[0.04] px-3 py-2.5">
+                <div key={a.name} className="flex items-center gap-3 rounded-xl bg-white/[0.04] px-3 py-2.5">
                   <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: a.color }} />
                   <div className="min-w-0 flex-1">
-                    <div className="text-[13px] font-medium">{a.name}</div>
+                    <div className="text-[13px]">{a.name}</div>
                     <div className="truncate text-[11.5px] text-white/50">{a.note}</div>
                   </div>
                   <Chip color={a.color}>{a.fmt}</Chip>
@@ -132,59 +149,187 @@ export default function PlatformBento() {
             </div>
           </Card>
 
-          {/* Languages — navy */}
+          {/* Languages — plum, wide */}
           <Card
-            className="md:col-span-2 md:min-h-[360px]"
-            bg="#0f3256"
-            hue="#7fb2ec"
+            side
+            className="md:col-span-4 md:h-[260px]"
+            bg="#3b1655"
+            hue="#c493ff"
             title="40+ languages"
             desc="Right-to-left scripts are mirrored inside the page, not just reversed."
           >
-            <div className="space-y-1">
+            <div className="grid grid-cols-2 gap-x-6 gap-y-1">
               {LANGS.map((l) => (
-                <div key={l.code} className="flex items-center gap-3 rounded-md px-2 py-1.5">
-                  <span className="font-pb-mono w-6 text-[11px] text-[#9cc2ff]">{l.code}</span>
+                <div key={l.code} className="flex items-center gap-3 py-1.5">
+                  <span className="font-pb-mono w-6 text-[11px] text-[#c493ff]">{l.code}</span>
                   <span className="text-[13px]">{l.name}</span>
-                  {l.note ? <span className="ml-auto text-[11px] text-white/45">{l.note}</span> : null}
+                  {l.note ? <span className="ml-auto truncate text-[11px] text-white/45">{l.note}</span> : null}
                 </div>
               ))}
             </div>
           </Card>
 
-          {/* Workflow — neutral dotted */}
+          {/* Delivery — neutral, small */}
           <div
-            className="flex flex-col overflow-hidden rounded-[24px] p-6 md:col-span-3 md:min-h-[300px]"
+            className="flex flex-col justify-between rounded-[24px] p-6 md:col-span-2 md:h-[260px]"
+            style={{ background: NEUTRAL, border: "1px solid rgba(255,255,255,0.08)" }}
+          >
+            <h3 className="text-[15px] text-[#f0ece3]">Inbox</h3>
+            <div>
+              <p className="text-[13px] text-[#a8a49a]">Finished files land where your team works</p>
+              <div className="mt-3 flex gap-2">
+                {["Email", "Slack", "Drive"].map((x) => (
+                  <span key={x} className="rounded-md bg-white/[0.06] px-2 py-1 text-[11.5px] text-[#d8d3c8]">{x}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Formats — umber */}
+          <Card
+            side
+            textWidth="40%"
+            className="md:col-span-3 md:h-[360px]"
+            bg="#3d2410"
+            hue="#f0b46a"
+            title="Formats"
+            desc="Native files in, native files out. More are on the way."
+          >
+            <div className="grid grid-cols-2 gap-1.5">
+              {FORMATS.map((x) => (
+                <div key={x.f} className="flex items-center justify-between rounded-md bg-white/[0.04] px-2.5 py-1.5">
+                  <span className="font-pb-mono text-[12px]">{x.f}</span>
+                  <span className="text-[10.5px]" style={{ color: x.soon ? "#8a8478" : "#8fd14f" }}>
+                    {x.soon ? "Soon" : "Live"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          {/* Tools — navy */}
+          <Card
+            side
+            textWidth="38%"
+            className="md:col-span-3 md:h-[360px]"
+            bg="#0f3256"
+            hue="#7fb2ec"
+            title="Works with your tools"
+            desc="Open translated files straight in the apps your team already uses."
+          >
+            <div className="space-y-2">
+              {TOOLS.map((t) => (
+                <div key={t.name} className="flex items-center gap-3 rounded-xl bg-white/[0.04] px-3 py-2" style={{ opacity: t.soon ? 0.5 : 1 }}>
+                  <span
+                    className="font-pb-mono flex h-7 w-7 items-center justify-center rounded-md text-[11px] font-bold"
+                    style={{ color: t.color, border: `1.5px solid ${t.color}` }}
+                  >
+                    {t.short}
+                  </span>
+                  <span className="text-[12.5px]">{t.name}</span>
+                  {t.soon ? <span className="ml-auto text-[11px] text-white/45">Soon</span> : null}
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          {/* Workflow — no card, nodes on a dotted field */}
+          <div
+            className="relative flex flex-col justify-center rounded-[24px] p-2 md:col-span-3 md:row-span-2"
             style={{
-              background: "#1f1e1c",
-              color: "#f0ece3",
-              backgroundImage: "radial-gradient(rgba(255,255,255,0.07) 1px, transparent 1px)",
-              backgroundSize: "20px 20px",
+              backgroundImage: "radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1px)",
+              backgroundSize: "18px 18px",
             }}
           >
-            <h3 className="text-[15px] font-medium">Upload to delivery, hands-off</h3>
-            <p className="mt-2 max-w-[340px] text-[13.5px] leading-relaxed text-white/60">
-              Drop a file in. Each step runs in order and the result comes back in the same format.
+            <p className="mb-6 max-w-[300px] text-[14px] leading-relaxed text-[#a8a49a]">
+              <span className="text-[#f0ece3]">Upload to delivery, hands-off.</span> Each step runs in order and the file comes back in the same format.
             </p>
-            <div className="mt-auto flex items-center gap-2 pt-8">
+            <div className="flex flex-wrap items-center gap-2 lg:flex-nowrap">
               {[
-                { k: "Trigger", v: "Upload", c: "#4fc4a8" },
+                { k: "Trigger", v: "New upload", c: "#4fc4a8" },
                 { k: "Agent", v: "Translate", c: "#a98bf0" },
-                { k: "Tool", v: "Rebuild", c: "#e08a6f" },
-                { k: "Deliver", v: "Return", c: "#6f9cff" },
+                { k: "Tool", v: "Rebuild layout", c: "#e08a6f" },
+                { k: "Deliver", v: "Same format", c: "#6f9cff" },
               ].map((n, i, arr) => (
-                <div key={n.k} className="flex min-w-0 flex-1 items-center gap-2">
-                  <div className="min-w-0 flex-1 rounded-xl border border-white/10 bg-[#2a2927] px-3 py-2.5">
-                    <div className="text-[11px] font-medium" style={{ color: n.c }}>{n.k}</div>
-                    <div className="mt-0.5 truncate text-[12.5px]">{n.v}</div>
+                <div key={n.k} className="flex items-center gap-2">
+                  <div className="rounded-2xl border bg-[#1f1e1c] px-3 py-2 shadow-[0_8px_24px_rgba(0,0,0,0.4)]"
+                    style={{ borderColor: "rgba(255,255,255,0.10)" }}>
+                    <div className="text-[10.5px] uppercase tracking-[0.06em]" style={{ color: n.c }}>{n.k}</div>
+                    <div className="mt-0.5 whitespace-nowrap text-[12.5px] text-[#f0ece3]">{n.v}</div>
                   </div>
-                  {i < arr.length - 1 ? <span className="h-px w-3 shrink-0 bg-white/25" /> : null}
+                  {i < arr.length - 1 ? <span className="h-px w-3 bg-white/25" /> : null}
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Background jobs — magenta, folded corner */}
-          <div className="relative md:col-span-3 md:min-h-[300px]">
+          {/* QA — neutral, small */}
+          <Card
+            className="md:col-span-3 md:h-[220px]"
+            title="QA report"
+            desc="Run a report on any finished job."
+          >
+            <div className="space-y-2 text-[12.5px]">
+              {[
+                { n: "brand_guide.idml", v: "94%", c: "#8fd14f" },
+                { n: "invoice_template.pdf", v: "Flagged", c: "#ff6f6f" },
+              ].map((r) => (
+                <div key={r.n} className="flex items-center justify-between rounded-md bg-white/[0.04] px-3 py-2">
+                  <span className="truncate">{r.n}</span>
+                  <span className="ml-2 shrink-0" style={{ color: r.c }}>{r.v}</span>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          {/* Glossary — olive, table bleeding off the edge */}
+          <Card
+            side
+            textWidth="40%"
+            className="md:col-span-3 md:h-[220px]"
+            bg="#2c3d0f"
+            hue="#a4c862"
+            title="Glossary"
+            desc="Lock brand terms so they are never translated or reworded."
+          >
+            <div className="text-[12px]">
+              <div className="flex gap-2 border-b border-white/10 pb-2 text-white/50">
+                <span className="flex-1">English</span>
+                <span className="flex-1">French</span>
+                <span className="w-12 text-right">State</span>
+              </div>
+              {[
+                { a: "Pagebirdy", b: "Pagebirdy", s: "Locked" },
+                { a: "Annual report", b: "Rapport annuel", s: "Locked" },
+                { a: "Draft", b: "Brouillon", s: "Open" },
+              ].map((r) => (
+                <div key={r.a} className="flex gap-2 border-b border-white/[0.06] py-2">
+                  <span className="flex-1 truncate">{r.a}</span>
+                  <span className="flex-1 truncate">{r.b}</span>
+                  <span className="w-12 text-right" style={{ color: r.s === "Locked" ? "#c4e684" : "#8a8478" }}>{r.s}</span>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          {/* Industries — neutral */}
+          <div
+            className="overflow-hidden rounded-[24px] p-6 md:col-span-3"
+            style={{ background: NEUTRAL, border: "1px solid rgba(255,255,255,0.08)" }}
+          >
+            <h3 className="text-[15px] text-[#f0ece3]">For every team that ships in more than one language</h3>
+            <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2">
+              {INDUSTRIES.map((i) => (
+                <div key={i.label} className="flex items-center gap-2.5 rounded-xl bg-[#292826] px-3 py-3 text-[13px] text-[#f0ece3]">
+                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: i.color }} />
+                  {i.label}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Background jobs — wine, folded corner */}
+          <div className="relative md:col-span-3">
             <Card
               className="h-full"
               bg="#4d1a38"
@@ -216,125 +361,6 @@ export default function PlatformBento() {
               style={{ background: "linear-gradient(225deg, #0a0908 50%, #6a2449 50%)", borderTopRightRadius: "24px" }}
             />
           </div>
-
-          {/* Formats — umber */}
-          <Card
-            className="md:col-span-2 md:min-h-[380px]"
-            bg="#3d2410"
-            hue="#f0b46a"
-            title="Formats"
-            desc="Native files in, native files out. More are on the way."
-          >
-            <div className="grid grid-cols-2 gap-1.5">
-              {FORMATS.map((x) => (
-                <div
-                  key={x.f}
-                  className="flex items-center justify-between rounded-md bg-white/[0.04] px-2.5 py-1.5"
-                >
-                  <span className="font-pb-mono text-[12px]">{x.f}</span>
-                  <span className="text-[10.5px]" style={{ color: x.soon ? "#8a8478" : "#8fd14f" }}>
-                    {x.soon ? "Soon" : "Live"}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          {/* Integrations — teal */}
-          <Card
-            className="md:col-span-2 md:min-h-[380px]"
-            bg="#0f3537"
-            hue="#6fd0c0"
-            title="Works with your tools"
-            desc="Open translated files straight in the apps your team already uses."
-          >
-            <div className="grid grid-cols-2 gap-2">
-              {TOOLS.map((t) => (
-                <div
-                  key={t.name}
-                  className="flex flex-col items-center gap-2 rounded-lg bg-white/[0.04] px-2 py-3"
-                  style={{ opacity: t.soon ? 0.5 : 1 }}
-                >
-                  <span
-                    className="font-pb-mono flex h-8 w-8 items-center justify-center rounded-md text-[12px] font-bold"
-                    style={{ color: t.color, border: `1.5px solid ${t.color}` }}
-                  >
-                    {t.short}
-                  </span>
-                  <span className="text-[11.5px]">{t.name}</span>
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          {/* Glossary — olive */}
-          <Card
-            className="md:col-span-2 md:min-h-[380px]"
-            bg="#2c3d0f"
-            hue="#a4c862"
-            title="Glossary"
-            desc="Lock brand terms so they are never translated or reworded."
-          >
-            <div className="text-[12px]">
-              <div className="flex gap-2 border-b border-white/10 pb-2 text-white/50">
-                <span className="flex-1">English</span>
-                <span className="flex-1">French</span>
-                <span className="w-12 text-right">State</span>
-              </div>
-              {[
-                { a: "Pagebirdy", b: "Pagebirdy", s: "Locked" },
-                { a: "Annual report", b: "Rapport annuel", s: "Locked" },
-                { a: "Draft", b: "Brouillon", s: "Open" },
-                { a: "Layout", b: "Mise en page", s: "Open" },
-              ].map((r) => (
-                <div key={r.a} className="flex gap-2 border-b border-white/[0.06] py-2">
-                  <span className="flex-1 truncate">{r.a}</span>
-                  <span className="flex-1 truncate">{r.b}</span>
-                  <span className="w-12 text-right" style={{ color: r.s === "Locked" ? "#c4e684" : "#8a8478" }}>
-                    {r.s}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </Card>
-
-          {/* Industries — neutral */}
-          <div
-            className="overflow-hidden rounded-[24px] p-6 md:col-span-4"
-            style={{ background: "#1f1e1c", color: "#f0ece3" }}
-          >
-            <h3 className="text-[15px] font-medium">For every team that ships in more than one language</h3>
-            <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {INDUSTRIES.map((i) => (
-                <div key={i.label} className="flex items-center gap-2.5 rounded-xl bg-[#2a2927] px-3 py-3 text-[13px]">
-                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: i.color }} />
-                  {i.label}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* QA — indigo */}
-          <Card
-            className="md:col-span-2"
-            bg="#1c1f52"
-            hue="#9aa4ff"
-            title="QA report"
-            desc="Run a report on any finished job. Flagged segments are listed for review."
-          >
-            <div className="space-y-2 text-[12.5px]">
-              {[
-                { n: "brand_guide.idml", v: "94%", c: "#8fd14f" },
-                { n: "invoice_template.pdf", v: "Flagged", c: "#ff6f6f" },
-                { n: "app_screenshots.psd", v: "88%", c: "#e8c547" },
-              ].map((r) => (
-                <div key={r.n} className="flex items-center justify-between rounded-md bg-white/[0.04] px-3 py-2">
-                  <span className="truncate">{r.n}</span>
-                  <span className="ml-2 shrink-0 font-medium" style={{ color: r.c }}>{r.v}</span>
-                </div>
-              ))}
-            </div>
-          </Card>
         </div>
       </div>
     </section>
