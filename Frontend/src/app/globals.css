@@ -349,7 +349,7 @@ body {
 .footer-link:hover { color: rgba(240,236,227,0.75) !important; }
 
 /* Hero background: a warm light ramp (grey-olive edge, a bright yellow band,
-   orange, rust, wine, plum, then blue) that stays put while the page scrolls. */
+   orange, rust, wine, plum, then blue) that scrolls away with the hero. */
 .pb-hero {
   --pb-col: calc(100vw * 1102 / 6 / 1440); /* the text column in six */
   --pb-reed: calc(100vw / 14); /* one glass reed, narrower than the text columns */

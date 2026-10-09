@@ -3,10 +3,10 @@
 import { useId, useRef, useState } from "react";
 
 const TOPICS = [
-  { value: "sales", label: "Sales & pricing" },
-  { value: "enterprise", label: "Enterprise" },
-  { value: "support", label: "Support" },
-  { value: "extension", label: "Chrome extension" },
+  { value: "sales", label: "Sales & pricing", hint: "Plans, volume pricing, or what fits after your 14-day free trial." },
+  { value: "enterprise", label: "Enterprise", hint: "Custom formats, shared glossaries and high-volume IDML workflows." },
+  { value: "support", label: "Support", hint: "A file that didn't come back the way you expected? Tell us which one." },
+  { value: "extension", label: "Chrome extension", hint: "Early access to translating pages and selections in the browser." },
 ] as const;
 
 type TopicValue = (typeof TOPICS)[number]["value"];
@@ -17,10 +17,8 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MESSAGE_MAX = 4800; // API caps at 5000; leave room for the topic prefix.
 
 const C = {
-  card: "#1d1c1a",
-  cardBorder: "rgba(255,255,255,0.08)",
-  input: "#292826",
-  inputBorder: "rgba(255,255,255,0.10)",
+  cardBorder: "#2a2826",
+  inputBorder: "#34312d",
   error: "#f08a7a",
   coral: "#e08a6f",
   text: "#f0ece3",
@@ -39,7 +37,7 @@ function validate(values: { name: string; email: string; message: string }): Err
 }
 
 const inputClass =
-  "w-full rounded-xl px-4 py-3 text-[16px] leading-snug outline-none transition-[box-shadow,border-color] placeholder:text-[#8a8478] focus-visible:ring-2 focus-visible:ring-[#e08a6f] focus-visible:ring-offset-0 aria-[invalid=true]:ring-1 aria-[invalid=true]:ring-[#f08a7a]";
+  "w-full rounded-none border-0 border-b bg-transparent px-0 py-2.5 text-[16px] leading-snug outline-none transition-colors placeholder:text-[#5f5a52] focus-visible:border-[#e08a6f] aria-[invalid=true]:border-[#f08a7a]";
 
 const labelClass = "text-[13px] font-semibold";
 
@@ -127,7 +125,7 @@ export default function ContactForm() {
         <span
           aria-hidden
           className="flex h-11 w-11 items-center justify-center rounded-full"
-          style={{ background: "rgba(200,96,24,0.16)", color: C.coral }}
+          style={{ background: C.primary, color: "#ffffff" }}
         >
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
             <path d="M4.5 10.5l3.5 3.5 7.5-8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -157,7 +155,7 @@ export default function ContactForm() {
     );
   }
 
-  const fieldStyle = { background: C.input, border: `1px solid ${C.inputBorder}`, color: C.text };
+  const fieldStyle = { borderBottomColor: C.inputBorder, color: C.text };
 
   return (
     <form noValidate onSubmit={onSubmit} className="flex flex-col gap-6" aria-busy={submitting}>
@@ -165,7 +163,7 @@ export default function ContactForm() {
         <legend className={`${labelClass} mb-3`} style={{ color: C.text }}>
           What&rsquo;s this about?
         </legend>
-        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+        <div className="flex flex-wrap gap-2">
           {TOPICS.map((t) => {
             const active = topic === t.value;
             return (
@@ -173,9 +171,9 @@ export default function ContactForm() {
                 key={t.value}
                 className="relative flex cursor-pointer items-center justify-center rounded-full px-4 py-2.5 text-center text-[13px] font-medium transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-[#e08a6f]"
                 style={{
-                  background: active ? "rgba(200,96,24,0.16)" : C.input,
-                  border: `1px solid ${active ? "rgba(224,138,111,0.55)" : C.inputBorder}`,
-                  color: active ? C.text : C.secondary,
+                  background: active ? C.primary : "transparent",
+                  border: `1px solid ${active ? C.primary : C.inputBorder}`,
+                  color: active ? "#ffffff" : C.secondary,
                 }}
               >
                 <input
@@ -191,6 +189,9 @@ export default function ContactForm() {
             );
           })}
         </div>
+        <p className="text-[13.5px] leading-relaxed" style={{ color: C.secondary }} aria-live="polite">
+          {TOPICS.find((t) => t.value === topic)?.hint}
+        </p>
       </fieldset>
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 sm:gap-4">
@@ -277,7 +278,7 @@ export default function ContactForm() {
         {error && (
           <p
             className="rounded-xl px-4 py-3 text-[14px] leading-relaxed"
-            style={{ background: "rgba(240,138,122,0.10)", border: "1px solid rgba(240,138,122,0.28)", color: C.error }}
+            style={{ background: "#2a1714", border: "1px solid #5a2a24", color: C.error }}
           >
             {error} You can also email us at{" "}
             <a href="mailto:hello@pagebirdy.com" className="underline underline-offset-2">
@@ -295,7 +296,7 @@ export default function ContactForm() {
         <button
           type="submit"
           disabled={submitting}
-          className="inline-flex h-12 items-center justify-center gap-2 rounded-full px-7 text-[15px] font-semibold text-white outline-none transition-[filter,opacity] hover:brightness-110 focus-visible:ring-2 focus-visible:ring-[#e08a6f] focus-visible:ring-offset-2 focus-visible:ring-offset-[#1d1c1a] disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex h-12 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full px-7 text-[15px] font-semibold text-white outline-none transition-[filter,opacity] hover:brightness-110 focus-visible:ring-2 focus-visible:ring-[#e08a6f] focus-visible:ring-offset-2 focus-visible:ring-offset-[#171614] disabled:cursor-not-allowed disabled:opacity-60"
           style={{ background: C.primary }}
         >
           {submitting && (
